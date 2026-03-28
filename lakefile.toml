@@ -1,0 +1,25 @@
+name = "leanbf"
+version = "1.0.0"
+description = "Formal Verification of Brainfuck Turing Completeness"
+keywords = ["math", "formal-verification", "turing-completeness"]
+defaultTargets = ["LeanBF", "Tests"]
+lintDriver = "batteries/runLinter"
+testDriver = "Tests"
+
+[leanOptions]
+pp.unicode.fun = true                 # pretty-prints `fun a ↦ b`
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+maxSynthPendingDepth = 10
+maxHeartbeats = 400000
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.28.0"
+
+[[lean_lib]]
+name = "LeanBF"
+
+[[lean_lib]]
+name = "Tests"

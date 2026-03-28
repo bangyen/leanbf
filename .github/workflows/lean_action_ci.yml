@@ -1,0 +1,30 @@
+name: Lean Action CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read 
+  pages: write 
+  id-token: write 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build Lean project
+        uses: leanprover/lean-action@v1
+
+      - name: Enforce warning-free Lean build
+        run: lake --wfail build
+
+      - name: Run guard checks
+        run: |
+          chmod +x scripts/check_all.sh
+          ./scripts/check_all.sh

@@ -90,12 +90,18 @@ project convention that `Core` files contain only definitions.
   step, `>` moves the pointer, and `[` either skips its body (zero current
   value) or runs it and re-queues the loop (non-zero). The empty program
   halts.
+- `Theory/Simulation.lean`: simulation infrastructure and the first result.
+  `runToCompletion` runs until the program halts or a fuel cap is hit, and
+  its results convert into `RunsTo` chains (`RunsTo_of_haltsWithin`). The
+  compiled empty Minsky program is shown to halt from any simulating state
+  (`compile_empty_halts`), giving the first `compile_empty_simulates`
+  instance.
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
-  `tape 3 = c2`, `tape 0 = 1` for running) and the statement of the project's
-  central goal, `turingCompleteness`. The statement is recorded as a
-  conjecture, not a theorem: the run-level simulation argument that would
-  witness it is open work (see the Roadmap).
+  `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`, and
+  the statement of the project's central goal, `turingCompleteness`. The
+  statement is recorded as a conjecture, not a theorem: the run-level
+  simulation argument that would witness it is open work (see the Roadmap).
 
 ## Example Programs
 

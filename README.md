@@ -49,6 +49,10 @@ The implementation is organized into `Core` (definitions), `Theory`
   (`Theory.Semantics`): the cell operations act only on the addressed cell
   and round-trip with the current value (`currentVal_incVal_decVal`), and the
   single-step behavior of the empty program, `>`, and `[` is pinned down.
+- **Simulation infrastructure** (`Theory.Simulation`): a fuel-capped runner
+  whose results convert into `RunsTo` chains, and the first instance — the
+  compiled empty Minsky program halts from any simulating state
+  (`compile_empty_simulates`).
 - **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
   compiler definitions are re-asserted on concrete inputs with `rfl` and
   `decide` — including running compiled Minsky programs (`inc1`, `inc2`,
@@ -58,7 +62,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Prove `turingCompleteness`** | High | The central goal: a run-level simulation theorem from the compiled dispatch loop to `RunsTo`. |
+| **Prove `turingCompleteness`** | High | The general dispatch simulation is the roadblock: proving a `jzdec`-block lemma needs induction on the counter value, and out-of-range `pc` needs induction on the `pc`-test loop. The empty-program instance and the `RunsTo` conversion are in place. |
 | **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
 | **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 

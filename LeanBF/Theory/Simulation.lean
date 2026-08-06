@@ -1,0 +1,161 @@
+/-
+Copyright (c) 2026 Bangyen Pham. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bangyen Pham
+-/
+import LeanBF.Core.Compiler
+import LeanBF.Core.Semantics
+import LeanBF.Theory.Completeness
+
+/-!
+# The Simulation
+
+Infrastructure for the completeness proof: a fuel-capped runner whose
+results convert into `RunsTo` chains, and the first concrete simulation —
+the compiled empty program halts from any simulating state.
+
+## Main definitions
+
+* `runToCompletion`: Run until the program halts or the fuel runs out.
+
+## Theorems
+
+* `step_none_iff_empty`: The step relation is undefined exactly on the empty
+  program.
+* `runsTo_halt_of_step_none`: An undefined step means the program halts.
+* `runsTo_of_runToCompletion_some`: A completed fuel-capped run gives a
+  `RunsTo` chain.
+* `runToCompletion_some_of_haltsWithin`: A program that halts within `n`
+  steps is finished by `runToCompletion n`.
+* `RunsTo_of_haltsWithin`: A program that halts within `n` steps reaches the
+  empty program.
+* `compile_empty_haltsWithin`: The compiled empty program halts within 100
+  steps from any simulating state.
+* `compile_empty_halts`: The compiled empty program halts.
+* `compile_empty_simulates`: The empty Minsky program is simulated by its
+  compilation.
+-/
+
+namespace LeanBF
+
+/--
+Run until the program halts (its instruction list is empty) or the fuel runs
+out, whichever comes first.
+-/
+def runToCompletion (fuel : ℕ) (prog : Program) (s : State) : Option State :=
+  match fuel with
+  | 0 => none
+  | fuel + 1 =>
+    match step prog s with
+    | none => some s
+    | some (prog', s') => runToCompletion fuel prog' s'
+
+/-- A non-empty program always has a step. -/
+private theorem step_cons_ne_none (i : Instruction) (rest : Program) (s : State) :
+    step (i :: rest) s ≠ none := by
+  cases i
+  · intro h; simp only [step] at h; cases h
+  · intro h; simp only [step] at h; cases h
+  · intro h; simp only [step] at h; cases h
+  · intro h; simp only [step] at h; cases h
+  · intro h
+    by_cases c : s.currentVal = 0
+    · simp only [step, c] at h; cases h
+    · simp only [step, c] at h; cases h
+  · intro h
+    rw [step] at h
+    cases h_in : s.input with
+    | nil => rw [h_in] at h; cases h
+    | cons x xs => rw [h_in] at h; cases h
+  · intro h; simp only [step] at h; cases h
+
+/-- The step relation is undefined exactly on the empty program. -/
+theorem step_none_iff_empty (prog : Program) (s : State) :
+    step prog s = none ↔ prog = [] := by
+  constructor
+  · intro h
+    cases prog with
+    | nil => rfl
+    | cons i rest => exact False.elim (step_cons_ne_none i rest s h)
+  · intro h
+    rw [h]
+    rfl
+
+/-- An undefined step means the program halts. -/
+theorem runsTo_halt_of_step_none (prog : Program) (s : State) (h : step prog s = none) :
+    RunsTo (prog, s) s := by
+  have hprog : prog = [] := (step_none_iff_empty prog s).mp h
+  rw [hprog]
+  exact RunsTo.halt s
+
+/-- A completed fuel-capped run gives a `RunsTo` chain. -/
+theorem runsTo_of_runToCompletion_some (fuel : ℕ) (prog : Program) (s : State) :
+    (∃ s' : State, runToCompletion fuel prog s = some s') →
+      ∃ s' : State, RunsTo (prog, s) s' := by
+  induction fuel generalizing prog s with
+  | zero =>
+      intro h
+      rcases h with ⟨s', h'⟩
+      simp only [runToCompletion] at h'
+      cases h'
+  | succ fuel ih =>
+      intro h
+      cases hstep : step prog s with
+      | none =>
+          exact ⟨s, runsTo_halt_of_step_none prog s hstep⟩
+      | some cfg =>
+          rcases h with ⟨s', h'⟩
+          simp only [runToCompletion, hstep] at h'
+          have ih' := ih cfg.1 cfg.2
+          rcases ih' ⟨s', h'⟩ with ⟨s_final, h_final⟩
+          exact ⟨s_final, RunsTo.step prog s cfg.2 cfg.1 s_final hstep h_final⟩
+
+/-- A program that halts within `n` steps is finished by `runToCompletion n`. -/
+theorem runToCompletion_some_of_haltsWithin (n : ℕ) (prog : Program) (s : State) :
+    haltsWithin n prog s → ∃ s' : State, runToCompletion n prog s = some s' := by
+  induction n generalizing prog s with
+  | zero =>
+      intro h
+      simp only [haltsWithin, stepsToHalt] at h
+      cases h
+  | succ n ih =>
+      intro h
+      unfold haltsWithin stepsToHalt at h
+      cases hstep : step prog s with
+      | none =>
+          exact ⟨s, by simp only [runToCompletion, hstep]⟩
+      | some cfg =>
+          have hlt : stepsToHalt n cfg.1 cfg.2 < n := by
+            have : stepsToHalt n cfg.1 cfg.2 + 1 < n + 1 := by
+              simpa only [hstep, Nat.succ_eq_add_one] using h
+            exact Nat.succ_lt_succ_iff.mp (by simpa only [Nat.succ_eq_add_one] using this)
+          have ih' := ih cfg.1 cfg.2
+          rcases ih' hlt with ⟨s', h'⟩
+          exact ⟨s', by simp only [runToCompletion, hstep, h']⟩
+
+/-- A program that halts within `n` steps reaches the empty program. -/
+theorem RunsTo_of_haltsWithin (n : ℕ) (prog : Program) (s : State) :
+    haltsWithin n prog s → ∃ s' : State, RunsTo (prog, s) s' := by
+  intro h
+  exact runsTo_of_runToCompletion_some n prog s (runToCompletion_some_of_haltsWithin n prog s h)
+
+/-- The compiled empty program halts within 100 steps from any simulating
+    state. -/
+theorem compile_empty_haltsWithin (ms : Minsky.State) :
+    haltsWithin 100 (Compiler.compileProgram ([] : Minsky.Program)) (simState ms) := by
+  unfold haltsWithin
+  rw [show
+    stepsToHalt 100 (Compiler.compileProgram ([] : Minsky.Program)) (simState ms) = 74 by rfl]
+  decide
+
+/-- The compiled empty program halts. -/
+theorem compile_empty_halts (ms : Minsky.State) :
+    halts (Compiler.compileProgram ([] : Minsky.Program)) (simState ms) :=
+  ⟨100, compile_empty_haltsWithin ms⟩
+
+/-- The empty Minsky program is simulated by its compilation. -/
+theorem compile_empty_simulates (ms : Minsky.State) :
+    ∃ s' : State, RunsTo (Compiler.compileProgram ([] : Minsky.Program), simState ms) s' :=
+  RunsTo_of_haltsWithin 100 _ _ (compile_empty_haltsWithin ms)
+
+end LeanBF

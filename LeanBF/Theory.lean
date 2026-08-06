@@ -5,6 +5,7 @@ Authors: Bangyen Pham
 -/
 import LeanBF.Theory.Completeness
 import LeanBF.Theory.Semantics
+import LeanBF.Theory.Simulation
 import LeanBF.Theory.State
 
 /-!

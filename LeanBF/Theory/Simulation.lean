@@ -36,6 +36,11 @@ the compiled empty program halts from any simulating state.
 * `compile_empty_simulates`: The empty Minsky program is simulated by its
   compilation.
 * `RunsTo_append`: RunsTo composes across concatenation.
+* `runToCompletion_succ_eq`: Extra fuel after termination does not change a
+  completed run.
+* `runToCompletion_eq_of_ge`: Completing within `n` steps means completing
+  within any larger bound.
+* `runToCompletion_append`: Completed runs compose across concatenation.
 -/
 
 namespace LeanBF
@@ -160,8 +165,44 @@ theorem compile_empty_simulates (ms : Minsky.State) :
     ∃ s' : State, RunsTo (Compiler.compileProgram ([] : Minsky.Program), simState ms) s' :=
   RunsTo_of_haltsWithin 100 _ _ (compile_empty_haltsWithin ms)
 
-/-- RunsTo composes across concatenation: a run of `cfg.1` to `s'` followed by
-    a run of `B` from `s'` is a run of `cfg.1 ++ B`. -/
+/-- Extra fuel after termination does not change a completed run. -/
+theorem runToCompletion_succ_eq (n : Nat) (prog : Program) (s : State)
+    (hterm : runToCompletion n prog s ≠ none) :
+    runToCompletion (n + 1) prog s = runToCompletion n prog s := by
+  induction n generalizing prog s with
+  | zero => simp only [runToCompletion] at hterm; exact False.elim (hterm rfl)
+  | succ n ih =>
+      cases hstep : step prog s with
+      | none => simp only [runToCompletion, hstep]
+      | some cfg =>
+          have hterm' : runToCompletion n cfg.1 cfg.2 ≠ none := by
+            intro h'
+            apply hterm
+            rw [runToCompletion, hstep]
+            exact h'
+          have hstep' :
+              runToCompletion (n + 1 + 1) prog s = runToCompletion (n + 1) cfg.1 cfg.2 := by
+            rw [runToCompletion, hstep]
+          have hstep'' : runToCompletion (n + 1) prog s = runToCompletion n cfg.1 cfg.2 := by
+            rw [runToCompletion, hstep]
+          rw [hstep', hstep'']
+          rw [ih cfg.1 cfg.2 hterm']
+
+/-- Completing within `n` steps means completing within any larger bound. -/
+theorem runToCompletion_eq_of_ge (n k : Nat) (prog : Program) (s : State)
+    (hterm : runToCompletion n prog s ≠ none) :
+    runToCompletion (n + k) prog s = runToCompletion n prog s := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+      have hle : runToCompletion (n + k) prog s ≠ none := by
+        intro h'
+        apply hterm
+        rw [ih] at h'
+        exact h'
+      rw [← Nat.add_assoc]
+      rw [runToCompletion_succ_eq (n + k) prog s hle]
+      exact ih
 theorem RunsTo_append {cfg : Program × State} (B : Program) (s' s'' : State)
     (h1 : RunsTo cfg s') (h2 : RunsTo (B, s') s'') :
     RunsTo (cfg.1 ++ B, cfg.2) s'' := by

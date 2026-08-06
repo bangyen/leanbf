@@ -54,16 +54,25 @@ will be shown to simulate.
 
 ### The Compiler (`LeanBF.Core.Compiler`)
 
-`Compiler.compileInstr` translates a single Minsky instruction into a
-Brainfuck block for a large dispatch loop. The layout convention is: cell 0
-is the `running` flag, cell 1 holds `pc`, cells 2 and 3 hold `c1` and `c2`,
-and auxiliary cells start at cell 4. `movePtr` and `copyCell` generate the
-pointer movement and cell-copy blocks.
+The compiler translates a whole Minsky program into a single Brainfuck
+dispatch loop. The layout is: cell 0 is the `running` flag, cell 1 holds the
+program counter `pc`, cells 2 and 3 hold `c1` and `c2`, cell 4 is the `done`
+flag used by the dispatcher, and cells 5-16 back the three `ifZeroElse`
+layers (the `done` test, the `pc` test, and the counter test inside `jzdec`).
 
-> [!WARNING]
-> The compiler is a work in progress: the `jzdec1` block is a placeholder and
-> `jzdec2` is unimplemented. The completeness proof (Roadmap) cannot begin
-> until these produce a complete dispatch loop.
+The core primitive is `ifZeroElse test thenBody elseBody`, which preserves
+the tested cell, runs `thenBody` exactly once when it is `0` and `elseBody`
+exactly once otherwise, and restores all scratch cells to `0`. Both bodies
+must start and end with the pointer on the tested cell. `compileInstr`
+translates one Minsky instruction into a block that starts and ends on the
+`pc` cell, and `compileProgram` assembles the `[` dispatch loop: reset
+`done`, run one window per instruction (skip if already matched; test `pc`,
+run the block when `0`, decrement `pc` otherwise), and stop `running` if no
+window matched.
+
+The compiled blocks and the full dispatch loop are exercised in `Tests` with
+kernel `decide` reductions on small Minsky programs (`inc1`, `inc2`,
+`jzdec1`, `jzdec2`, `halt`) run to their halting state.
 
 ## The Theory Layer
 

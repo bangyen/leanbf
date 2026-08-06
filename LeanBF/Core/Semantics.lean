@@ -12,6 +12,7 @@ import LeanBF.Core.State
 ## Main definitions
 
 * `step`: A single step of the Brainfuck machine.
+* `run`: Run the machine for finitely many steps.
 * `RunsTo`: The reflexive-transitive closure of the step relation.
 -/
 
@@ -42,6 +43,16 @@ def step (prog : Program) (s : State) : Option (Program × State) :=
       else
         -- If current value is not 0, execute body and then the loop again.
         some (body ++ [instr] ++ rest, s)
+
+/-- Run the machine for up to `n` steps, stopping early once the program
+    halts (its instruction list is empty). Returns the state at that point. -/
+def run (n : ℕ) (prog : Program) (s : State) : Option State :=
+  match n with
+  | 0 => some s
+  | n + 1 =>
+    match step prog s with
+    | none => some s
+    | some (prog', s') => run n prog' s'
 
 /-- Reflexive-transitive closure of the step relation -/
 inductive RunsTo : (Program × State) → State → Prop where

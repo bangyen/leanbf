@@ -13,101 +13,159 @@ import LeanBF.Core.State
 ## Main definitions
 
 * `Compiler.movePtr`: Brainfuck code that moves the pointer between two cells.
-* `Compiler.copyCell`: Brainfuck code that copies one cell to another.
+* `Compiler.clearHere`: Clear the current cell to `0`.
+* `Compiler.setHere`: Set the current cell to a constant.
+* `Compiler.ifZeroElse`: Conditional on the current cell being zero.
 * `Compiler.compileInstr`: The translation of a single Minsky instruction.
+* `Compiler.compileProgram`: The full dispatch-loop program for a Minsky program.
 
-The dispatch block assumes the pointer starts at the `running` cell (0), the
-program counter `pc` lives in cell 1, and the counters `c1`, `c2` live in
-cells 2 and 3, with auxiliary cells starting at cell 4. The `jzdec1`/`jzdec2`
-translation is still a work in progress (see the Roadmap in the README).
+The compiled program keeps the pointer in the cell it addresses, so every
+block starts and ends at a known cell. The layout is: cell 0 is the `running`
+flag, cell 1 holds the program counter `pc`, cells 2 and 3 hold `c1` and
+`c2`, cell 4 is the `done` flag used by the dispatcher, and the scratch cells
+5-16 back the three `ifZeroElse` layers (the `done` test, the `pc` test, and
+the counter test inside `jzdec`).
+
+`ifZeroElse test thenBody elseBody` preserves the tested cell, runs
+`thenBody` exactly once when the cell is `0` and `elseBody` exactly once
+otherwise, and restores all scratch cells to `0`. Both bodies must start and
+end with the pointer on the tested cell.
 -/
 
 namespace LeanBF
 
 namespace Compiler
 
-/--
-Generate BF code to move from cell `i` to cell `j`.
--/
+/-- Move the pointer from cell `i` to cell `j`. -/
 def movePtr (i j : Int) : Program :=
   if i < j then
     List.replicate (j - i).toNat .inc_ptr
   else
     List.replicate (i - j).toNat .dec_ptr
 
-/--
-Generate BF code to copy cell `i` to cell `j` using cell `k` as temporary.
-Assumes pointer is at `i` initially, and `j`, `k` are 0.
-Leaves pointer at `i`.
--/
-def copyCell (i j k : Int) : Program :=
-  movePtr i i ++
-  [.loop (
-    [.dec_val] ++
-    movePtr i j ++ [.inc_val] ++
-    movePtr j k ++ [.inc_val] ++
-    movePtr k i
-  )] ++
-  movePtr i k ++
-  [.loop (
-    [.dec_val] ++
-    movePtr k i ++ [.inc_val] ++
-    movePtr i k
-  )] ++
-  movePtr k i
+/-- Clear the current cell to `0` (the pointer does not move). -/
+def clearHere : Program :=
+  [.loop [.dec_val]]
+
+/-- Set the current cell to the constant `n` (the pointer does not move). -/
+def setHere (n : ℕ) : Program :=
+  clearHere ++ List.replicate n .inc_val
 
 /--
-Compile a single Minsky instruction into a BF block.
-This block will be part of a large dispatch loop.
-Assumes pointer starts at the `running` cell (cell 0).
-The `pc` is in cell 1.
-`c1` and `c2` are in cells 2 and 3.
-Auxiliary cells start at cell 4.
+Conditional on the current cell (the `test` cell) being `0`: run `thenBody`
+when it is `0` and `elseBody` otherwise, each exactly once, and preserve the
+tested cell. The four scratch cells `s1 s2 s3 s4` are cleared at the start
+and restored to `0` at the end. Both bodies must start and end with the
+pointer on the `test` cell.
+-/
+def ifZeroElse (test s1 s2 s3 s4 : ℕ) (thenBody elseBody : Program) : Program :=
+  movePtr test s1 ++ clearHere ++
+  movePtr s1 s2 ++ clearHere ++
+  movePtr s2 s3 ++ clearHere ++
+  movePtr s3 s4 ++ clearHere ++
+  movePtr s4 test ++
+  -- copy the tested cell into s1, s2, and s4, zeroing it:
+  [.loop (
+    [.dec_val] ++
+    movePtr test s1 ++ [.inc_val] ++
+    movePtr s1 s2 ++ [.inc_val] ++
+    movePtr s2 s4 ++ [.inc_val] ++
+    movePtr s4 test
+  )] ++
+  -- s3 := 1, then clear s3 once per unit of s1: s3 = 1 iff the cell was 0:
+  movePtr test s3 ++ [.inc_val] ++
+  movePtr s3 s1 ++
+  [.loop (
+    [.dec_val] ++
+    movePtr s1 s3 ++ [.dec_val] ++
+    movePtr s3 s1
+  )] ++
+  movePtr s1 test ++
+  -- restore the tested cell from s4:
+  movePtr test s4 ++
+  [.loop (
+    [.dec_val] ++
+    movePtr s4 test ++ [.inc_val] ++
+    movePtr test s4
+  )] ++
+  movePtr s4 test ++
+  -- else-body iff s2 is non-zero:
+  movePtr test s2 ++
+  [.loop (
+    movePtr s2 test ++ elseBody ++
+    movePtr test s2 ++ clearHere
+  )] ++
+  movePtr s2 test ++
+  -- then-body iff s3 is non-zero (the cell was zero):
+  movePtr test s3 ++
+  [.loop (
+    movePtr s3 test ++ thenBody ++
+    movePtr test s3 ++ clearHere
+  )] ++
+  movePtr s3 test
+
+/--
+Compile a single Minsky instruction into a Brainfuck block. The block is part
+of a dispatch loop: it starts and ends with the pointer on the `pc` cell (1).
+A `jzdec` tests its counter with `ifZeroElse`, which preserves the counter
+value, so the decrement branch works on the preserved value.
 -/
 def compileInstr (instr : Minsky.Instruction) : Program :=
   match instr with
   | .inc1 next =>
-    movePtr 0 2 ++ [.inc_val] ++ -- increment c1
-    movePtr 2 1 ++ -- go to pc
-    (List.replicate 256 .dec_val) ++ -- clear pc (assuming 8-bit or just resetting)
-    -- Actually, for unbounded counters, we need a "set to N" helper.
-    (List.replicate next .inc_val) ++
-    movePtr 1 0 -- back to running
+    movePtr 1 2 ++ [.inc_val] ++
+    movePtr 2 1 ++
+    setHere next
   | .inc2 next =>
-    movePtr 0 3 ++ [.inc_val] ++
+    movePtr 1 3 ++ [.inc_val] ++
     movePtr 3 1 ++
-    (List.replicate 256 .dec_val) ++
-    (List.replicate next .inc_val) ++
-    movePtr 1 0
-  | .jzdec1 _ ifNonZero =>
-    movePtr 0 2 ++ -- go to c1
-    [.loop (
-      -- If c1 is non-zero
-      [.dec_val] ++ -- decrement c1
-      movePtr 2 1 ++ -- go to pc
-      (List.replicate 256 .dec_val) ++
-      (List.replicate ifNonZero .inc_val) ++
-      movePtr 1 4 ++ [.inc_val] ++ -- set flag in cell 4
-      movePtr 4 2 ++ -- back to c1
-      [.loop []] -- clear c1 to exit loop
-    )] ++
-    movePtr 2 4 ++
-    [.loop (
-      -- This loop runs if the "non-zero" branch was taken.
-      -- We just need to clear cell 4.
-      [.dec_val]
-    )] ++
-    movePtr 4 5 ++ [.inc_val] ++ -- temp flag
-    movePtr 5 2 ++ -- check if c1 is 0
-    -- This logic is getting complex. For a proof of Turing completeness,
-    -- we only need to show that *some* such program exists.
-    -- Let's use a simpler "if" structure:
-    -- copy c1 to temp, if temp is 0 then PC = ifZero else PC = ifNonZero, dec c1.
-    []
+    setHere next
+  | .jzdec1 ifZero ifNonZero =>
+    movePtr 1 2 ++
+    ifZeroElse 2 13 14 15 16
+      (movePtr 2 1 ++ setHere ifZero ++ movePtr 1 2)
+      ([.dec_val] ++ movePtr 2 1 ++ setHere ifNonZero ++ movePtr 1 2) ++
+    movePtr 2 1
+  | .jzdec2 ifZero ifNonZero =>
+    movePtr 1 3 ++
+    ifZeroElse 3 13 14 15 16
+      (movePtr 3 1 ++ setHere ifZero ++ movePtr 1 3)
+      ([.dec_val] ++ movePtr 3 1 ++ setHere ifNonZero ++ movePtr 1 3) ++
+    movePtr 3 1
   | .halt =>
-    movePtr 0 0 ++ [.dec_val] -- set running to 0
-  | .jzdec2 _ _ =>
-    [] -- TODO: implement the `jzdec2` translation
+    movePtr 1 0 ++ clearHere ++
+    movePtr 0 1
+
+/--
+One dispatch window: skip entirely if another window already matched (the
+`done` flag is set); otherwise test the `pc` cell — if it is `0`, mark `done`
+and run `block` (which sets the new `pc`), and if it is not `0`, decrement
+`pc`.
+-/
+def window (block : Program) : Program :=
+  ifZeroElse 4 5 6 7 8
+    (movePtr 4 1 ++
+      ifZeroElse 1 9 10 11 12
+        (movePtr 1 4 ++ [.inc_val] ++ movePtr 4 1 ++ block)
+        [.dec_val] ++
+      movePtr 1 4)
+    []
+
+/--
+Compile a whole Minsky program. The result is a single loop over the
+`running` cell: reset `done`, dispatch over the `pc` cell through one window
+per instruction, and if no window matched (the `pc` fell off the program)
+stop running. Initial `running`/`pc`/`c1`/`c2` are provided by the initial
+state.
+-/
+def compileProgram (m : Minsky.Program) : Program :=
+  [.loop (
+    movePtr 0 4 ++ clearHere ++
+    List.flatten (m.map (window ∘ compileInstr)) ++
+    ifZeroElse 4 5 6 7 8
+      (movePtr 4 0 ++ clearHere ++ movePtr 0 4) [] ++
+    movePtr 4 0
+  )]
 
 end Compiler
 

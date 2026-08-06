@@ -34,22 +34,24 @@ The implementation is organized into `Core` (definitions), `Theory`
   tape of unbounded `Nat` cells, pointer, input stream, and output stream.
 - **The Minsky machine model** (`Core.Minsky`): a two-counter machine with
   `inc`/`jzdec` instructions and its own `RunsTo` closure.
-- **The compiler** (`Core.Compiler`): `movePtr`/`copyCell` blocks and a
-  per-instruction translation into Brainfuck for the dispatch-loop layout.
+- **The compiler** (`Core.Compiler`): a total translation of any Minsky
+  program into a Brainfuck dispatch loop. `ifZeroElse` is a value-preserving
+  conditional, and `compileInstr`/`compileProgram` assemble the loop. The
+  compiled programs are exercised end-to-end in `Tests` with `decide`.
 - **Completeness statement** (`Theory.Completeness`): `Simulates` (a
   Brainfuck state that simulates a Minsky state) and the conjecture
   `turingCompleteness`. The conjecture is stated but not yet proven; see the
   Roadmap.
 - **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
   compiler definitions are re-asserted on concrete inputs with `rfl` and
-  `decide`.
+  `decide` — including running compiled Minsky programs (`inc1`, `inc2`,
+  `jzdec1`, `jzdec2`, `halt`) to their halting state.
 
 ## Roadmap
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Complete the compiler** | High | `jzdec1` is a placeholder block and `jzdec2` is unimplemented in `Core.Compiler`. |
-| **Prove `turingCompleteness`** | High | The central goal: a run-level simulation theorem from the dispatch loop to `RunsTo`. Needs the compiled `jzdec` structure first. |
+| **Prove `turingCompleteness`** | High | The central goal: a run-level simulation theorem from the compiled dispatch loop to `RunsTo`. |
 | **Verified example programs** | Medium | `Examples.HelloWorld` is defined but its run behavior is not yet `decide`-checked. |
 | **Stack/tape algebra** | Medium | Round-trip lemmas for `modifyCell`, `incVal`/`decVal`, and the loop-unrolling step. |
 
@@ -79,8 +81,9 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
 - `turingCompleteness` is a conjecture, not a theorem: it is recorded in
   `Theory.Completeness` and re-asserted nowhere.
 - `Examples.HelloWorld` is data only; its behavior is not yet machine-checked.
-- The `jzdec` translation is a work in progress, so the compiler does not yet
-  produce a complete dispatch loop.
+- The compiler is verified by `decide`-checked runs of small programs, not by
+  a general simulation theorem — that theorem is the `turingCompleteness`
+  roadblock.
 
 ## Installation & Building
 

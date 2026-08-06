@@ -88,8 +88,9 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **Prove `turingCompleteness`** | High | Done. `Theory.Simulate` wires `compileInstr`/`compileProgram` into the dispatch simulation: each window runs its instruction's block, the dispatch loop runs exactly the matching window, the loop body maps a simulating state to the stepped machine, and `turingCompleteness_proof` closes the statement by induction on `Minsky.RunsTo`. |
-| **More verified examples** | Medium | More Minsky machines (arithmetic, multiplication) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
+| **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
 | **Run-level tape lemmas** | Low | Done. `Theory.Invariance` provides a general `RunsTo` invariant lemma (`RunsTo_inv`) and lifts the single-step cell-preservation facts to whole runs (`RunsTo_preserves_tape_above`), so a run whose configurations keep the pointer below a bound preserves every tape cell above it. |
+| **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
 
 ## Scope & Limitations
 

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
 import LeanBF.Theory.Simulate
+import LeanBF.Theory.Simulation
 
 /-!
 # Count-Down Minsky Machine
@@ -27,6 +28,8 @@ final counter values on the tape.
 * `countDown_compiled`: The compiled program halts and leaves the final
   counter values on the tape.
 * `countDown_halts`: The compiled program halts from the canonical state.
+* `countDown_executes`: The interpreter's `run` completes the compiled
+  program in exactly n steps with `c2 = 2` on the tape.
 -/
 
 namespace LeanBF.Examples
@@ -103,5 +106,19 @@ theorem countDown_halts :
     ∃ s', RunsTo (Compiler.compileProgram countDown, simState countDownStart) s' := by
   rcases countDown_compiled with ⟨s', hrun, hpost⟩
   exact ⟨s', hrun⟩
+
+/--
+The interpreter's `run` completes the compiled program, halting in exactly
+`n` steps with the pointer back at 0, the running flag cleared, the program
+counter reset, `c1 = 0`, and `c2 = 2`.
+-/
+theorem countDown_executes :
+    ∃ n s', run n (Compiler.compileProgram countDown) (simState countDownStart) = some s' ∧
+      stepsToHalt (n + 1) (Compiler.compileProgram countDown) (simState countDownStart) = n ∧
+        s'.ptr = 0 ∧ s'.tape 0 = 0 ∧ s'.tape 1 = 0 ∧ s'.tape 2 = 0 ∧ s'.tape 3 = 2 := by
+  rcases countDown_compiled with ⟨s', hrun, hpost⟩
+  rcases run_of_RunsTo (Compiler.compileProgram countDown, simState countDownStart) s' hrun
+    with ⟨n, hex, hsteps⟩
+  exact ⟨n, s', hex, hsteps, hpost.1, hpost.2.1, hpost.2.2.1, hpost.2.2.2.1, hpost.2.2.2.2⟩
 
 end LeanBF.Examples

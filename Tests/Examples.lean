@@ -35,6 +35,12 @@ example :
     ∃ s', RunsTo (Compiler.compileProgram countDown, simState countDownStart) s' :=
   countDown_halts
 
+example :
+    ∃ n s', run n (Compiler.compileProgram countDown) (simState countDownStart) = some s' ∧
+      stepsToHalt (n + 1) (Compiler.compileProgram countDown) (simState countDownStart) = n ∧
+        s'.ptr = 0 ∧ s'.tape 0 = 0 ∧ s'.tape 1 = 0 ∧ s'.tape 2 = 0 ∧ s'.tape 3 = 2 :=
+  countDown_executes
+
 example : Minsky.RunsTo quadruple quadrupleStart quadrupleFinal :=
   quadruple_runs
 
@@ -46,5 +52,11 @@ example :
 example :
     ∃ s', RunsTo (Compiler.compileProgram quadruple, simState quadrupleStart) s' :=
   quadruple_halts
+
+example :
+    ∃ n s', run n (Compiler.compileProgram quadruple) (simState quadrupleStart) = some s' ∧
+      stepsToHalt (n + 1) (Compiler.compileProgram quadruple) (simState quadrupleStart) = n ∧
+        s'.ptr = 0 ∧ s'.tape 0 = 0 ∧ s'.tape 1 = 0 ∧ s'.tape 2 = 0 ∧ s'.tape 3 = 8 :=
+  quadruple_executes
 
 end LeanBF.Tests

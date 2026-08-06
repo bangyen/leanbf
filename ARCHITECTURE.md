@@ -152,16 +152,19 @@ output is exactly the character codes of `Hello World!` and a newline
 `CountDown` is a concrete two-counter Minsky machine (`jzdec1 2 1; inc2 0;
 halt`) that decrements `c1` to zero while counting in `c2`. Unlike
 `HelloWorld`, it exercises the compiler: `countDown_runs` proves the machine
-runs to its final state, and `countDown_compiled` pushes that run through
+runs to its final state, `countDown_compiled` pushes that run through
 `runsTo_compileProgram` to prove the compiled Brainfuck program halts on the
-canonical simulating state with `c2 = 2` on the tape (`countDown_halts`).
+canonical simulating state with `c2 = 2` on the tape, and
+`countDown_executes` converts the resulting `RunsTo` chain via `run_of_RunsTo`
+into an exact interpreter run: `run n` completes in exactly `n` steps
+(`countDown_halts`).
 
 `Quadruple` is a longer machine (`jzdec2 3 1; inc1 2; inc1 0; jzdec1 6 4;
 inc2 5; inc2 3; halt`) that quadruples `c2` via two transfer phases and
 exercises every instruction (`inc1`, `inc2`, `jzdec1`, `jzdec2`, `halt`).
 `quadruple_runs` proves the 20-step run from `c2 = 2` to `c2 = 8`, and
 `quadruple_compiled`/`quadruple_halts` verify the compiled program the same
-way.
+way, with `quadruple_executes` giving the exact interpreter run (`c2 = 8`).
 
 ## Project Structure
 

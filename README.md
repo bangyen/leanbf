@@ -47,7 +47,8 @@ The implementation is organized into `Core` (definitions), `Theory`
   `Hello World!` and a newline and to halt, plus two concrete Minsky machines
   (`countDown`, `quadruple`) whose compiled Brainfuck programs are verified
   via `runsTo_compileProgram` to halt with the final counter values on the
-  tape.
+  tape — and, via `run_of_RunsTo`, confirmed to complete under the
+  interpreter's executable `run` in exactly `n` steps.
 - **Tape algebra** (`Theory.State`) and **semantics lemmas**
   (`Theory.Semantics`): the cell operations act only on the addressed cell
   and round-trip with the current value (`currentVal_incVal_decVal`), and the

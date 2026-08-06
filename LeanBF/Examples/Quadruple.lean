@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
 import LeanBF.Theory.Simulate
+import LeanBF.Theory.Simulation
 
 /-!
 # Quadruple Minsky Machine
@@ -28,6 +29,8 @@ and phase two transfers `c1` back into `c2`, adding twice per unit (so
 * `quadruple_compiled`: The compiled program halts and leaves the final
   counter values on the tape.
 * `quadruple_halts`: The compiled program halts from the canonical state.
+* `quadruple_executes`: The interpreter's `run` completes the compiled
+  program in exactly n steps with `c2 = 8` on the tape.
 -/
 
 namespace LeanBF.Examples
@@ -135,5 +138,19 @@ theorem quadruple_halts :
     ∃ s', RunsTo (Compiler.compileProgram quadruple, simState quadrupleStart) s' := by
   rcases quadruple_compiled with ⟨s', hrun, hpost⟩
   exact ⟨s', hrun⟩
+
+/--
+The interpreter's `run` completes the compiled program, halting in exactly
+`n` steps with the pointer back at 0, the running flag cleared, the program
+counter reset, `c1 = 0`, and `c2 = 8`.
+-/
+theorem quadruple_executes :
+    ∃ n s', run n (Compiler.compileProgram quadruple) (simState quadrupleStart) = some s' ∧
+      stepsToHalt (n + 1) (Compiler.compileProgram quadruple) (simState quadrupleStart) = n ∧
+        s'.ptr = 0 ∧ s'.tape 0 = 0 ∧ s'.tape 1 = 0 ∧ s'.tape 2 = 0 ∧ s'.tape 3 = 8 := by
+  rcases quadruple_compiled with ⟨s', hrun, hpost⟩
+  rcases run_of_RunsTo (Compiler.compileProgram quadruple, simState quadrupleStart) s' hrun
+    with ⟨n, hex, hsteps⟩
+  exact ⟨n, s', hex, hsteps, hpost.1, hpost.2.1, hpost.2.2.1, hpost.2.2.2.1, hpost.2.2.2.2⟩
 
 end LeanBF.Examples

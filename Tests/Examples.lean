@@ -35,4 +35,16 @@ example :
     ∃ s', RunsTo (Compiler.compileProgram countDown, simState countDownStart) s' :=
   countDown_halts
 
+example : Minsky.RunsTo quadruple quadrupleStart quadrupleFinal :=
+  quadruple_runs
+
+example :
+    ∃ s', RunsTo (Compiler.compileProgram quadruple, simState quadrupleStart) s' ∧
+      s'.ptr = 0 ∧ s'.tape 0 = 0 ∧ s'.tape 1 = 0 ∧ s'.tape 2 = 0 ∧ s'.tape 3 = 8 :=
+  quadruple_compiled
+
+example :
+    ∃ s', RunsTo (Compiler.compileProgram quadruple, simState quadrupleStart) s' :=
+  quadruple_halts
+
 end LeanBF.Tests

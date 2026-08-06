@@ -156,6 +156,13 @@ runs to its final state, and `countDown_compiled` pushes that run through
 `runsTo_compileProgram` to prove the compiled Brainfuck program halts on the
 canonical simulating state with `c2 = 2` on the tape (`countDown_halts`).
 
+`Quadruple` is a longer machine (`jzdec2 3 1; inc1 2; inc1 0; jzdec1 6 4;
+inc2 5; inc2 3; halt`) that quadruples `c2` via two transfer phases and
+exercises every instruction (`inc1`, `inc2`, `jzdec1`, `jzdec2`, `halt`).
+`quadruple_runs` proves the 20-step run from `c2 = 2` to `c2 = 8`, and
+`quadruple_compiled`/`quadruple_halts` verify the compiled program the same
+way.
+
 ## Project Structure
 
 - `LeanBF/Core`: Definitions (Instruction, State, Semantics, Minsky,

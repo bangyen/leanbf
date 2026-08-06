@@ -23,7 +23,7 @@ final counter values on the tape.
 ## Theorems
 
 * `countDown_runs`: The Minsky machine runs from `countDownStart` to
-  `countDownFinal`.
+  the final state.
 * `countDown_compiled`: The compiled program halts and leaves the final
   counter values on the tape.
 * `countDown_halts`: The compiled program halts from the canonical state.

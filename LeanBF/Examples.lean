@@ -5,6 +5,7 @@ Authors: Bangyen Pham
 -/
 import LeanBF.Examples.CountDown
 import LeanBF.Examples.HelloWorld
+import LeanBF.Examples.Quadruple
 
 /-!
 # Examples Aggregator

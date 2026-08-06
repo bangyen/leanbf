@@ -180,7 +180,7 @@ theorem runsTo_inc_val (s : State) :
 /-- The `inc1` block increments `c1` and sets the program counter. -/
 theorem runsTo_compileInstr_inc1 (next : Nat) (ms : Minsky.State)
     (s : State)
-    (hptr : s.ptr = 1) (_hpc : s.tape 1 = 0) (hc1 : s.tape 2 = ms.c1)
+    (hptr : s.ptr = 1) (hc1 : s.tape 2 = ms.c1)
     (hc2 : s.tape 3 = ms.c2) (hrun : s.tape 0 = 1) :
     ∃ s', RunsTo (Compiler.compileInstr (.inc1 next), s) s' ∧
       s'.ptr = 1 ∧ s'.tape 1 = next ∧ s'.tape 2 = ms.c1 + 1 ∧
@@ -262,7 +262,7 @@ theorem runsTo_compileInstr_inc1 (next : Nat) (ms : Minsky.State)
 
 /-- The `inc2` block increments `c2` and sets the program counter. -/
 theorem runsTo_compileInstr_inc2 (next : Nat) (ms : Minsky.State) (s : State)
-    (hptr : s.ptr = 1) (_hpc : s.tape 1 = 0) (hc1 : s.tape 2 = ms.c1)
+    (hptr : s.ptr = 1) (hc1 : s.tape 2 = ms.c1)
     (hc2 : s.tape 3 = ms.c2) (hrun : s.tape 0 = 1) :
     ∃ s', RunsTo (Compiler.compileInstr (.inc2 next), s) s' ∧
       s'.ptr = 1 ∧ s'.tape 1 = next ∧ s'.tape 2 = ms.c1 ∧
@@ -540,7 +540,7 @@ theorem runsTo_jzdecElse (testCell : Int) (ifNonZero : Nat) (s : State)
 
 /-- The `jzdec1` block branches on `c1`. -/
 theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : State)
-    (hptr : s.ptr = 1) (_hpc : s.tape 1 = 0) (hc1 : s.tape 2 = ms.c1)
+    (hptr : s.ptr = 1) (hc1 : s.tape 2 = ms.c1)
     (hc2 : s.tape 3 = ms.c2) (hrun : s.tape 0 = 1) :
     ∃ s', RunsTo (Compiler.compileInstr (.jzdec1 ifZero ifNonZero), s) s' ∧
       s'.ptr = 1 ∧ s'.tape 1 = (if ms.c1 = 0 then ifZero else ifNonZero) ∧
@@ -854,7 +854,7 @@ theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) 
 
 theorem runsTo_compileInstr_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State)
     (s : State)
-    (hptr : s.ptr = 1) (_hpc : s.tape 1 = 0) (hc1 : s.tape 2 = ms.c1)
+    (hptr : s.ptr = 1) (hc1 : s.tape 2 = ms.c1)
     (hc2 : s.tape 3 = ms.c2) (hrun : s.tape 0 = 1) :
     ∃ s', RunsTo (Compiler.compileInstr (.jzdec2 ifZero ifNonZero), s) s' ∧
       s'.ptr = 1 ∧ s'.tape 1 = (if ms.c2 = 0 then ifZero else ifNonZero) ∧
@@ -1707,7 +1707,7 @@ theorem runsTo_window_inc1 (next : Nat) (ms : Minsky.State) (s : State)
     have hb0tape12 : b0.tape 12 = 0 := by
       change (windowBlockStart s).tape 12 = 0
       rfl
-    rcases runsTo_compileInstr_inc1 next ms b0 hb0ptr hb0pc hb0c1 hb0c2 hb0run with
+    rcases runsTo_compileInstr_inc1 next ms b0 hb0ptr hb0c1 hb0c2 hb0run with
       ⟨s'', hblock, hp1, hpc', hc1', hc2', hrun', hp4, hp5, hp6, hp8, hp9, hp10, hp12⟩
     have hpost : s''.ptr = 1 ∧ s''.tape 1 = next ∧ s''.tape 2 = ms.c1 + 1 ∧
         s''.tape 3 = ms.c2 ∧ s''.tape 0 = 1 ∧ s''.tape 4 = 1 ∧
@@ -1796,7 +1796,7 @@ theorem runsTo_window_inc2 (next : Nat) (ms : Minsky.State) (s : State)
     have hb0tape12 : b0.tape 12 = 0 := by
       change (windowBlockStart s).tape 12 = 0
       rfl
-    rcases runsTo_compileInstr_inc2 next ms b0 hb0ptr hb0pc hb0c1 hb0c2 hb0run with
+    rcases runsTo_compileInstr_inc2 next ms b0 hb0ptr hb0c1 hb0c2 hb0run with
       ⟨s'', hblock, hp1, hpc', hc1', hc2', hrun', hp4, hp5, hp6, hp8, hp9, hp10, hp12⟩
     have hpost : s''.ptr = 1 ∧ s''.tape 1 = next ∧ s''.tape 2 = ms.c1 ∧
         s''.tape 3 = ms.c2 + 1 ∧ s''.tape 0 = 1 ∧ s''.tape 4 = 1 ∧
@@ -1886,7 +1886,7 @@ theorem runsTo_window_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : S
     have hb0tape12 : b0.tape 12 = 0 := by
       change (windowBlockStart s).tape 12 = 0
       rfl
-    rcases runsTo_compileInstr_jzdec1 ifZero ifNonZero ms b0 hb0ptr hb0pc hb0c1 hb0c2
+    rcases runsTo_compileInstr_jzdec1 ifZero ifNonZero ms b0 hb0ptr hb0c1 hb0c2
         hb0run with
       ⟨s'', hblock, hp1, hpc', hc1', hc2', hrun', hp4, hp5, hp6, hp8, hp9, hp10, hp12⟩
     have hpost : s''.ptr = 1 ∧ s''.tape 1 = (if ms.c1 = 0 then ifZero else ifNonZero) ∧
@@ -1981,7 +1981,7 @@ theorem runsTo_window_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : S
     have hb0tape12 : b0.tape 12 = 0 := by
       change (windowBlockStart s).tape 12 = 0
       rfl
-    rcases runsTo_compileInstr_jzdec2 ifZero ifNonZero ms b0 hb0ptr hb0pc hb0c1 hb0c2 hb0run with
+    rcases runsTo_compileInstr_jzdec2 ifZero ifNonZero ms b0 hb0ptr hb0c1 hb0c2 hb0run with
       ⟨s'', hblock, hp1, hpc', hc1', hc2', hrun', hp4, hp5, hp6, hp8, hp9, hp10, hp12⟩
     have hpost : s''.ptr = 1 ∧ s''.tape 1 = (if ms.c2 = 0 then ifZero else ifNonZero) ∧
         s''.tape 2 = ms.c1 ∧

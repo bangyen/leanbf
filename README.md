@@ -11,10 +11,10 @@ LeanBF formalizes the [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck)
 esolang in the [Lean 4](https://leanprover.github.io/) interactive theorem
 prover. It pins down a precise, total, deterministic formalization — the
 tape, the instruction set, and a small-step operational semantics are all
-pure Lean definitions — and its long-term goal is a machine-checked proof of
-Brainfuck's Turing completeness by simulating a two-counter Minsky machine.
-Every transition of the interpreter is a pure Lean function; nothing is
-executed by an external trusted interpreter.
+pure Lean definitions — and proves Brainfuck's Turing completeness by
+simulating a two-counter Minsky machine (`turingCompleteness`, closed by
+`Theory.Simulate`). Every transition of the interpreter is a pure Lean
+function; nothing is executed by an external trusted interpreter.
 
 ## Architecture
 
@@ -22,8 +22,9 @@ For a detailed overview of the project's design and the current state of the
 verified theorems, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 The implementation is organized into `Core` (definitions), `Theory`
-(verified theorems — currently the `turingCompleteness` statement), `Examples`
-(example programs), and `Tests` (kernel re-assertions of the definitions).
+(verified theorems — the dispatch simulation, the completeness proof, and
+the run-level tape lemmas), `Examples` (example programs), and `Tests`
+(kernel re-assertions of the definitions).
 
 ## Results
 

@@ -82,6 +82,14 @@ kernel `decide` reductions on small Minsky programs (`inc1`, `inc2`,
 Theorems are kept separate from definitions (`LeanBF/Theory`), mirroring the
 project convention that `Core` files contain only definitions.
 
+- `Theory/State.lean`: tape algebra. The cell operations act only on the
+  addressed cell (`tape_modifyCell_self`/`tape_modifyCell_other`) and
+  round-trip with the current value (`currentVal_incVal_decVal`), and `>`/`<`
+  leave the tape and pointer alone (`incPtr_tape`, `ptr_incPtr_decPtr`).
+- `Theory/Semantics.lean`: single-step semantics. The empty program has no
+  step, `>` moves the pointer, and `[` either skips its body (zero current
+  value) or runs it and re-queues the loop (non-zero). The empty program
+  halts.
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
   `tape 3 = c2`, `tape 0 = 1` for running) and the statement of the project's

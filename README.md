@@ -45,6 +45,10 @@ The implementation is organized into `Core` (definitions), `Theory`
 - **Verified example program** (`LeanBF.Examples.HelloWorld`): the classic
   `Hello World!` program, machine-checked with `decide` to print exactly
   `Hello World!` and a newline and to halt.
+- **Tape algebra** (`Theory.State`) and **semantics lemmas**
+  (`Theory.Semantics`): the cell operations act only on the addressed cell
+  and round-trip with the current value (`currentVal_incVal_decVal`), and the
+  single-step behavior of the empty program, `>`, and `[` is pinned down.
 - **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
   compiler definitions are re-asserted on concrete inputs with `rfl` and
   `decide` — including running compiled Minsky programs (`inc1`, `inc2`,
@@ -56,7 +60,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 | :--- | :--- | :--- |
 | **Prove `turingCompleteness`** | High | The central goal: a run-level simulation theorem from the compiled dispatch loop to `RunsTo`. |
 | **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
-| **Stack/tape algebra** | Medium | Round-trip lemmas for `modifyCell`, `incVal`/`decVal`, and the loop-unrolling step. |
+| **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 
 ## Scope & Limitations
 

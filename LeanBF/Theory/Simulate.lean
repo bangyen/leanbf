@@ -852,7 +852,6 @@ theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) 
         if_neg (by decide : ¬ (12 : Int) = 15),
         if_neg (by decide : ¬ (12 : Int) = 16)]
 
-
 theorem runsTo_compileInstr_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State)
     (s : State)
     (hptr : s.ptr = 1) (_hpc : s.tape 1 = 0) (hc1 : s.tape 2 = ms.c1)
@@ -1172,7 +1171,6 @@ theorem runsTo_compileInstr_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State)
         if_neg (by decide : ¬ (12 : Int) = 15),
         if_neg (by decide : ¬ (12 : Int) = 16)]
 
-
 /-- The state in which `block` runs inside a window: the `done` flag is set and
     the pointer is back on the `pc` cell. -/
 def windowBlockStart (s : State) : State :=
@@ -1367,8 +1365,6 @@ theorem runsTo_window_match (block : Program) (ms ms' : Minsky.State) (s s'' : S
     simpa only [hprog] using hOuter
   exact ⟨a2, hwin, ha2ptr, ha2tape1, ha2tape2, ha2tape3, ha2tape4, ha2run, ha2tape5,
     ha2tape6, ha2tape7, ha2tape8⟩
-
-
 
 /-- A single `-` decrements the current cell. -/
 theorem runsTo_dec_val (s : State) :
@@ -1648,8 +1644,6 @@ theorem runsTo_window_skip (block : Program) (ms : Minsky.State) (s : State)
   exact ⟨a2, hwin, ha2ptr, ha2tape1, ha2tape2, ha2tape3, ha2tape4, ha2run, ha2tape5,
     ha2tape6, ha2tape7, ha2tape8⟩
 
-
-
 /-- The prepared window state keeps the running flag and counters, clears the
     `pc`, and sets the `done` flag and the two window flags. -/
 theorem windowBlockStart_tape (s : State) :
@@ -1660,7 +1654,6 @@ theorem windowBlockStart_tape (s : State) :
     (windowBlockStart s).tape 8 = 0 ∧ (windowBlockStart s).tape 9 = 0 ∧
     (windowBlockStart s).tape 10 = 0 ∧ (windowBlockStart s).tape 12 = 0 := by
   repeat' constructor
-
 
 /-- The `inc1` window: if the `pc` is zero, run the `inc1` block and set
     `done`; otherwise decrement the `pc`. -/
@@ -1753,8 +1746,6 @@ theorem runsTo_window_inc1 (next : Nat) (ms : Minsky.State) (s : State)
     simp only [hpc0]
     exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
 
-
-
 theorem runsTo_window_inc2 (next : Nat) (ms : Minsky.State) (s : State)
     (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 0) :
     ∃ s', RunsTo (Compiler.window (Compiler.compileInstr (.inc2 next)), s) s' ∧
@@ -1843,8 +1834,6 @@ theorem runsTo_window_inc2 (next : Nat) (ms : Minsky.State) (s : State)
     refine ⟨s', hwin, ?_⟩
     simp only [hpc0]
     exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
-
-
 
 theorem runsTo_window_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : State)
     (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 0) :
@@ -1941,8 +1930,6 @@ theorem runsTo_window_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : S
     simp only [hpc0]
     exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
 
-
-
 theorem runsTo_window_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : State)
     (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 0) :
     ∃ s', RunsTo (Compiler.window (Compiler.compileInstr (.jzdec2 ifZero ifNonZero)), s) s' ∧
@@ -2038,9 +2025,6 @@ theorem runsTo_window_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : S
     simp only [hpc0]
     exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
 
-
-
-
 /-- The `halt` window: if the `pc` is zero, run the `halt` block (which clears
     the running flag) and set `done`; otherwise decrement the `pc`. -/
 theorem runsTo_window_halt (ms : Minsky.State) (s : State)
@@ -2134,8 +2118,6 @@ theorem runsTo_window_halt (ms : Minsky.State) (s : State)
     simp only [hpc0]
     exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
 
-
-
 /-- A window whose `done` flag is set runs nothing. -/
 theorem runsTo_window_done' (block : Program) (s : State)
     (hptr : s.ptr = 4) (hdone : s.tape 4 = 1) :
@@ -2219,8 +2201,6 @@ theorem runsTo_window_done' (block : Program) (s : State)
   exact ⟨a2, hwin, ha2ptr, ha2tape1, ha2tape2, ha2tape3, ha2tape4, ha2run, ha2tape5,
     ha2tape6, ha2tape7, ha2tape8⟩
 
-
-
 /-- The Minsky state after the dispatch loop runs the windows for the current
     `pc`. -/
 def dispatchMs (m : Minsky.Program) (ms : Minsky.State) : Minsky.State :=
@@ -2243,11 +2223,6 @@ def dispatchRunning (m : Minsky.Program) (ms : Minsky.State) : Nat :=
   | .halt :: _, 0 => 0
   | _ :: _, 0 => 1
   | _ :: rest, k + 1 => dispatchRunning rest { ms with pc := k }
-
-
-
-
-
 
 /-- With the `done` flag already set, the remaining windows do nothing. -/
 theorem runsTo_windows_done (m : Minsky.Program) (ms : Minsky.State) (running : Nat)
@@ -2291,8 +2266,6 @@ theorem runsTo_windows_done (m : Minsky.Program) (ms : Minsky.State) (running : 
           (List.flatten (rest.map (Compiler.window ∘ Compiler.compileInstr))) s1 s' hw1 hrest
       exact ⟨s', hchain, post⟩
 
-
-
 theorem stepInstr_jzdec1_pc (ms : Minsky.State) (ifZero ifNonZero : Nat) :
     (Minsky.stepInstr (.jzdec1 ifZero ifNonZero) ms).pc =
       (if ms.c1 = 0 then ifZero else ifNonZero) := by
@@ -2321,22 +2294,20 @@ theorem stepInstr_jzdec2_c2 (ms : Minsky.State) (ifZero ifNonZero : Nat) :
       (if ms.c2 = 0 then ms.c2 else ms.c2 - 1) := by
   by_cases hc : ms.c2 = 0 <;> simp only [Minsky.stepInstr, hc, if_true, if_false]
 
-
-
 theorem dispatchDone_succ (instr : Minsky.Instruction) (rest : Minsky.Program)
     (ms : Minsky.State) (k : Nat) (hpc : ms.pc = Nat.succ k) :
     dispatchDone (instr :: rest) ms = dispatchDone rest { ms with pc := k } := by
-  simp [dispatchDone, hpc]
+  simp only [hpc, Nat.succ_eq_add_one, Nat.add_right_cancel_iff, dispatchDone]
 
 theorem dispatchRunning_succ (instr : Minsky.Instruction) (rest : Minsky.Program)
     (ms : Minsky.State) (k : Nat) (hpc : ms.pc = Nat.succ k) :
     dispatchRunning (instr :: rest) ms = dispatchRunning rest { ms with pc := k } := by
-  simp [dispatchRunning, hpc]
+  simp only [hpc, Nat.succ_eq_add_one, Nat.add_right_cancel_iff, dispatchRunning]
 
 theorem dispatchMs_succ (instr : Minsky.Instruction) (rest : Minsky.Program)
     (ms : Minsky.State) (k : Nat) (hpc : ms.pc = Nat.succ k) :
     dispatchMs (instr :: rest) ms = dispatchMs rest { ms with pc := k } := by
-  simp [dispatchMs, hpc]
+  simp only [hpc, Nat.succ_eq_add_one, Nat.add_right_cancel_iff, dispatchMs]
 
 theorem runsTo_dispatch (m : Minsky.Program) (ms : Minsky.State) (s : State)
     (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 0)
@@ -2592,8 +2563,6 @@ theorem runsTo_dispatch (m : Minsky.Program) (ms : Minsky.State) (s : State)
           · exact post.2.2.2.2.2.2.2.2.1
           · exact post.2.2.2.2.2.2.2.2.2
 
-
-
 theorem stepInstr_pc_irrelevant (instr : Minsky.Instruction) (ms : Minsky.State) (k : Nat)
     (hne : instr ≠ .halt) :
     Minsky.stepInstr instr { ms with pc := k } = Minsky.stepInstr instr ms := by
@@ -2609,26 +2578,44 @@ theorem dispatchMs_step (m : Minsky.Program) (ms : Minsky.State) (instr : Minsky
     dispatchDone m ms = true ∧ dispatchRunning m ms = 1 ∧
       dispatchMs m ms = Minsky.stepInstr instr ms := by
   induction m generalizing ms hne with
-  | nil => simp at h
+  | nil =>
+      simp only [List.length_nil, not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at h
   | cons head tail ih =>
       cases hpc : ms.pc with
       | zero =>
-          have hhead : head = instr := by simpa [hpc] using h
+          have hhead : head = instr := by
+            simp only [hpc, List.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one,
+              or_true, getElem?_pos, List.getElem_cons_zero, Option.some.injEq] at h
+            exact h
           rw [hhead]
           cases instr with
-          | inc1 next => simp [dispatchDone, dispatchRunning, dispatchMs, hpc]
-          | inc2 next => simp [dispatchDone, dispatchRunning, dispatchMs, hpc]
-          | jzdec1 ifZero ifNonZero => simp [dispatchDone, dispatchRunning, dispatchMs, hpc]
-          | jzdec2 ifZero ifNonZero => simp [dispatchDone, dispatchRunning, dispatchMs, hpc]
+          | inc1 next =>
+              unfold dispatchDone dispatchRunning dispatchMs
+              rw [hpc]
+              exact ⟨rfl, rfl, rfl⟩
+          | inc2 next =>
+              unfold dispatchDone dispatchRunning dispatchMs
+              rw [hpc]
+              exact ⟨rfl, rfl, rfl⟩
+          | jzdec1 ifZero ifNonZero =>
+              unfold dispatchDone dispatchRunning dispatchMs
+              rw [hpc]
+              exact ⟨rfl, rfl, rfl⟩
+          | jzdec2 ifZero ifNonZero =>
+              unfold dispatchDone dispatchRunning dispatchMs
+              rw [hpc]
+              exact ⟨rfl, rfl, rfl⟩
           | halt => exact False.elim (hne rfl)
       | succ k =>
           have hk : (tail : List Minsky.Instruction)[k]? = some instr := by
-            simpa [hpc] using h
+            simp only [hpc, List.getElem?_cons_succ] at h
+            exact h
           rcases ih ({ ms with pc := k } : Minsky.State) hk hne with ⟨hd, hr, hm⟩
           have hres : dispatchMs tail ({ ms with pc := k }) =
               Minsky.stepInstr instr ms := by
             rw [hm, stepInstr_pc_irrelevant instr ms k hne]
-          simp [dispatchDone, dispatchRunning, dispatchMs, hpc]
+          rw [dispatchDone_succ head tail ms k hpc, dispatchRunning_succ head tail ms k hpc,
+            dispatchMs_succ head tail ms k hpc]
           exact ⟨hd, hr, hres⟩
 
 theorem dispatch_halt (m : Minsky.Program) (ms : Minsky.State)
@@ -2636,23 +2623,37 @@ theorem dispatch_halt (m : Minsky.Program) (ms : Minsky.State)
     dispatchDone m ms = true ∧ dispatchRunning m ms = 0 ∧
       dispatchMs m ms = { ms with pc := 0 } := by
   induction m generalizing ms with
-  | nil => simp at h
+  | nil =>
+      simp only [List.length_nil, not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at h
   | cons head tail ih =>
       cases hpc : ms.pc with
       | zero =>
-          have hhead : head = .halt := by simpa [hpc] using h
+          have hhead : head = .halt := by
+            simp only [hpc, List.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one,
+              or_true, getElem?_pos, List.getElem_cons_zero, Option.some.injEq] at h
+            exact h
           rw [hhead]
-          simp [dispatchDone, dispatchRunning, dispatchMs, hpc, Minsky.stepInstr]
-          cases ms with
-          | mk pc c1 c2 =>
-              congr
-              all_goals
-                first | exact hpc | rfl
+          constructor
+          · unfold dispatchDone
+            rw [hpc]
+          · constructor
+            · unfold dispatchRunning
+              rw [hpc]
+            · unfold dispatchMs
+              rw [hpc]
+              change Minsky.stepInstr .halt ms = { ms with pc := 0 }
+              unfold Minsky.stepInstr
+              cases ms with
+              | mk pc c1 c2 =>
+                  change Minsky.State.mk pc c1 c2 = Minsky.State.mk 0 c1 c2
+                  congr
       | succ k =>
           have hk : (tail : List Minsky.Instruction)[k]? = some .halt := by
-            simpa [hpc] using h
+            simp only [hpc, List.getElem?_cons_succ] at h
+            exact h
           rcases ih ({ ms with pc := k } : Minsky.State) hk with ⟨hd, hr, hm⟩
-          simp [dispatchDone, dispatchRunning, dispatchMs, hpc]
+          rw [dispatchDone_succ head tail ms k hpc, dispatchRunning_succ head tail ms k hpc,
+            dispatchMs_succ head tail ms k hpc]
           exact ⟨hd, hr, hm⟩
 
 theorem dispatch_none (m : Minsky.Program) (ms : Minsky.State)
@@ -2661,16 +2662,21 @@ theorem dispatch_none (m : Minsky.Program) (ms : Minsky.State)
       dispatchMs m ms = { ms with pc := ms.pc - m.length } := by
   induction m generalizing ms with
   | nil =>
-      simp [dispatchDone, dispatchRunning, dispatchMs]
+      simp only [dispatchDone, dispatchRunning, dispatchMs, List.length_nil, tsub_zero, and_self]
   | cons head tail ih =>
       cases hpc : ms.pc with
       | zero =>
-          simp [hpc] at h
+          simp only [hpc, List.length_cons, lt_add_iff_pos_left, add_pos_iff, zero_lt_one, or_true,
+            getElem?_pos, List.getElem_cons_zero, reduceCtorEq] at h
       | succ k =>
           have hk : (tail : List Minsky.Instruction)[k]? = none := by
-            simpa [hpc] using h
+            simp only [hpc, List.getElem?_cons_succ] at h
+            exact h
           rcases ih ({ ms with pc := k } : Minsky.State) hk with ⟨hd, hr, hm⟩
-          simp [dispatchDone, dispatchRunning, dispatchMs, hpc]
+          rw [dispatchDone_succ head tail ms k hpc, dispatchRunning_succ head tail ms k hpc,
+            dispatchMs_succ head tail ms k hpc]
+          rw [show k + 1 - (head :: tail).length = k - tail.length
+          from by simp only [List.length_cons, Nat.succ_sub_succ]]
           exact ⟨hd, hr, hm⟩
 
 /-- One iteration of the `compileProgram` loop: clear `done`, dispatch, and
@@ -2824,7 +2830,7 @@ theorem runsTo_compileBody (m : Minsky.Program) (ms : Minsky.State) (s : State)
         if_neg (by decide : ¬ (8 : Int) = 6), if_neg (by decide : ¬ (8 : Int) = 7), if_true]
   · have hd0 : a3.tape 4 = 0 := by
       rw [h3done]
-      simp [hD]
+      rw [if_neg hD]
     let m1 : State := { thenBodyState 4 5 6 7 8 a3 with ptr := 0 }
     let m2 : State := { m1 with tape := fun i => if i = (0 : Int) then 0 else m1.tape i }
     let m3 : State := { m2 with ptr := 4 }
@@ -2962,34 +2968,54 @@ theorem runsTo_compileBody (m : Minsky.Program) (ms : Minsky.State) (s : State)
     · simp only [a5, ha4tape7]
     · simp only [a5, ha4tape8]
 
-
-
 lemma step_getElem (m : Minsky.Program) (ms ms' : Minsky.State)
     (h : Minsky.step m ms = some ms') :
     ∃ instr : Minsky.Instruction, (m : List Minsky.Instruction)[ms.pc]? = some instr ∧
       instr ≠ .halt ∧ Minsky.stepInstr instr ms = ms' := by
   unfold Minsky.step at h
   cases hpc : (m : List Minsky.Instruction)[ms.pc]? with
-  | none => simp [hpc] at h
+  | none =>
+      rw [hpc] at h
+      cases h
   | some ins =>
       cases ins with
       | inc1 next =>
-          simp [hpc] at h
-          exact ⟨.inc1 next, rfl, by simp, h⟩
+          rw [hpc] at h
+          simp only [Option.some.injEq] at h
+          have hne' : (.inc1 next : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.inc1 next, rfl, hne', h⟩
       | inc2 next =>
-          simp [hpc] at h
-          exact ⟨.inc2 next, rfl, by simp, h⟩
+          rw [hpc] at h
+          simp only [Option.some.injEq] at h
+          have hne' : (.inc2 next : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.inc2 next, rfl, hne', h⟩
       | jzdec1 ifZero ifNonZero =>
-          simp [hpc] at h
+          rw [hpc] at h
           have hstep : Minsky.stepInstr (.jzdec1 ifZero ifNonZero) ms = ms' := by
-            by_cases hc : ms.c1 = 0 <;> simp [Minsky.stepInstr, hc] at h ⊢ <;> exact h
-          exact ⟨.jzdec1 ifZero ifNonZero, rfl, by simp, hstep⟩
+            by_cases hc : ms.c1 = 0
+            <;> simp only [hc, reduceIte, Option.some.injEq, Minsky.stepInstr] at h ⊢
+            <;> exact h
+          have hne' : (.jzdec1 ifZero ifNonZero : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.jzdec1 ifZero ifNonZero, rfl, hne', hstep⟩
       | jzdec2 ifZero ifNonZero =>
-          simp [hpc] at h
+          rw [hpc] at h
           have hstep : Minsky.stepInstr (.jzdec2 ifZero ifNonZero) ms = ms' := by
-            by_cases hc : ms.c2 = 0 <;> simp [Minsky.stepInstr, hc] at h ⊢ <;> exact h
-          exact ⟨.jzdec2 ifZero ifNonZero, rfl, by simp, hstep⟩
-      | halt => simp [hpc] at h
+            by_cases hc : ms.c2 = 0
+            <;> simp only [hc, reduceIte, Option.some.injEq, Minsky.stepInstr] at h ⊢
+            <;> exact h
+          have hne' : (.jzdec2 ifZero ifNonZero : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.jzdec2 ifZero ifNonZero, rfl, hne', hstep⟩
+      | halt =>
+          rw [hpc] at h
+          cases h
 
 /-- The compiled program runs a Minsky machine to its terminal state, then
     clears the running flag. -/
@@ -3085,8 +3111,6 @@ theorem runsTo_compileProgram (m : Minsky.Program) (ms ms' : Minsky.State) (s : 
       · exact hpost.2.2.2.1
       · exact hpost.2.2.2.2
 
-
-
 /-- Brainfuck is Turing complete: the two-counter Minsky machine is simulated
     by `Compiler.compileProgram`. -/
 theorem turingCompleteness_proof : turingCompleteness := by
@@ -3100,6 +3124,5 @@ theorem turingCompleteness_proof : turingCompleteness := by
   rcases runsTo_compileProgram m ms ms_final (simState ms) hruns hsim hclean with
     ⟨bfs_final, hrun, hpost⟩
   exact ⟨bfs_final, hrun⟩
-
 
 end LeanBF

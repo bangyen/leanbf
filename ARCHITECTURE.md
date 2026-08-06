@@ -90,7 +90,10 @@ project convention that `Core` files contain only definitions.
   step theorem: `>`/`<` move the pointer, `+`/`-` change the current cell,
   `,` reads input (writing `0` at end-of-input), `.` writes output, and `[`
   either skips its body (zero current value) or runs it and re-queues the
-  loop (non-zero). The empty program has no step and halts.
+  loop (non-zero). It also covers run-level I/O (`read_write_echo`,
+  `runSeq_read_input` — reads consume the input prefix) and divergence
+  (`loop_incVal_never_halts` — a non-zero cell makes `[+ ]` run forever).
+  The empty program has no step and halts.
 - `Theory/Loop.lean`: loop-correctness machinery. `stepOne`/`runSeq` execute
   a single instruction or a whole loop-free program, `LoopFree` characterizes
   programs without `[`, and `run_length_loop_free`/`run_append` let a run be

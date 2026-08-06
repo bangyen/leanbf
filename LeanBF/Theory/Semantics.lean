@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
 import LeanBF.Core.Semantics
+import LeanBF.Theory.Loop
+import LeanBF.Theory.State
 
 /-!
 # Semantics Lemmas
@@ -32,6 +34,13 @@ basic `run`/`halts` facts.
 * `step_cons_ne_none`: A non-empty program always has a step.
 * `stepsToHalt_one_eq_zero`: `stepsToHalt 1` is `0` exactly on the empty
   program.
+* `loop_incVal_stepsToHalt`: A non-zero cell makes `[+ ]` run forever, taking
+  n steps in any n-step window.
+* `loop_incVal_never_halts`: `[+ ]` never halts from a non-zero cell.
+* `read_write_echo`: Reading a value and writing it back echoes it.
+* `runSeq_write_write_output`: Writing twice appends two copies of the
+  current value.
+* `runSeq_read_input`: Reading `k` times consumes the first `k` inputs.
 -/
 
 namespace LeanBF
@@ -135,5 +144,93 @@ theorem stepsToHalt_one_eq_zero (prog : Program) (s : State) :
   · intro h
     rw [h]
     rfl
+
+-- divergence: [.loop [.inc_val]] from a non-zero cell never halts
+theorem loop_incVal_stepsToHalt (s : State) (h : 0 < s.tape s.ptr) (n : Nat) :
+    stepsToHalt n [.loop [.inc_val]] s = n := by
+  have hmain : ∀ (n : Nat) (s : State), 0 < s.tape s.ptr →
+      stepsToHalt n [.loop [.inc_val]] s = n := by
+    intro n
+    induction n using Nat.strong_induction_on with
+    | h n ih =>
+        intro s hs
+        have hcur : State.currentVal s ≠ 0 := by
+          change s.tape s.ptr ≠ 0
+          omega
+        by_cases hn2 : n ≤ 1
+        · cases n with
+          | zero => rfl
+          | succ n =>
+              cases n with
+              | zero =>
+                  unfold stepsToHalt
+                  rw [step_loop_nonzero s [.inc_val] hcur]
+                  unfold stepsToHalt
+                  rfl
+              | succ n => omega
+        · have hloop : step [.loop [.inc_val]] s =
+              some ([.inc_val, .loop [.inc_val]], s) := by
+            rw [step_loop_nonzero s [.inc_val] hcur]
+            rfl
+          have hinc : step [.inc_val, .loop [.inc_val]] s =
+              some ([.loop [.inc_val]], s.incVal) := by
+            rfl
+          have hn' : n = (n - 2) + 2 := by omega
+          rw [hn']
+          simp only [stepsToHalt, hloop, hinc]
+          have ih' := ih (n - 2) (by omega) s.incVal (by
+            rw [incVal_ptr]
+            simp only [State.incVal, State.modifyCell, if_true]
+            omega)
+          rw [ih']
+  exact hmain n s h
+
+theorem loop_incVal_never_halts (s : State) (h : 0 < s.tape s.ptr) :
+    ¬ halts [.loop [.inc_val]] s := by
+  intro hhalts
+  rcases hhalts with ⟨n, hn⟩
+  unfold haltsWithin at hn
+  have hsteps := loop_incVal_stepsToHalt s h n
+  rw [hsteps] at hn
+  omega
+
+-- echo: read then write
+theorem read_write_echo (s : State) (x : Nat) (xs : List Nat) (h : s.input = x :: xs) :
+    (runSeq [.read, .write] s).output = x :: s.output ∧ (runSeq [.read, .write] s).input = xs := by
+  simp only [runSeq, stepOne, h, State.currentVal, if_true]
+  constructor <;> trivial
+
+-- writing twice appends two copies of the current value
+theorem runSeq_write_write_output (s : State) :
+    (runSeq [.write, .write] s).output = State.currentVal s :: State.currentVal s :: s.output := by
+  rfl
+
+-- read k times consumes the first k inputs
+theorem runSeq_read_input (s : State) (k : Nat) (hk : k ≤ s.input.length) :
+    (runSeq (List.replicate k .read) s).input = s.input.drop k := by
+  induction k generalizing s with
+  | zero => rfl
+  | succ k ih =>
+      rw [List.replicate, runSeq]
+      cases hs : s.input with
+      | nil =>
+          rw [hs] at hk
+          simp only [List.length_nil] at hk
+          omega
+      | cons x xs =>
+          have hread : stepOne .read s =
+              { s with input := xs, tape := fun i => if i = s.ptr then x else s.tape i } := by
+            unfold stepOne
+            rw [hs]
+          rw [hread]
+          let s' : State :=
+            { s with input := xs, tape := fun i => if i = s.ptr then x else s.tape i }
+          have ih' := ih s' (by
+            rw [hs] at hk
+            simp only [List.length_cons] at hk
+            change k ≤ xs.length
+            omega)
+          rw [ih']
+          rfl
 
 end LeanBF

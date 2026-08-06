@@ -54,7 +54,9 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   (`Theory.Semantics`): the cell operations act only on the addressed cell
   and round-trip with the current value (`currentVal_incVal_decVal`), and the
   single-step behavior of every instruction — `>`, `<`, `+`, `-`, `,`, `.`,
-  and `[` — is pinned down.
+  and `[` — is pinned down, together with I/O round-trips (read/write echo,
+  reads consume the input prefix) and a divergence theorem (`[+ ]` never
+  halts from a non-zero cell).
 - **Simulation infrastructure** (`Theory.Simulation`): a fuel-capped runner
   whose results convert into `RunsTo` chains, and the first instance — the
   compiled empty Minsky program halts from any simulating state

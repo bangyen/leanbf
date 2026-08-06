@@ -60,4 +60,19 @@ example (s : State) : step [.write] s = some ([], { s with output := s.currentVa
 example (s : State) : halts [] s :=
   halts_empty s
 
+example (s : State) (h : 0 < s.tape s.ptr) : ¬ halts [.loop [.inc_val]] s :=
+  loop_incVal_never_halts s h
+
+example (s : State) (x : Nat) (xs : List Nat) (h : s.input = x :: xs) :
+    (runSeq [.read, .write] s).output = x :: s.output ∧ (runSeq [.read, .write] s).input = xs :=
+  read_write_echo s x xs h
+
+example (s : State) :
+    (runSeq [.write, .write] s).output = State.currentVal s :: State.currentVal s :: s.output :=
+  runSeq_write_write_output s
+
+example (s : State) (k : Nat) (hk : k ≤ s.input.length) :
+    (runSeq (List.replicate k .read) s).input = s.input.drop k :=
+  runSeq_read_input s k hk
+
 end LeanBF.Tests

@@ -931,4 +931,68 @@ theorem run_restoreLoop (v a : Nat) (test s4 : Int) (s : State)
         · rfl
       · exact loop_free_restoreLoopBody test s4
 
+/-- The clear loop `[-]` clears the current cell to `0`. -/
+theorem run_clearHere (v : Nat) (s : State) (hv : s.tape s.ptr = v) :
+    ∃ n : Nat, run n Compiler.clearHere s =
+      some { s with tape := fun i => if i = s.ptr then 0 else s.tape i } := by
+  induction v generalizing s with
+  | zero =>
+      refine ⟨1, ?_⟩
+      have hzero : s.currentVal = 0 := by simp only [State.currentVal, hv]
+      have hstep : step Compiler.clearHere s = some ([], s) := by
+        simp only [Compiler.clearHere, step, if_pos hzero]
+      simp only [run, hstep]
+      congr 1
+      apply State.ext
+      · rfl
+      · funext i
+        by_cases hi : i = s.ptr
+        · simp only [hi, hv, if_true]
+        · simp only [if_neg hi]
+      · rfl
+      · rfl
+  | succ v ih =>
+      have hne : s.currentVal ≠ 0 := by
+        simp only [State.currentVal, hv]
+        exact Nat.succ_ne_zero v
+      let s' : State := { s with tape := fun i => if i = s.ptr then v else s.tape i }
+      have hs' : s'.tape s'.ptr = v := by
+        simp only [s']
+        rw [if_true]
+      rcases ih s' hs' with ⟨n, hn⟩
+      refine ⟨2 + n, ?_⟩
+      rw [show 2 + n = Nat.succ (1 + n) by
+        rw [Nat.succ_eq_add_one]
+        ring]
+      simp only [Compiler.clearHere, run, step, if_neg hne]
+      rw [List.append_nil]
+      change run ([Instruction.dec_val].length + n)
+        ([Instruction.dec_val] ++ [Instruction.loop [Instruction.dec_val]]) s =
+        some { s with tape := fun i => if i = s.ptr then 0 else s.tape i }
+      rw [run_append]
+      · have hbody : runSeq [.dec_val] s = s' := by
+          apply State.ext
+          · simp only [runSeq, stepOne, s', State.decVal, State.modifyCell]
+          · funext i
+            simp only [runSeq, stepOne, s', State.decVal, State.modifyCell]
+            by_cases hi : i = s.ptr
+            · simp only [hi, hv, if_true, Nat.add_sub_cancel]
+            · simp only [if_neg hi]
+          · rfl
+          · rfl
+        rw [hbody]
+        change run n Compiler.clearHere s' =
+          some { s with tape := fun i => if i = s.ptr then 0 else s.tape i }
+        rw [hn]
+        congr 1
+        apply State.ext
+        · rfl
+        · funext i
+          by_cases hi : i = s.ptr
+          · simp only [hi, hv, s', if_true]
+          · simp only [if_neg hi, s']
+        · rfl
+        · rfl
+      · exact loop_free_single .dec_val (by intro body h'; cases h')
+
 end LeanBF

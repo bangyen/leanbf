@@ -2955,20 +2955,24 @@ lemma step_getElem (m : Minsky.Program) (ms ms' : Minsky.State)
   unfold Minsky.step at h
   cases hpc : (m : List Minsky.Instruction)[ms.pc]? with
   | none => simp [hpc] at h
-  | some instr =>
-      cases instr with
+  | some ins =>
+      cases ins with
       | inc1 next =>
           simp [hpc] at h
-          exact ⟨.inc1 next, hpc, by decide, h⟩
+          exact ⟨.inc1 next, rfl, by simp, h⟩
       | inc2 next =>
           simp [hpc] at h
-          exact ⟨.inc2 next, hpc, by decide, h⟩
+          exact ⟨.inc2 next, rfl, by simp, h⟩
       | jzdec1 ifZero ifNonZero =>
           simp [hpc] at h
-          exact ⟨.jzdec1 ifZero ifNonZero, hpc, by decide, h⟩
+          have hstep : Minsky.stepInstr (.jzdec1 ifZero ifNonZero) ms = ms' := by
+            by_cases hc : ms.c1 = 0 <;> simp [Minsky.stepInstr, hc] at h ⊢ <;> exact h
+          exact ⟨.jzdec1 ifZero ifNonZero, rfl, by simp, hstep⟩
       | jzdec2 ifZero ifNonZero =>
           simp [hpc] at h
-          exact ⟨.jzdec2 ifZero ifNonZero, hpc, by decide, h⟩
+          have hstep : Minsky.stepInstr (.jzdec2 ifZero ifNonZero) ms = ms' := by
+            by_cases hc : ms.c2 = 0 <;> simp [Minsky.stepInstr, hc] at h ⊢ <;> exact h
+          exact ⟨.jzdec2 ifZero ifNonZero, rfl, by simp, hstep⟩
       | halt => simp [hpc] at h
 
 /-- The compiled program runs a Minsky machine to its terminal state, then
@@ -2985,48 +2989,48 @@ theorem runsTo_compileProgram (m : Minsky.Program) (ms ms' : Minsky.State) (s : 
     Compiler.ifZeroElse 4 5 6 7 8
       (Compiler.movePtr 4 0 ++ Compiler.clearHere ++ Compiler.movePtr 0 4) [] ++
     Compiler.movePtr 4 0
-  have hB : Compiler.compileProgram m = [.loop B] := by
+  have hB : Compiler.compileProgram m = ([.loop B] : Program) := by
     simp only [Compiler.compileProgram, B]
   induction hr generalizing s with
-  | halt =>
-      rcases hr with hhalt | hnone
-      rcases runsTo_compileBody m ms s hsim (by exact hsim.2.2.2.2) hclean with
+  | halt ms0 hterminal =>
+      rcases runsTo_compileBody m ms0 s hsim (by exact hsim.2.2.2.2) hclean with
         ⟨s1, hb, post⟩
       have hrun0 : s1.tape 0 = 0 := by
-        rw [post.2.2.1]
-        rcases dispatch_halt m ms hhalt with ⟨hd, hr0, hm⟩
-        rw [hd, hr0, if_true]
+        rw [post.2.1]
+        rcases hterminal with hhalt | hnone
+        · rcases dispatch_halt m ms0 hhalt with ⟨hd, hr0, hm⟩
+          rw [hd, hr0]
+          rfl
+        · rcases dispatch_none m ms0 hnone with ⟨hd, hr0, hm⟩
+          rw [hd]
+          rfl
       have hcur : State.currentVal s1 = 0 := by
         simp only [State.currentVal, post.1, hrun0]
-      have hstepL0 : step [.loop B] s1 = some ([], s1) := step_loop_zero s1 B hcur
-      have hloop0 : RunsTo ([.loop B], s1) s1 :=
-        RunsTo.step [.loop B] s1 s1 [] s1 hstepL0 (RunsTo.halt s1)
-      have hmain : RunsTo (B ++ [.loop B], s) s1 :=
-        RunsTo_append [.loop B] s1 s1 hb hloop0
+      have hstepL0 : step ([.loop B] : Program) s1 = some ([], s1) := step_loop_zero s1 B hcur
+      have hloop0 : RunsTo (([.loop B] : Program), s1) s1 :=
+        RunsTo.step ([.loop B] : Program) s1 s1 [] s1 hstepL0 (RunsTo.halt s1)
+      have hmain : RunsTo (B ++ ([.loop B] : Program), s) s1 :=
+        RunsTo_append ([.loop B] : Program) s1 s1 hb hloop0
       have hcur0 : State.currentVal s ≠ 0 := by
         simp only [State.currentVal, hsim.1, hsim.2.2.2.2]
         decide
-      have hstepL : step [.loop B] s = some (B ++ [.loop B], s) :=
+      have hstepL : step ([.loop B] : Program) s = some (B ++ ([.loop B] : Program), s) :=
         step_loop_nonzero s B hcur0
       have hrun' : RunsTo (Compiler.compileProgram m, s) s1 := by
         rw [hB]
-        exact RunsTo.step [.loop B] s (B ++ [.loop B]) s hstepL hmain
+        exact RunsTo.step ([.loop B] : Program) s s (B ++ ([.loop B] : Program)) s1 hstepL hmain
       refine ⟨s1, hrun', ?_, ?_, ?_, ?_, ?_⟩
       · exact post.1
       · exact hrun0
+      · rw [post.2.2.1]
       · rw [post.2.2.2.1]
-        rcases dispatch_halt m ms hhalt with ⟨hd, hr0, hm⟩
-        exact congrArg Minsky.State.pc hm
       · rw [post.2.2.2.2.1]
-        rcases dispatch_halt m ms hhalt with ⟨hd, hr0, hm⟩
-        exact congrArg Minsky.State.c1 hm
-      · rw [post.2.2.2.2.2.1]
-        rcases dispatch_halt m ms hhalt with ⟨hd, hr0, hm⟩
-        exact congrArg Minsky.State.c2 hm
-  | step ms1 hstep hr' ih =>
-      rcases step_getElem m ms ms1 hstep with ⟨instr, hget, hne, hinstr⟩
-      rcases dispatchMs_step m ms instr hget hne with ⟨hd, hr, hm⟩
-      rcases runsTo_compileBody m ms s hsim (by exact hsim.2.2.2.2) hclean with
+  | step ms_start ms1 ms_final hstep hr' ih =>
+      rcases step_getElem m ms_start ms1 hstep with ⟨instr, hget, hne, hinstr⟩
+      rcases dispatchMs_step m ms_start instr hget hne with ⟨hd, hr, hm⟩
+      have hsim' : SimulatesAt ms_start 0 s := by
+        simpa only [SimulatesAt] using hsim
+      rcases runsTo_compileBody m ms_start s hsim' (by exact hsim'.2.2.2.2) hclean with
         ⟨s1, hb, post⟩
       have hsim1 : SimulatesAt ms1 0 s1 := by
         change s1.ptr = 0 ∧ s1.tape 1 = ms1.pc ∧ s1.tape 2 = ms1.c1 ∧
@@ -3034,35 +3038,36 @@ theorem runsTo_compileProgram (m : Minsky.Program) (ms ms' : Minsky.State) (s : 
         constructor
         · exact post.1
         · constructor
-          · rw [post.2.2.2.1]
+          · rw [post.2.2.1]
             exact congrArg Minsky.State.pc (hm.trans hinstr)
           · constructor
-            · rw [post.2.2.2.2.1]
+            · rw [post.2.2.2.1]
               exact congrArg Minsky.State.c1 (hm.trans hinstr)
             · constructor
-              · rw [post.2.2.2.2.2.1]
+              · rw [post.2.2.2.2.1]
                 exact congrArg Minsky.State.c2 (hm.trans hinstr)
-              · rw [post.2.2.1, hd, hr, if_true]
+              · rw [post.2.1, hd, hr]
+                rfl
       have hclean1 : s1.tape 5 = 0 ∧ s1.tape 6 = 0 ∧ s1.tape 7 = 0 ∧ s1.tape 8 = 0 := by
-        exact ⟨post.2.2.2.2.2.2.1, post.2.2.2.2.2.2.2.1, post.2.2.2.2.2.2.2.2.1,
-          post.2.2.2.2.2.2.2.2.2⟩
+        exact ⟨post.2.2.2.2.2.1, post.2.2.2.2.2.2.1, post.2.2.2.2.2.2.2.1,
+          post.2.2.2.2.2.2.2.2⟩
       rcases ih s1 hsim1 hclean1 with ⟨s', hrest, hpost⟩
-      have hmain : RunsTo (B ++ [.loop B], s) s' :=
-        RunsTo_append [.loop B] s1 s' hb hrest
+      have hmain : RunsTo (B ++ ([.loop B] : Program), s) s' :=
+        RunsTo_append ([.loop B] : Program) s1 s' hb hrest
       have hcur0 : State.currentVal s ≠ 0 := by
         simp only [State.currentVal, hsim.1, hsim.2.2.2.2]
         decide
-      have hstepL : step [.loop B] s = some (B ++ [.loop B], s) :=
+      have hstepL : step ([.loop B] : Program) s = some (B ++ ([.loop B] : Program), s) :=
         step_loop_nonzero s B hcur0
       have hrun' : RunsTo (Compiler.compileProgram m, s) s' := by
         rw [hB]
-        exact RunsTo.step [.loop B] s (B ++ [.loop B]) s hstepL hmain
+        exact RunsTo.step ([.loop B] : Program) s s (B ++ ([.loop B] : Program)) s' hstepL hmain
       refine ⟨s', hrun', ?_, ?_, ?_, ?_, ?_⟩
       · exact hpost.1
       · exact hpost.2.1
+      · exact hpost.2.2.1
       · exact hpost.2.2.2.1
-      · exact hpost.2.2.2.2.1
-      · exact hpost.2.2.2.2.2.1
+      · exact hpost.2.2.2.2
 
 
 
@@ -3075,7 +3080,7 @@ theorem turingCompleteness_proof : turingCompleteness := by
   have hclean : (simState ms).tape 5 = 0 ∧ (simState ms).tape 6 = 0 ∧
       (simState ms).tape 7 = 0 ∧ (simState ms).tape 8 = 0 := by
     simp only [simState]
-    repeat' constructor <;> rfl
+    repeat' constructor <;> norm_num
   rcases runsTo_compileProgram m ms ms_final (simState ms) hruns hsim hclean with
     ⟨bfs_final, hrun, hpost⟩
   exact ⟨bfs_final, hrun⟩

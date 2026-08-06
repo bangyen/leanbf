@@ -24,7 +24,7 @@ the compiled empty program halts from any simulating state.
   program.
 * `runsTo_halt_of_step_none`: An undefined step means the program halts.
 * `runsTo_of_runToCompletion_some`: A completed fuel-capped run gives a
-  `RunsTo` chain.
+  RunsTo chain.
 * `runToCompletion_some_of_haltsWithin`: A program that halts within `n`
   steps is finished by `runToCompletion n`.
 * `RunsTo_of_haltsWithin`: A program that halts within `n` steps reaches the

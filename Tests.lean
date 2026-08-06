@@ -6,6 +6,7 @@ Authors: Bangyen Pham
 import Tests.Compiler
 import Tests.Completeness
 import Tests.Examples
+import Tests.Loop
 import Tests.Minsky
 import Tests.Semantics
 import Tests.State

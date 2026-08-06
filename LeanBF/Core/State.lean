@@ -35,6 +35,23 @@ structure State where
   output : List Nat
   deriving Inhabited
 
+/-- Two states with equal fields are equal. -/
+@[ext] theorem State.ext {s1 s2 : State}
+    (hptr : s1.ptr = s2.ptr) (htape : s1.tape = s2.tape)
+    (hinput : s1.input = s2.input) (houtput : s1.output = s2.output) :
+    s1 = s2 := by
+  rcases s1 with ⟨p1, t1, i1, o1⟩
+  rcases s2 with ⟨p2, t2, i2, o2⟩
+  change p1 = p2 at hptr
+  change t1 = t2 at htape
+  change i1 = i2 at hinput
+  change o1 = o2 at houtput
+  subst p2
+  subst t2
+  subst i2
+  subst o2
+  rfl
+
 namespace State
 
 /-- The initial state: pointer at cell `0`, all cells zero, empty I/O. -/

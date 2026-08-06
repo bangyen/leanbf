@@ -62,7 +62,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Prove `turingCompleteness`** | High | The general dispatch simulation is the roadblock: proving a `jzdec`-block lemma needs induction on the counter value, and out-of-range `pc` needs induction on the `pc`-test loop. The empty-program instance and the `RunsTo` conversion are in place. |
+| **Prove `turingCompleteness`** | High | The loop-correctness machinery (`Theory/Loop`) is in place; the remaining work is proving the `ifZeroElse` loop *effects* (copy/flag/restore move the tested value) — heavy `Int` pointer arithmetic in `runSeq` — and then the dispatch lemma. |
 | **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
 | **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 

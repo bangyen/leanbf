@@ -90,6 +90,11 @@ project convention that `Core` files contain only definitions.
   step, `>` moves the pointer, and `[` either skips its body (zero current
   value) or runs it and re-queues the loop (non-zero). The empty program
   halts.
+- `Theory/Loop.lean`: loop-correctness machinery. `stepOne`/`runSeq` execute
+  a single instruction or a whole loop-free program, `LoopFree` characterizes
+  programs without `[`, and `run_length_loop_free`/`run_append` let a run be
+  split across a loop-free prefix and its tail. These underpin the dispatch
+  simulation.
 - `Theory/Simulation.lean`: simulation infrastructure and the first result.
   `runToCompletion` runs until the program halts or a fuel cap is hit, and
   its results convert into `RunsTo` chains (`RunsTo_of_haltsWithin`). The

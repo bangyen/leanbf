@@ -45,6 +45,12 @@ the compiled empty program halts from any simulating state.
   in as many steps as it has instructions (fuel-capped form).
 * `runToCompletion_copyLoop`: The copy loop moves the tested value into three
   cells (fuel-capped form).
+* `runToCompletion_flagLoop`: The flag loop clears `s3` once per unit of `s1`
+  (fuel-capped form).
+* `runToCompletion_restoreLoop`: The restore loop moves `s4` back into `test`
+  (fuel-capped form).
+* `runToCompletion_clearHere`: The clear loop clears the current cell
+  (fuel-capped form).
 -/
 
 namespace LeanBF

@@ -45,4 +45,23 @@ example (n : Nat) (s : State) :
     (runSeq (List.replicate n .inc_ptr) s).ptr = s.ptr + (n : Int) :=
   runSeq_replicate_inc_ptr n s
 
+example : let s : State :=
+      { ptr := 2,
+        tape := fun i =>
+          if i = 2 then 3 else
+          if i = 5 then 1 else
+          if i = 6 then 2 else
+          if i = 8 then 4 else 0,
+        input := [], output := [] }
+    ; ∃ n : Nat, run n (copyLoop 2 5 6 8) s = some (copyLoopPost 2 5 6 8 1 2 4 3 s) := by
+  let s : State :=
+    { ptr := 2,
+      tape := fun i =>
+        if i = 2 then 3 else
+        if i = 5 then 1 else
+        if i = 6 then 2 else
+        if i = 8 then 4 else 0,
+      input := [], output := [] }
+  exact run_copyLoop 3 2 5 6 8 1 2 4 s rfl rfl rfl rfl rfl (by decide)
+
 end LeanBF.Tests

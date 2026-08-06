@@ -6,6 +6,7 @@ Authors: Bangyen Pham
 import LeanBF.Theory.BodyLoop
 import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
+import LeanBF.Theory.Invariance
 import LeanBF.Theory.Loop
 import LeanBF.Theory.Semantics
 import LeanBF.Theory.Simulate

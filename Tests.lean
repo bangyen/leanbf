@@ -8,6 +8,7 @@ import Tests.Compiler
 import Tests.Completeness
 import Tests.Examples
 import Tests.IfZeroElse
+import Tests.Invariance
 import Tests.Loop
 import Tests.Minsky
 import Tests.Semantics

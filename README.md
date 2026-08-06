@@ -57,6 +57,10 @@ The implementation is organized into `Core` (definitions), `Theory`
   whose results convert into `RunsTo` chains, and the first instance — the
   compiled empty Minsky program halts from any simulating state
   (`compile_empty_simulates`).
+- **Run-level tape invariance** (`Theory.Invariance`): `RunsTo_inv` (a
+  general configuration invariant), `step_preserves_tape_above` (a single
+  step only modifies the current cell), and `RunsTo_preserves_tape_above`
+  (a pointer-bounded run preserves every cell above the bound).
 - **Body-loop machinery** (`Theory.BodyLoop`): the `ifZeroElse` then/else
   loops — `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` — run an
   arbitrary body program exactly once when the tested cell is non-zero and not
@@ -82,7 +86,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 | :--- | :--- | :--- |
 | **Prove `turingCompleteness`** | High | Done. `Theory.Simulate` wires `compileInstr`/`compileProgram` into the dispatch simulation: each window runs its instruction's block, the dispatch loop runs exactly the matching window, the loop body maps a simulating state to the stepped machine, and `turingCompleteness_proof` closes the statement by induction on `Minsky.RunsTo`. |
 | **More verified examples** | Medium | More Minsky machines (arithmetic, multiplication) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
-| **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
+| **Run-level tape lemmas** | Low | Done. `Theory.Invariance` provides a general `RunsTo` invariant lemma (`RunsTo_inv`) and lifts the single-step cell-preservation facts to whole runs (`RunsTo_preserves_tape_above`), so a run whose configurations keep the pointer below a bound preserves every tape cell above it. |
 
 ## Scope & Limitations
 

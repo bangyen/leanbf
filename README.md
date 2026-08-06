@@ -1,32 +1,91 @@
 # LeanBF
 
-**Formal Verification of Brainfuck Turing Completeness in Lean 4.**
+**Formal Verification of the Brainfuck Esolang in Lean 4.**
 
+[![CI](https://github.com/bangyen/leanbf/actions/workflows/lean_action_ci.yml/badge.svg)](https://github.com/bangyen/leanbf/actions/workflows/lean_action_ci.yml)
 [![Lean 4 Version](https://img.shields.io/badge/Lean-4.28.0-blue.svg)](https://leanprover.github.io/)
 [![Mathlib4](https://img.shields.io/badge/Mathlib-4-brightgreen.svg)](https://github.com/leanprover-community/mathlib4)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-LeanBF is a formalization of the Brainfuck programming language in [Lean 4](https://leanprover.github.io/). Its primary goal is to provide a rigorous proof of Brainfuck's Turing completeness by formally simulating a 2-counter Minsky machine.
-
-## Motivation
-
-Brainfuck is a minimalist, esoteric language with only eight commands. Despite its simplicity, it is Turing-complete. Proving this in a formal setting like Lean 4 demonstrates the power of formal verification to reason about computation models and the "minimal" requirements for universal computation.
+LeanBF formalizes the [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck)
+esolang in the [Lean 4](https://leanprover.github.io/) interactive theorem
+prover. It pins down a precise, total, deterministic formalization — the
+tape, the instruction set, and a small-step operational semantics are all
+pure Lean definitions — and its long-term goal is a machine-checked proof of
+Brainfuck's Turing completeness by simulating a two-counter Minsky machine.
+Every transition of the interpreter is a pure Lean function; nothing is
+executed by an external trusted interpreter.
 
 ## Architecture
 
-For a detailed overview of the project's design patterns, including the Brainfuck state machine, small-step semantics, and the Minsky machine simulation, see [ARCHITECTURE.md](ARCHITECTURE.md).
+For a detailed overview of the project's design and the current state of the
+verified theorems, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Key Components
+The implementation is organized into `Core` (definitions), `Theory`
+(verified theorems — currently the `turingCompleteness` statement), `Examples`
+(example programs), and `Tests` (kernel re-assertions of the definitions).
 
-- **[LeanBF/Basic.lean](LeanBF/Basic.lean)**: Definition of Brainfuck instructions and machine state (pointer, tape, I/O).
-- **[LeanBF/Semantics.lean](LeanBF/Semantics.lean)**: Small-step operational semantics for Brainfuck programs.
-- **[LeanBF/Minsky.lean](LeanBF/Minsky.lean)**: Formalization of 2-counter Minsky Machines.
-- **[LeanBF/Compiler.lean](LeanBF/Compiler.lean)**: Mapping from Minsky instructions to Brainfuck code.
-- **[LeanBF/Completeness.lean](LeanBF/Completeness.lean)**: The formal simulation theorem and Turing completeness proof.
+## Results
+
+- **Total, deterministic interpreter** (`Core.Semantics`): `step`/`RunsTo`
+  define a single-step transition on `Program × State`, with loop unrolling
+  and end-of-input handled inside the pure function.
+- **The Brainfuck state machine** (`Core.State`): an infinite `Int`-indexed
+  tape of unbounded `Nat` cells, pointer, input stream, and output stream.
+- **The Minsky machine model** (`Core.Minsky`): a two-counter machine with
+  `inc`/`jzdec` instructions and its own `RunsTo` closure.
+- **The compiler** (`Core.Compiler`): `movePtr`/`copyCell` blocks and a
+  per-instruction translation into Brainfuck for the dispatch-loop layout.
+- **Completeness statement** (`Theory.Completeness`): `Simulates` (a
+  Brainfuck state that simulates a Minsky state) and the conjecture
+  `turingCompleteness`. The conjecture is stated but not yet proven; see the
+  Roadmap.
+- **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
+  compiler definitions are re-asserted on concrete inputs with `rfl` and
+  `decide`.
+
+## Roadmap
+
+| Task | Priority | Status |
+| :--- | :--- | :--- |
+| **Complete the compiler** | High | `jzdec1` is a placeholder block and `jzdec2` is unimplemented in `Core.Compiler`. |
+| **Prove `turingCompleteness`** | High | The central goal: a run-level simulation theorem from the dispatch loop to `RunsTo`. Needs the compiled `jzdec` structure first. |
+| **Verified example programs** | Medium | `Examples.HelloWorld` is defined but its run behavior is not yet `decide`-checked. |
+| **Stack/tape algebra** | Medium | Round-trip lemmas for `modifyCell`, `incVal`/`decVal`, and the loop-unrolling step. |
+
+## Scope & Limitations
+
+**Scope.** LeanBF formalizes the Brainfuck language — the tape, the eight
+commands, the bracketed loop as a recursive instruction list, and the
+small-step semantics — together with the Minsky machine model and the
+compiler intended to witness Turing completeness. The completeness theorem
+itself, verified example-program behavior, and any tape/stack algebra are
+still open work.
+
+**Design choices.** Brainfuck's informal specification leaves several details
+open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
+
+- **Infinite tape**: cells live on an `Int`-indexed tape with unbounded `Nat`
+  values, so pointer arithmetic never faults and decrement never underflows.
+- **Loops as trees**: `[`/`]` are paired at definition time; `loop body` is a
+  recursive `List Instruction`. At runtime a non-zero loop pushes
+  `body ++ [loop body] ++ rest`, so no control-flow parser is trusted.
+- **Input/output**: `,` consumes from an explicit `List Nat` input stream
+  (pushing `0` at EOF); `.` prepends the current cell to the output stream.
+- **Halting**: a program halts exactly when its instruction list is empty.
+
+**Limitations.**
+
+- `turingCompleteness` is a conjecture, not a theorem: it is recorded in
+  `Theory.Completeness` and re-asserted nowhere.
+- `Examples.HelloWorld` is data only; its behavior is not yet machine-checked.
+- The `jzdec` translation is a work in progress, so the compiler does not yet
+  produce a complete dispatch loop.
 
 ## Installation & Building
 
-Make sure you have [elan](https://github.com/leanprover/elan) installed for Lean 4 version management.
+Make sure you have [elan](https://github.com/leanprover/elan) installed for
+Lean 4 version management.
 
 ```bash
 git clone https://github.com/bangyen/leanbf.git
@@ -35,8 +94,20 @@ lake exe cache get  # Downloads the pre-compiled Mathlib libraries
 lake build
 ```
 
+Then run the verification:
+
+```bash
+lake test           # Builds the test suite
+lake lint           # Runs the linter
+./scripts/check_all.sh  # Runs the repository guard checks
+```
+
 ## Contributing
-This repo uses standard Mathlib naming conventions. If you're a Lean 4 enthusiast interested in computability theory, feel free to submit PRs!
+
+This repo uses standard Mathlib naming conventions and the same guard scripts
+as LeanSharp. If you are interested in extending the formalization — for
+example, completing the `jzdec` translation or taking a first step toward the
+completeness proof — feel free to open a pull request.
 
 ## Citation
 
@@ -45,7 +116,7 @@ If you use this work in your research, please cite:
 ```bibtex
 @misc{pham_leanbf_2026,
   author = {Pham, Bangyen},
-  title = {LeanBF: Formal Verification of Brainfuck Turing Completeness in Lean 4},
+  title = {LeanBF: Formal Verification of the Brainfuck Esolang in Lean 4},
   year = {2026},
   url = {https://github.com/bangyen/leanbf}
 }

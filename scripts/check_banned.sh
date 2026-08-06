@@ -40,5 +40,13 @@ if ! check_pattern "set_option" "Remove file-level 'set_option' directives."; th
     exit 1
 fi
 
+if ! check_pattern "partial" "Remove 'partial' declarations and prove termination."; then
+    exit 1
+fi
+
+if ! check_pattern "unsafe" "Remove 'unsafe' declarations."; then
+    exit 1
+fi
+
 echo "✓ No banned keywords found in Lean source files."
 exit 0

@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-SEARCH_ROOTS=("LeanSharp" "Tests")
+SEARCH_ROOTS=("LeanBF" "Tests")
 MATCHES=()
 
 module_from_path() {

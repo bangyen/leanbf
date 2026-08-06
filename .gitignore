@@ -1,1 +1,11 @@
 /.lake
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# AI assistant caches
+.aider*

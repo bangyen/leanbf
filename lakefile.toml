@@ -1,21 +1,27 @@
 name = "leanbf"
 version = "1.0.0"
-description = "Formal Verification of Brainfuck Turing Completeness"
-keywords = ["math", "formal-verification", "turing-completeness"]
+description = "Formal Lean 4 verification of the Brainfuck esolang focusing on Turing completeness"
+keywords = ["math", "esolang", "formal-verification", "programming-languages"]
 defaultTargets = ["LeanBF", "Tests"]
 lintDriver = "batteries/runLinter"
 testDriver = "Tests"
+
+# Give Lean's worker threads a large stack so the deep kernel `decide`
+# reductions (e.g. long `List.replicate` evaluations) do not overflow on CI
+# runners.
+moreLeanArgs = ["-s", "65536"]
 
 [leanOptions]
 pp.unicode.fun = true                 # pretty-prints `fun a ↦ b`
 relaxedAutoImplicit = false
 weak.linter.mathlibStandardSet = true
-maxSynthPendingDepth = 10
+maxSynthPendingDepth = 5
 maxHeartbeats = 400000
+maxRecDepth = 20000                   # kernel `decide`/`rfl` on deep `List.replicate` evaluations
 
 [[require]]
 name = "mathlib"
-git = "https://github.com/leanprover-community/mathlib4"
+scope = "leanprover-community"
 rev = "v4.28.0"
 
 [[lean_lib]]

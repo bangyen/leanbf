@@ -1,9 +1,30 @@
-import LeanBF.Basic
-import LeanBF.Minsky
+/-
+Copyright (c) 2026 Bangyen Pham. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bangyen Pham
+-/
+import LeanBF.Core.Instruction
+import LeanBF.Core.Minsky
+import LeanBF.Core.State
 
-namespace LeanBF.Compiler
+/-!
+# The Minsky-to-Brainfuck Compiler
 
-open LeanBF Instruction
+## Main definitions
+
+* `Compiler.movePtr`: Brainfuck code that moves the pointer between two cells.
+* `Compiler.copyCell`: Brainfuck code that copies one cell to another.
+* `Compiler.compileInstr`: The translation of a single Minsky instruction.
+
+The dispatch block assumes the pointer starts at the `running` cell (0), the
+program counter `pc` lives in cell 1, and the counters `c1`, `c2` live in
+cells 2 and 3, with auxiliary cells starting at cell 4. The `jzdec1`/`jzdec2`
+translation is still a work in progress (see the Roadmap in the README).
+-/
+
+namespace LeanBF
+
+namespace Compiler
 
 /--
 Generate BF code to move from cell `i` to cell `j`.
@@ -52,15 +73,13 @@ def compileInstr (instr : Minsky.Instruction) : Program :=
     -- Actually, for unbounded counters, we need a "set to N" helper.
     (List.replicate next .inc_val) ++
     movePtr 1 0 -- back to running
-
   | .inc2 next =>
     movePtr 0 3 ++ [.inc_val] ++
     movePtr 3 1 ++
     (List.replicate 256 .dec_val) ++
     (List.replicate next .inc_val) ++
     movePtr 1 0
-
-  | .jzdec1 ifZero ifNonZero =>
+  | .jzdec1 _ ifNonZero =>
     movePtr 0 2 ++ -- go to c1
     [.loop (
       -- If c1 is non-zero
@@ -80,15 +99,16 @@ def compileInstr (instr : Minsky.Instruction) : Program :=
     )] ++
     movePtr 4 5 ++ [.inc_val] ++ -- temp flag
     movePtr 5 2 ++ -- check if c1 is 0
-    -- This logic is getting complex. For a proof of Turing completeness, 
+    -- This logic is getting complex. For a proof of Turing completeness,
     -- we only need to show that *some* such program exists.
-    -- Let's use a simpler "if" structure: 
+    -- Let's use a simpler "if" structure:
     -- copy c1 to temp, if temp is 0 then PC = ifZero else PC = ifNonZero, dec c1.
     []
-
   | .halt =>
     movePtr 0 0 ++ [.dec_val] -- set running to 0
+  | .jzdec2 _ _ =>
+    [] -- TODO: implement the `jzdec2` translation
 
-  | _ => [] -- TODO: implement rest
+end Compiler
 
-end LeanBF.Compiler
+end LeanBF

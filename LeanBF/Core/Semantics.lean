@@ -1,8 +1,25 @@
-import LeanBF.Basic
+/-
+Copyright (c) 2026 Bangyen Pham. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bangyen Pham
+-/
+import LeanBF.Core.Instruction
+import LeanBF.Core.State
+
+/-!
+# Operational Semantics
+
+## Main definitions
+
+* `step`: A single step of the Brainfuck machine.
+* `RunsTo`: The reflexive-transitive closure of the step relation.
+-/
 
 namespace LeanBF
 
-/-- A single step of the Brainfuck machine -/
+/-- A single step of the Brainfuck machine. A `,` at end of input pushes `0`,
+    and a `[` with current value `0` skips its body; a non-zero `[` runs its
+    body and then repeats the loop. -/
 def step (prog : Program) (s : State) : Option (Program × State) :=
   match prog with
   | [] => none
@@ -14,8 +31,10 @@ def step (prog : Program) (s : State) : Option (Program × State) :=
     | .dec_val => some (rest, s.decVal)
     | .read    =>
       match s.input with
-      | [] => some (rest, { s with tape := fun i ↦ if i = s.ptr then 0 else s.tape i })
-      | x :: xs => some (rest, { s with tape := fun i ↦ if i = s.ptr then x else s.tape i, input := xs })
+      | [] =>
+        some (rest, { s with tape := fun i ↦ if i = s.ptr then 0 else s.tape i })
+      | x :: xs =>
+        some (rest, { s with tape := fun i ↦ if i = s.ptr then x else s.tape i, input := xs })
     | .write   => some (rest, { s with output := s.currentVal :: s.output })
     | .loop body =>
       if s.currentVal = 0 then

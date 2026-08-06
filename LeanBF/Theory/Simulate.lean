@@ -18,13 +18,16 @@ the `turingCompleteness` statement.
 
 * `SimulatesAt`: A Brainfuck state that simulates a Minsky state with the
   pointer at a given cell.
+* `windowBlockStart`: The state in which a window runs its block.
+* `dispatchMs`, `dispatchDone`, `dispatchRunning`: The dispatch loop's effect.
 
 ## Theorems
 
-* `runSeq_replicate_inc_val`: Incrementing the current cell `n` times adds
-  `n`.
+* `windowBlockStart_tape`: The prepared window state's cells.
+* `runSeq_replicate_inc_val`: Incrementing the current cell n times adds n.
 * `runsTo_setHere`: `setHere n` sets the current cell to `n`.
 * `runsTo_inc_val`: A single `+` increments the current cell.
+* `runsTo_dec_val`: A single `-` decrements the current cell.
 * `runsTo_jzdecThen`: The `jzdec` zero branch sets the program counter.
 * `runsTo_jzdecElse`: The `jzdec` non-zero branch decrements the tested cell
   and sets the program counter.
@@ -35,21 +38,34 @@ the `turingCompleteness` statement.
 * `runsTo_compileInstr_jzdec1`: The `jzdec1` block branches on `c1`.
 * `runsTo_compileInstr_jzdec2`: The `jzdec2` block branches on `c2`.
 * `runsTo_compileInstr_halt`: The `halt` block clears the running flag.
-* `windowBlockStart`: The state in which a window runs its block.
-* `runsTo_dec_val`: A single `-` decrements the current cell.
 * `runsTo_window_match`: A window with a zero `pc` runs its block once and
-  sets the `done` flag.
-* `windowBlockStart_tape`: The prepared window state's cells.
+  sets the done flag.
 * `runsTo_window_skip`: A window with a non-zero `pc` decrements it.
 * `runsTo_window_inc1`: The `inc1` window.
 * `runsTo_window_inc2`: The `inc2` window.
 * `runsTo_window_jzdec1`: The `jzdec1` window.
 * `runsTo_window_jzdec2`: The `jzdec2` window.
 * `runsTo_window_halt`: The `halt` window clears the running flag.
-* `runsTo_window_done`: A window with the `done` flag set runs nothing.
-* `dispatchMs`, `dispatchDone`, `dispatchRunning`: The dispatch loop's effect.
+* `runsTo_window_done`: A window with the done flag set runs nothing.
 * `runsTo_windows_done`: The remaining windows do nothing once done is set.
+* `dispatchMs_step`: The dispatch effect for a non-halt instruction.
+* `dispatch_halt`: The dispatch effect for a `halt` instruction.
+* `dispatch_none`: The dispatch effect out of bounds.
+* `dispatchDone_succ`: The `done` flag after the first window.
+* `dispatchRunning_succ`: The running flag after the first window.
+* `dispatchMs_succ`: The dispatch state after the first window.
+* `stepInstr_jzdec1_pc`: The `jzdec1` pc.
+* `stepInstr_jzdec1_c1`: The `jzdec1` first counter.
+* `stepInstr_jzdec1_c2`: The `jzdec1` second counter.
+* `stepInstr_jzdec2_pc`: The `jzdec2` pc.
+* `stepInstr_jzdec2_c1`: The `jzdec2` first counter.
+* `stepInstr_jzdec2_c2`: The `jzdec2` second counter.
+* `stepInstr_pc_irrelevant`: `stepInstr` ignores the incoming `pc`.
+* `step_getElem`: A Minsky step is a single instruction at the `pc`.
 * `runsTo_dispatch`: The dispatch loop runs exactly the matching window.
+* `runsTo_compileBody`: One iteration of the `compileProgram` loop.
+* `runsTo_compileProgram`: The compiled program simulates a Minsky machine.
+* `turingCompleteness_proof`: Brainfuck is Turing complete.
 -/
 
 namespace LeanBF

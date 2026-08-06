@@ -76,7 +76,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Prove `turingCompleteness`** | High | `Theory/IfZeroElse` proves `Compiler.ifZeroElse` end-to-end: it runs `thenBody` exactly once when the tested cell is zero and `elseBody` exactly once otherwise, preserving `test` and restoring all scratch cells to `0` (`runsTo_ifZeroElse_zero`/`runsTo_ifZeroElse_succ`, plus `run` and `runToCompletion` forms). The next step is wiring `compileInstr`/`compileProgram` into the dispatch simulation and the `turingCompleteness` statement. |
+| **Prove `turingCompleteness`** | High | Done. `Theory.Simulate` wires `compileInstr`/`compileProgram` into the dispatch simulation: each window runs its instruction's block, the dispatch loop runs exactly the matching window, the loop body maps a simulating state to the stepped machine, and `turingCompleteness_proof` closes the statement by induction on `Minsky.RunsTo`. |
 | **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
 | **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 
@@ -84,10 +84,9 @@ The implementation is organized into `Core` (definitions), `Theory`
 
 **Scope.** LeanBF formalizes the Brainfuck language — the tape, the eight
 commands, the bracketed loop as a recursive instruction list, and the
-small-step semantics — together with the Minsky machine model and the
-compiler intended to witness Turing completeness. The completeness theorem
-itself, verified example-program behavior, and any tape/stack algebra are
-still open work.
+small-step semantics — together with the Minsky machine model, the compiler,
+and the proof that `Compiler.compileProgram` simulates a two-counter Minsky
+machine, so Brainfuck is Turing complete.
 
 **Design choices.** Brainfuck's informal specification leaves several details
 open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
@@ -103,11 +102,8 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
 
 **Limitations.**
 
-- `turingCompleteness` is a conjecture, not a theorem: it is recorded in
-  `Theory.Completeness` and re-asserted nowhere.
-- The compiler and the `HelloWorld` example are verified by `decide`-checked
-  runs on concrete programs, not by a general simulation theorem — that
-  theorem is the `turingCompleteness` roadblock.
+- The completeness theorem is proven: `Theory.Simulate.turingCompleteness_proof`
+  shows `Compiler.compileProgram` simulates the two-counter Minsky machine.
 
 ## Installation & Building
 

@@ -123,12 +123,22 @@ project convention that `Core` files contain only definitions.
   preserving `test` and restoring the scratch cells to `0`. `run` and
   `runToCompletion` forms follow (`run_ifZeroElse_*`,
   `runToCompletion_ifZeroElse_*`).
+- `Theory/Simulate.lean`: the dispatch simulation. Each compiled instruction
+  block is proven to update the simulating cells (`runsTo_compileInstr_*`),
+  each dispatch window runs its block when the `pc` matches and skips or
+  decrements otherwise (`runsTo_window_match`/`runsTo_window_skip`/
+  `runsTo_window_done` and the per-instruction `runsTo_window_*`), the
+  dispatch loop runs exactly the matching window (`runsTo_dispatch`, with the
+  `dispatchMs`/`dispatchDone`/`dispatchRunning` effect), and the compiled
+  program's loop body clears `done`, dispatches, and clears the running flag
+  at a halt (`runsTo_compileBody`, `runsTo_compileProgram`). This proves
+  `turingCompleteness_proof`: Brainfuck simulates the two-counter Minsky
+  machine.
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
   `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`, and
   the statement of the project's central goal, `turingCompleteness`. The
-  statement is recorded as a conjecture, not a theorem: the run-level
-  simulation argument that would witness it is open work (see the Roadmap).
+  proof is `Theory.Simulate.turingCompleteness_proof`.
 
 ## Example Programs
 

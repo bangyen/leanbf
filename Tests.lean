@@ -11,6 +11,7 @@ import Tests.IfZeroElse
 import Tests.Loop
 import Tests.Minsky
 import Tests.Semantics
+import Tests.Simulate
 import Tests.State
 
 /-!

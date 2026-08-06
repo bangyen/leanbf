@@ -53,7 +53,8 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 - **Tape algebra** (`Theory.State`) and **semantics lemmas**
   (`Theory.Semantics`): the cell operations act only on the addressed cell
   and round-trip with the current value (`currentVal_incVal_decVal`), and the
-  single-step behavior of the empty program, `>`, and `[` is pinned down.
+  single-step behavior of every instruction — `>`, `<`, `+`, `-`, `,`, `.`,
+  and `[` — is pinned down.
 - **Simulation infrastructure** (`Theory.Simulation`): a fuel-capped runner
   whose results convert into `RunsTo` chains, and the first instance — the
   compiled empty Minsky program halts from any simulating state

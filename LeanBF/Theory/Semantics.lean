@@ -8,13 +8,20 @@ import LeanBF.Core.Semantics
 /-!
 # Semantics Lemmas
 
-Single-step behavior of the interpreter on the empty program, pointer
-movement, and the loop instruction.
+Single-step behavior of the interpreter: a theorem for every instruction
+(pointer movement, cell arithmetic, input/output, and the loop), plus the
+basic `run`/`halts` facts.
 
 ## Theorems
 
 * `step_empty`: The empty program has no step.
 * `step_incPtr`: A single `>` moves the pointer.
+* `step_decPtr`: A single `<` moves the pointer.
+* `step_incVal`: A single `+` increments the current cell.
+* `step_decVal`: A single `-` decrements the current cell.
+* `step_read_nil`: A `,` at end-of-input writes `0` to the current cell.
+* `step_read_cons`: A `,` with available input writes it to the current cell.
+* `step_write`: A `.` appends the current value to the output.
 * `step_loop_zero`: A `[` with current value `0` skips its body.
 * `step_loop_nonzero`: A `[` with a non-zero current value runs its body and
   re-queues the loop.
@@ -35,6 +42,34 @@ theorem step_empty (s : State) : step [] s = none :=
 
 /-- A single `>` moves the pointer. -/
 theorem step_incPtr (s : State) : step [.inc_ptr] s = some ([], s.incPtr) :=
+  rfl
+
+/-- A single `<` moves the pointer. -/
+theorem step_decPtr (s : State) : step [.dec_ptr] s = some ([], s.decPtr) :=
+  rfl
+
+/-- A single `+` increments the current cell. -/
+theorem step_incVal (s : State) : step [.inc_val] s = some ([], s.incVal) :=
+  rfl
+
+/-- A single `-` decrements the current cell. -/
+theorem step_decVal (s : State) : step [.dec_val] s = some ([], s.decVal) :=
+  rfl
+
+/-- A `,` at end-of-input writes `0` to the current cell. -/
+theorem step_read_nil (s : State) (h : s.input = []) :
+    step [.read] s = some ([], { s with tape := fun i => if i = s.ptr then 0 else s.tape i }) := by
+  rw [step, h]
+
+/-- A `,` with available input writes it to the current cell and consumes it. -/
+theorem step_read_cons (s : State) (x : Nat) (xs : List Nat) (h : s.input = x :: xs) :
+    step [.read] s =
+      some ([], { s with tape := fun i => if i = s.ptr then x else s.tape i, input := xs }) := by
+  rw [step, h]
+
+/-- A `.` appends the current value to the output. -/
+theorem step_write (s : State) :
+    step [.write] s = some ([], { s with output := s.currentVal :: s.output }) :=
   rfl
 
 /-- A `[` with current value `0` skips its body. -/

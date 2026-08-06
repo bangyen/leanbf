@@ -36,6 +36,27 @@ example (s : State) (body : Program) (h : State.currentVal s = 0) :
     step [.loop body] s = some ([], s) :=
   step_loop_zero s body h
 
+example (s : State) : step [.dec_ptr] s = some ([], s.decPtr) :=
+  step_decPtr s
+
+example (s : State) : step [.inc_val] s = some ([], s.incVal) :=
+  step_incVal s
+
+example (s : State) : step [.dec_val] s = some ([], s.decVal) :=
+  step_decVal s
+
+example (s : State) (h : s.input = []) :
+    step [.read] s = some ([], { s with tape := fun i => if i = s.ptr then 0 else s.tape i }) :=
+  step_read_nil s h
+
+example (s : State) (x : Nat) (xs : List Nat) (h : s.input = x :: xs) :
+    step [.read] s =
+      some ([], { s with tape := fun i => if i = s.ptr then x else s.tape i, input := xs }) :=
+  step_read_cons s x xs h
+
+example (s : State) : step [.write] s = some ([], { s with output := s.currentVal :: s.output }) :=
+  step_write s
+
 example (s : State) : halts [] s :=
   halts_empty s
 

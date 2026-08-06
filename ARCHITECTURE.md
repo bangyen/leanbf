@@ -86,10 +86,11 @@ project convention that `Core` files contain only definitions.
   addressed cell (`tape_modifyCell_self`/`tape_modifyCell_other`) and
   round-trip with the current value (`currentVal_incVal_decVal`), and `>`/`<`
   leave the tape and pointer alone (`incPtr_tape`, `ptr_incPtr_decPtr`).
-- `Theory/Semantics.lean`: single-step semantics. The empty program has no
-  step, `>` moves the pointer, and `[` either skips its body (zero current
-  value) or runs it and re-queues the loop (non-zero). The empty program
-  halts.
+- `Theory/Semantics.lean`: single-step semantics. Every instruction has a
+  step theorem: `>`/`<` move the pointer, `+`/`-` change the current cell,
+  `,` reads input (writing `0` at end-of-input), `.` writes output, and `[`
+  either skips its body (zero current value) or runs it and re-queues the
+  loop (non-zero). The empty program has no step and halts.
 - `Theory/Loop.lean`: loop-correctness machinery. `stepOne`/`runSeq` execute
   a single instruction or a whole loop-free program, `LoopFree` characterizes
   programs without `[`, and `run_length_loop_free`/`run_append` let a run be

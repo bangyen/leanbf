@@ -38,13 +38,15 @@ The implementation is organized into `Core` (definitions), `Theory`
   program into a Brainfuck dispatch loop. `ifZeroElse` is a value-preserving
   conditional, and `compileInstr`/`compileProgram` assemble the loop. The
   compiled programs are exercised end-to-end in `Tests` with `decide`.
-- **Completeness statement** (`Theory.Completeness`): `Simulates` (a
-  Brainfuck state that simulates a Minsky state) and the conjecture
-  `turingCompleteness`. The conjecture is stated but not yet proven; see the
-  Roadmap.
-- **Verified example program** (`LeanBF.Examples.HelloWorld`): the classic
+- **Completeness** (`Theory.Completeness` + `Theory.Simulate`): `Simulates`
+  (a Brainfuck state that simulates a Minsky state) and the theorem
+  `turingCompleteness`, proven by the dispatch simulation in
+  `Theory.Simulate` and closed by `turingCompleteness_proof`.
+- **Verified example programs** (`LeanBF.Examples`): the classic
   `Hello World!` program, machine-checked with `decide` to print exactly
-  `Hello World!` and a newline and to halt.
+  `Hello World!` and a newline and to halt, and `countDown` — a concrete
+  Minsky machine whose compiled Brainfuck program is verified via
+  `runsTo_compileProgram` to halt with the final counter values on the tape.
 - **Tape algebra** (`Theory.State`) and **semantics lemmas**
   (`Theory.Semantics`): the cell operations act only on the addressed cell
   and round-trip with the current value (`currentVal_incVal_decVal`), and the
@@ -77,7 +79,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **Prove `turingCompleteness`** | High | Done. `Theory.Simulate` wires `compileInstr`/`compileProgram` into the dispatch simulation: each window runs its instruction's block, the dispatch loop runs exactly the matching window, the loop body maps a simulating state to the stepped machine, and `turingCompleteness_proof` closes the statement by induction on `Minsky.RunsTo`. |
-| **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
+| **More verified examples** | Medium | More Minsky machines (arithmetic, multiplication) could run through `runsTo_compileProgram` like `countDown`. |
 | **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 
 ## Scope & Limitations

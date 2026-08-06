@@ -149,6 +149,13 @@ and it is verified with the kernel `decide` tactic: after 1000 steps the
 output is exactly the character codes of `Hello World!` and a newline
 (`hello_world_output`), and the program halts (`hello_world_halts`).
 
+`CountDown` is a concrete two-counter Minsky machine (`jzdec1 2 1; inc2 0;
+halt`) that decrements `c1` to zero while counting in `c2`. Unlike
+`HelloWorld`, it exercises the compiler: `countDown_runs` proves the machine
+runs to its final state, and `countDown_compiled` pushes that run through
+`runsTo_compileProgram` to prove the compiled Brainfuck program halts on the
+canonical simulating state with `c2 = 2` on the tape (`countDown_halts`).
+
 ## Project Structure
 
 - `LeanBF/Core`: Definitions (Instruction, State, Semantics, Minsky,

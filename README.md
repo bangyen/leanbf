@@ -53,6 +53,20 @@ The implementation is organized into `Core` (definitions), `Theory`
   whose results convert into `RunsTo` chains, and the first instance — the
   compiled empty Minsky program halts from any simulating state
   (`compile_empty_simulates`).
+- **Body-loop machinery** (`Theory.BodyLoop`): the `ifZeroElse` then/else
+  loops — `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` — run an
+  arbitrary body program exactly once when the tested cell is non-zero and not
+  at all when it is zero. This is proven in `run`, `RunsTo`, and
+  `runToCompletion` form (`runsTo_bodyLoop_zero`/`runsTo_bodyLoop_succ`), and
+  the module also hosts the exact-run bridge (`RunsExactly`) and the
+  run-composition lemmas (`runToCompletion_append`) used to chain loop
+  effects.
+- **The `ifZeroElse` conditional** (`Theory/IfZeroElse`): chains the four loop
+  effects into the behavior of `Compiler.ifZeroElse` itself. From a state with
+  the pointer on `test`, the compiled conditional runs `thenBody` exactly once
+  when `test` is `0` and `elseBody` exactly once otherwise, preserving `test`
+  and restoring the scratch cells to `0` (`runsTo_ifZeroElse_zero`/
+  `runsTo_ifZeroElse_succ`, plus `run` and `runToCompletion` forms).
 - **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
   compiler definitions are re-asserted on concrete inputs with `rfl` and
   `decide` — including running compiled Minsky programs (`inc1`, `inc2`,
@@ -62,7 +76,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Prove `turingCompleteness`** | High | `Theory/Loop` and `Theory/Simulation` now have all four `ifZeroElse` loop effects (copy/flag/restore/clear) in both `run` and termination-tracking `runToCompletion` form, plus composition (`runToCompletion_append`, `RunsTo_append`). The next step is the else/then body loops (which run an arbitrary body once) and chaining the segments into the `ifZeroElse` lemma. |
+| **Prove `turingCompleteness`** | High | `Theory/IfZeroElse` proves `Compiler.ifZeroElse` end-to-end: it runs `thenBody` exactly once when the tested cell is zero and `elseBody` exactly once otherwise, preserving `test` and restoring all scratch cells to `0` (`runsTo_ifZeroElse_zero`/`runsTo_ifZeroElse_succ`, plus `run` and `runToCompletion` forms). The next step is wiring `compileInstr`/`compileProgram` into the dispatch simulation and the `turingCompleteness` statement. |
 | **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
 | **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 

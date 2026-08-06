@@ -22,6 +22,9 @@ movement, and the loop instruction.
 * `run_empty`: The empty program halts immediately.
 * `stepsToHalt_empty`: The empty program takes zero steps to halt.
 * `halts_empty`: The empty program halts.
+* `step_cons_ne_none`: A non-empty program always has a step.
+* `stepsToHalt_one_eq_zero`: `stepsToHalt 1` is `0` exactly on the empty
+  program.
 -/
 
 namespace LeanBF
@@ -62,5 +65,40 @@ theorem halts_empty (s : State) : halts [] s := by
     unfold haltsWithin
     rw [show stepsToHalt 1 [] s = 0 by rfl]
     decide⟩
+
+/-- A non-empty program always has a step. -/
+theorem step_cons_ne_none (i : Instruction) (rest : Program) (s : State) :
+    step (i :: rest) s ≠ none := by
+  cases i
+  · intro h; simp only [step] at h; cases h
+  · intro h; simp only [step] at h; cases h
+  · intro h; simp only [step] at h; cases h
+  · intro h; simp only [step] at h; cases h
+  · intro h
+    by_cases c : s.currentVal = 0
+    · simp only [step, c] at h; cases h
+    · simp only [step, c] at h; cases h
+  · intro h
+    rw [step] at h
+    cases h_in : s.input with
+    | nil => rw [h_in] at h; cases h
+    | cons x xs => rw [h_in] at h; cases h
+  · intro h; simp only [step] at h; cases h
+
+/-- `stepsToHalt 1` is `0` exactly on the empty program. -/
+theorem stepsToHalt_one_eq_zero (prog : Program) (s : State) :
+    stepsToHalt 1 prog s = 0 ↔ prog = [] := by
+  constructor
+  · intro h
+    unfold stepsToHalt at h
+    cases hstep : step prog s with
+    | none =>
+        cases prog with
+        | nil => rfl
+        | cons i rest => exact False.elim (step_cons_ne_none i rest s hstep)
+    | some cfg => simp only [hstep, stepsToHalt, Nat.zero_add] at h; cases h
+  · intro h
+    rw [h]
+    rfl
 
 end LeanBF

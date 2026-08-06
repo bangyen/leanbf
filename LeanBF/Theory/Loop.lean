@@ -51,6 +51,13 @@ increments. These are the foundation for the dispatch simulation.
 * `loop_free_copyLoopBody`: The copy loop body is loop-free.
 * `runSeq_copyLoopBody`: Running the copy loop body once produces copyLoopStep.
 * `run_copyLoop`: The copy loop moves the tested value into three cells.
+* `loop_free_flagLoopBody`: The flag loop body is loop-free.
+* `loop_free_restoreLoopBody`: The restore loop body is loop-free.
+* `runSeq_flagLoopBody`: Running the flag loop body once produces flagLoopStep.
+* `runSeq_restoreLoopBody`: Running the restore loop body once moves one unit.
+* `run_flagLoop`: The flag loop clears `s3` once per unit of `s1`.
+* `run_restoreLoop`: The restore loop moves `s4` back into `test`.
+* `run_clearHere`: The clear loop clears the current cell to `0`.
 -/
 
 namespace LeanBF

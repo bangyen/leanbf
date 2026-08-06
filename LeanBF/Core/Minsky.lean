@@ -62,6 +62,20 @@ def step (p : Program) (s : State) : Option State :=
     else
       some { s with pc := ifNonZero, c2 := s.c2 - 1 }
 
+/-- The effect of executing a single instruction at the current program
+    counter, with no dispatch. -/
+def stepInstr (instr : Instruction) (s : State) : State :=
+  match instr with
+  | .inc1 next => { s with pc := next, c1 := s.c1 + 1 }
+  | .inc2 next => { s with pc := next, c2 := s.c2 + 1 }
+  | .jzdec1 ifZero ifNonZero =>
+    if s.c1 = 0 then { s with pc := ifZero }
+    else { s with pc := ifNonZero, c1 := s.c1 - 1 }
+  | .jzdec2 ifZero ifNonZero =>
+    if s.c2 = 0 then { s with pc := ifZero }
+    else { s with pc := ifNonZero, c2 := s.c2 - 1 }
+  | .halt => s
+
 /-- Reflexive-transitive closure of the Minsky step -/
 inductive RunsTo (p : Program) : State → State → Prop where
   | halt (s : State) :

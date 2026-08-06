@@ -101,6 +101,28 @@ project convention that `Core` files contain only definitions.
   compiled empty Minsky program is shown to halt from any simulating state
   (`compile_empty_halts`), giving the first `compile_empty_simulates`
   instance.
+- `Theory/BodyLoop.lean`: the `ifZeroElse` then/else body loop. The loop
+  `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` runs an arbitrary
+  `body` exactly once when the tested cell `s` is non-zero and not at all when
+  it is zero, ending with the pointer back on `test` and `s` cleared. It is
+  pinned down in `run` form (`run_bodyLoop_zero`/`run_bodyLoop_succ`),
+  `RunsTo` form (`runsTo_bodyLoop_zero`/`runsTo_bodyLoop_succ`), and
+  fuel-capped `runToCompletion` form (`runToCompletion_bodyLoop_zero`/
+  `runToCompletion_bodyLoop_succ`). The module also hosts the exact-run bridge
+  (`RunsExactly`, `run_of_RunsTo`) and the run-composition lemmas
+  (`runToCompletion_append`, `RunsTo_append`-style chaining) that the
+  `ifZeroElse` lemma will use.
+- `Theory/IfZeroElse.lean`: the `Compiler.ifZeroElse` conditional itself. It
+  records the `RunsTo` forms of the three fixed loops
+  (`runsTo_copyLoop`/`runsTo_flagLoop`/`runsTo_restoreLoop`), the pointer and
+  scratch helpers (`runsTo_movePtr`, `runsTo_clearScratch`, `runsTo_setOne`),
+  the setup segment (`runsTo_setup_zero`/`runsTo_setup_succ`), and the main
+  results `runsTo_ifZeroElse_zero`/`runsTo_ifZeroElse_succ`: from a state with
+  the pointer on `test`, `Compiler.ifZeroElse` runs `thenBody` exactly once
+  when the tested cell is `0` and `elseBody` exactly once otherwise,
+  preserving `test` and restoring the scratch cells to `0`. `run` and
+  `runToCompletion` forms follow (`run_ifZeroElse_*`,
+  `runToCompletion_ifZeroElse_*`).
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
   `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`, and

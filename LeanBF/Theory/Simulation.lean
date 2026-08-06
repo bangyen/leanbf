@@ -7,6 +7,7 @@ import LeanBF.Core.Compiler
 import LeanBF.Core.Semantics
 import LeanBF.Theory.Completeness
 import LeanBF.Theory.Loop
+import LeanBF.Theory.Semantics
 
 /-!
 # The Simulation
@@ -40,17 +41,6 @@ the compiled empty program halts from any simulating state.
   completed run.
 * `runToCompletion_eq_of_ge`: Completing within `n` steps means completing
   within any larger bound.
-* `runToCompletion_append`: Completed runs compose across concatenation.
-* `runToCompletion_length_loop_free`: A loop-free program is fully executed
-  in as many steps as it has instructions (fuel-capped form).
-* `runToCompletion_copyLoop`: The copy loop moves the tested value into three
-  cells (fuel-capped form).
-* `runToCompletion_flagLoop`: The flag loop clears `s3` once per unit of `s1`
-  (fuel-capped form).
-* `runToCompletion_restoreLoop`: The restore loop moves `s4` back into `test`
-  (fuel-capped form).
-* `runToCompletion_clearHere`: The clear loop clears the current cell
-  (fuel-capped form).
 -/
 
 namespace LeanBF
@@ -66,25 +56,6 @@ def runToCompletion (fuel : ℕ) (prog : Program) (s : State) : Option State :=
     match step prog s with
     | none => some s
     | some (prog', s') => runToCompletion fuel prog' s'
-
-/-- A non-empty program always has a step. -/
-private theorem step_cons_ne_none (i : Instruction) (rest : Program) (s : State) :
-    step (i :: rest) s ≠ none := by
-  cases i
-  · intro h; simp only [step] at h; cases h
-  · intro h; simp only [step] at h; cases h
-  · intro h; simp only [step] at h; cases h
-  · intro h; simp only [step] at h; cases h
-  · intro h
-    by_cases c : s.currentVal = 0
-    · simp only [step, c] at h; cases h
-    · simp only [step, c] at h; cases h
-  · intro h
-    rw [step] at h
-    cases h_in : s.input with
-    | nil => rw [h_in] at h; cases h
-    | cons x xs => rw [h_in] at h; cases h
-  · intro h; simp only [step] at h; cases h
 
 /-- The step relation is undefined exactly on the empty program. -/
 theorem step_none_iff_empty (prog : Program) (s : State) :
@@ -220,7 +191,7 @@ theorem RunsTo_append {cfg : Program × State} (B : Program) (s' s'' : State)
   induction h1 with
   | halt s =>
       intro h2
-      simpa using h2
+      simpa only using h2
   | step p s s1 p' s_final hstep hrest ih =>
       intro h2
       exact RunsTo.step (p ++ B) s s1 (p' ++ B) s''

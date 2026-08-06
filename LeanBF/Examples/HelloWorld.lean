@@ -4,21 +4,29 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
 import LeanBF.Core.Instruction
+import LeanBF.Core.Semantics
 import LeanBF.Core.State
 
 /-!
 # Hello World
 
 The classic Brainfuck program that prints `Hello World!` followed by a
-newline, expressed as an `Instruction` list.
+newline, expressed as an `Instruction` list and verified with the kernel
+`decide` tactic.
 
 ## Main definitions
 
 * `helloWorld`: The program.
 * `helloState`: The initial state the program is run from.
+* `helloWorldOutput`: The expected output as a list of character codes, most
+  recent write first.
 
-The program is defined for illustration only; its run behavior is not yet
-machine-checked (see the Roadmap in the README).
+## Theorems
+
+* `hello_world_output`: After 1000 steps the output is exactly
+  `Hello World!` and a newline.
+* `hello_world_haltsWithin`: The program halts within 1000 steps.
+* `hello_world_halts`: The program halts.
 -/
 
 namespace LeanBF.Examples
@@ -48,8 +56,7 @@ def helloWorld : Program :=
   )] ++
   List.replicate 2 .inc_ptr ++ [.write] ++
   [.inc_ptr] ++ List.replicate 3 .dec_val ++ [.write] ++
-  List.replicate 7 .inc_val ++ [.write] ++
-  [.write, .write] ++
+  List.replicate 7 .inc_val ++ [.write, .write] ++
   List.replicate 3 .inc_val ++ [.write] ++
   List.replicate 2 .inc_ptr ++ [.write] ++
   [.dec_ptr, .dec_val, .write] ++
@@ -62,5 +69,23 @@ def helloWorld : Program :=
 
 /-- The initial state of the program. -/
 def helloState : State := State.mkEmpty
+
+/-- The output of `helloWorld`: the codes of `Hello World!` and a newline,
+    most recent write first. -/
+def helloWorldOutput : List Nat :=
+  [10, 33, 100, 108, 114, 111, 87, 32, 111, 108, 108, 101, 72]
+
+/-- After 1000 steps the output is exactly `Hello World!` and a newline. -/
+theorem hello_world_output :
+    (run 1000 helloWorld helloState).map (fun s => s.output) = some helloWorldOutput := by
+  decide
+
+/-- The program halts within 1000 steps. -/
+theorem hello_world_haltsWithin : haltsWithin 1000 helloWorld helloState := by
+  decide
+
+/-- The program halts. -/
+theorem hello_world_halts : halts helloWorld helloState :=
+  ⟨1000, hello_world_haltsWithin⟩
 
 end LeanBF.Examples

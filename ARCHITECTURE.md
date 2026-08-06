@@ -40,9 +40,12 @@ cell operations are total: `modifyCell`, `incVal`, `decVal`, `incPtr`,
 `step : Program → State → Option (Program × State)` is the small-step
 relation. A `,` at end of input writes `0`; a `[` with current value `0`
 skips its body; a non-zero `[` runs the body and then re-queues the loop
-(`body ++ [instr] ++ rest`). `RunsTo : (Program × State) → State → Prop` is
-the reflexive-transitive closure of `step`, and a program halts exactly when
-its instruction list is empty.
+(`body ++ [instr] ++ rest`). `run` executes up to `n` steps and stops early
+once the program halts; `stepsToHalt` counts the steps to halting (capped at
+`n`); `haltsWithin` and `halts` express halting within `n` steps and in
+general. `RunsTo : (Program × State) → State → Prop` is the
+reflexive-transitive closure of `step`, and a program halts exactly when its
+instruction list is empty.
 
 ### The Minsky Machine Model (`LeanBF.Core.Minsky`)
 
@@ -88,15 +91,12 @@ project convention that `Core` files contain only definitions.
 
 ## Example Programs
 
-`LeanBF/Examples` holds example programs as `Program` data. `HelloWorld` is
-the classic `++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.`
-`+++++++..+++.` `>>.<-.<.` `+++.` `------.` `--------.` `>>+.>++.` program
-together with its initial state.
-
-> [!NOTE]
-> Unlike the verified examples in the sibling LeanFunge project, the example
-> programs here are data only: their run behavior is not yet `decide`-checked
-> against `step`/`RunsTo`.
+`LeanBF/Examples` holds example programs. `HelloWorld` is the classic
+`++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.`
+`+++++++..+++.` `>>.<-.<.` `+++.` `------.` `--------.` `>>+.>++.` program,
+and it is verified with the kernel `decide` tactic: after 1000 steps the
+output is exactly the character codes of `Hello World!` and a newline
+(`hello_world_output`), and the program halts (`hello_world_halts`).
 
 ## Project Structure
 

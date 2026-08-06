@@ -42,6 +42,9 @@ The implementation is organized into `Core` (definitions), `Theory`
   Brainfuck state that simulates a Minsky state) and the conjecture
   `turingCompleteness`. The conjecture is stated but not yet proven; see the
   Roadmap.
+- **Verified example program** (`LeanBF.Examples.HelloWorld`): the classic
+  `Hello World!` program, machine-checked with `decide` to print exactly
+  `Hello World!` and a newline and to halt.
 - **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
   compiler definitions are re-asserted on concrete inputs with `rfl` and
   `decide` — including running compiled Minsky programs (`inc1`, `inc2`,
@@ -52,7 +55,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **Prove `turingCompleteness`** | High | The central goal: a run-level simulation theorem from the compiled dispatch loop to `RunsTo`. |
-| **Verified example programs** | Medium | `Examples.HelloWorld` is defined but its run behavior is not yet `decide`-checked. |
+| **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
 | **Stack/tape algebra** | Medium | Round-trip lemmas for `modifyCell`, `incVal`/`decVal`, and the loop-unrolling step. |
 
 ## Scope & Limitations
@@ -80,10 +83,9 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
 
 - `turingCompleteness` is a conjecture, not a theorem: it is recorded in
   `Theory.Completeness` and re-asserted nowhere.
-- `Examples.HelloWorld` is data only; its behavior is not yet machine-checked.
-- The compiler is verified by `decide`-checked runs of small programs, not by
-  a general simulation theorem — that theorem is the `turingCompleteness`
-  roadblock.
+- The compiler and the `HelloWorld` example are verified by `decide`-checked
+  runs on concrete programs, not by a general simulation theorem — that
+  theorem is the `turingCompleteness` roadblock.
 
 ## Installation & Building
 

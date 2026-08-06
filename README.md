@@ -62,7 +62,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Prove `turingCompleteness`** | High | `Theory/Loop` proves all three value-movement loops of `ifZeroElse`: the copy loop (`run_copyLoop`), the flag loop (`run_flagLoop`, clears `s3` once per unit of `s1`), and the restore loop (`run_restoreLoop`). Next: the else/then body loops, then composing `ifZeroElse` and the dispatch lemma. |
+| **Prove `turingCompleteness`** | High | `Theory/Loop` and `Theory/Simulation` now have all four `ifZeroElse` loop effects (copy/flag/restore/clear) in both `run` and termination-tracking `runToCompletion` form, plus composition (`runToCompletion_append`, `RunsTo_append`). The next step is the else/then body loops (which run an arbitrary body once) and chaining the segments into the `ifZeroElse` lemma. |
 | **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
 | **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 

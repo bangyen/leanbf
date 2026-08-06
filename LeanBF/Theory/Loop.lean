@@ -24,6 +24,8 @@ increments. These are the foundation for the dispatch simulation.
 ## Theorems
 
 * `step_cons_stepOne`: A non-loop instruction steps to its `stepOne` effect.
+* `step_append`: Appending `B` to a program does not change the effect of its
+  next step.
 * `loop_free_cons`: A non-loop head keeps a program loop-free.
 * `loop_free_replicate`: Replicating a non-loop instruction is loop-free.
 * `loop_free_append`: Concatenating loop-free programs is loop-free.
@@ -93,6 +95,97 @@ theorem step_cons_stepOne (i : Instruction) (rest : Program) (s : State)
       | nil => simp only [step, stepOne, h_in]
       | cons x xs => simp only [step, stepOne, h_in]
   | write => rfl
+
+/-- Appending `B` to a program does not change the effect of its next step. -/
+theorem step_append (p B : Program) (s s1 : State) (p' : Program)
+    (h : step p s = some (p', s1)) : step (p ++ B) s = some (p' ++ B, s1) := by
+  cases p with
+  | nil => simp only [step] at h; cases h
+  | cons i rest =>
+      cases i with
+      | inc_ptr =>
+          rw [step_cons_stepOne .inc_ptr rest s (by intro body h'; cases h')] at h
+          change step (.inc_ptr :: (rest ++ B)) s = some (p' ++ B, s1)
+          rw [step_cons_stepOne .inc_ptr (rest ++ B) s (by intro body h'; cases h')]
+          injection h with hpair
+          injection hpair with hrest hs1
+          subst p'
+          subst s1
+          rfl
+      | dec_ptr =>
+          rw [step_cons_stepOne .dec_ptr rest s (by intro body h'; cases h')] at h
+          change step (.dec_ptr :: (rest ++ B)) s = some (p' ++ B, s1)
+          rw [step_cons_stepOne .dec_ptr (rest ++ B) s (by intro body h'; cases h')]
+          injection h with hpair
+          injection hpair with hrest hs1
+          subst p'
+          subst s1
+          rfl
+      | inc_val =>
+          rw [step_cons_stepOne .inc_val rest s (by intro body h'; cases h')] at h
+          change step (.inc_val :: (rest ++ B)) s = some (p' ++ B, s1)
+          rw [step_cons_stepOne .inc_val (rest ++ B) s (by intro body h'; cases h')]
+          injection h with hpair
+          injection hpair with hrest hs1
+          subst p'
+          subst s1
+          rfl
+      | dec_val =>
+          rw [step_cons_stepOne .dec_val rest s (by intro body h'; cases h')] at h
+          change step (.dec_val :: (rest ++ B)) s = some (p' ++ B, s1)
+          rw [step_cons_stepOne .dec_val (rest ++ B) s (by intro body h'; cases h')]
+          injection h with hpair
+          injection hpair with hrest hs1
+          subst p'
+          subst s1
+          rfl
+      | write =>
+          rw [step_cons_stepOne .write rest s (by intro body h'; cases h')] at h
+          change step (.write :: (rest ++ B)) s = some (p' ++ B, s1)
+          rw [step_cons_stepOne .write (rest ++ B) s (by intro body h'; cases h')]
+          injection h with hpair
+          injection hpair with hrest hs1
+          subst p'
+          subst s1
+          rfl
+      | read =>
+          cases h_in : s.input with
+          | nil =>
+              rw [step_cons_stepOne .read rest s (by intro body h'; cases h')] at h
+              change step (.read :: (rest ++ B)) s = some (p' ++ B, s1)
+              rw [step_cons_stepOne .read (rest ++ B) s (by intro body h'; cases h')]
+              injection h with hpair
+              injection hpair with hrest hs1
+              subst p'
+              subst s1
+              rfl
+          | cons x xs =>
+              rw [step_cons_stepOne .read rest s (by intro body h'; cases h')] at h
+              change step (.read :: (rest ++ B)) s = some (p' ++ B, s1)
+              rw [step_cons_stepOne .read (rest ++ B) s (by intro body h'; cases h')]
+              injection h with hpair
+              injection hpair with hrest hs1
+              subst p'
+              subst s1
+              rfl
+      | loop body =>
+          by_cases c : s.currentVal = 0
+          · rw [step, if_pos c] at h
+            change step ((.loop body) :: (rest ++ B)) s = some (p' ++ B, s1)
+            rw [step, if_pos c]
+            injection h with hpair
+            injection hpair with hrest hs1
+            subst p'
+            subst s1
+            rfl
+          · rw [step, if_neg c] at h
+            change step ((.loop body) :: (rest ++ B)) s = some (p' ++ B, s1)
+            rw [step, if_neg c]
+            injection h with hpair
+            injection hpair with hrest hs1
+            subst p'
+            subst s1
+            ac_rfl
 
 /-- A non-loop head keeps a program loop-free. -/
 theorem loop_free_cons (i : Instruction) (rest : Program) :

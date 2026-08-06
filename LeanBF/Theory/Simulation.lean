@@ -6,6 +6,7 @@ Authors: Bangyen Pham
 import LeanBF.Core.Compiler
 import LeanBF.Core.Semantics
 import LeanBF.Theory.Completeness
+import LeanBF.Theory.Loop
 
 /-!
 # The Simulation
@@ -34,6 +35,7 @@ the compiled empty program halts from any simulating state.
 * `compile_empty_halts`: The compiled empty program halts.
 * `compile_empty_simulates`: The empty Minsky program is simulated by its
   compilation.
+* `RunsTo_append`: RunsTo composes across concatenation.
 -/
 
 namespace LeanBF
@@ -157,5 +159,20 @@ theorem compile_empty_halts (ms : Minsky.State) :
 theorem compile_empty_simulates (ms : Minsky.State) :
     ∃ s' : State, RunsTo (Compiler.compileProgram ([] : Minsky.Program), simState ms) s' :=
   RunsTo_of_haltsWithin 100 _ _ (compile_empty_haltsWithin ms)
+
+/-- RunsTo composes across concatenation: a run of `cfg.1` to `s'` followed by
+    a run of `B` from `s'` is a run of `cfg.1 ++ B`. -/
+theorem RunsTo_append {cfg : Program × State} (B : Program) (s' s'' : State)
+    (h1 : RunsTo cfg s') (h2 : RunsTo (B, s') s'') :
+    RunsTo (cfg.1 ++ B, cfg.2) s'' := by
+  revert h2
+  induction h1 with
+  | halt s =>
+      intro h2
+      simpa using h2
+  | step p s s1 p' s_final hstep hrest ih =>
+      intro h2
+      exact RunsTo.step (p ++ B) s s1 (p' ++ B) s''
+        (step_append p B s s1 p' hstep) (ih h2)
 
 end LeanBF

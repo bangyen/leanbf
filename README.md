@@ -62,7 +62,7 @@ The implementation is organized into `Core` (definitions), `Theory`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Prove `turingCompleteness`** | High | The loop-correctness machinery (`Theory/Loop`) is in place; the remaining work is proving the `ifZeroElse` loop *effects* (copy/flag/restore move the tested value) — heavy `Int` pointer arithmetic in `runSeq` — and then the dispatch lemma. |
+| **Prove `turingCompleteness`** | High | `Theory/Loop` has the loop-free machinery plus `movePtr`/`runSeq` pointer, tape, and I/O lemmas. The next step is the composed `ifZeroElse` copy-loop *effect* lemma (one-iteration cell reasoning), then the flag/restore loops and the dispatch lemma. |
 | **More verified examples** | Medium | Other example programs (arithmetic, loops) could follow `HelloWorld`. |
 | **Run-level tape lemmas** | Low | Generalize the single-step tape lemmas to whole runs (loop unrolling, invariance). |
 

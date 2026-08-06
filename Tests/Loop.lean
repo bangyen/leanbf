@@ -33,4 +33,16 @@ example (A B : Program) :
     LoopFree A → LoopFree B → LoopFree (A ++ B) :=
   loop_free_append A B
 
+example (s : State) (hptr : s.ptr = (0 : Int)) :
+    (runSeq (Compiler.movePtr 0 3) s).ptr = 3 :=
+  runSeq_movePtr_ptr 0 3 s hptr
+
+example (i j : Int) (s : State) :
+    (runSeq (Compiler.movePtr i j) s).tape = s.tape :=
+  runSeq_movePtr_tape i j s
+
+example (n : Nat) (s : State) :
+    (runSeq (List.replicate n .inc_ptr) s).ptr = s.ptr + (n : Int) :=
+  runSeq_replicate_inc_ptr n s
+
 end LeanBF.Tests

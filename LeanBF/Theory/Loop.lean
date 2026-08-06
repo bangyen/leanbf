@@ -32,9 +32,26 @@ increments. These are the foundation for the dispatch simulation.
 * `run_length_loop_free`: A loop-free program is fully executed in as many
   steps as it has instructions.
 * `run_append`: Splitting a run across a loop-free prefix and its tail.
+* `runSeq_append`: Sequential execution composes across concatenation.
+* `runSeq_replicate_inc_ptr`: `n` pointer-right moves move the pointer `n`
+  cells right.
+* `runSeq_replicate_dec_ptr`: `n` pointer-left moves move the pointer `n`
+  cells left.
+* `runSeq_replicate_inc_ptr_tape`: Pointer moves do not change the tape.
+* `runSeq_replicate_dec_ptr_tape`: Pointer moves do not change the tape.
+* `runSeq_movePtr_ptr`: `movePtr` moves the pointer to its target.
+* `runSeq_movePtr_tape`: `movePtr` does not change the tape.
+* `runSeq_replicate_inc_ptr_io`: Pointer moves do not change the input or
+  output.
+* `runSeq_replicate_dec_ptr_io`: Pointer moves do not change the input or
+  output.
+* `runSeq_movePtr_io`: `movePtr` does not change the input or output.
 * `loop_free_copyLoopBody`: The copy loop body is loop-free.
--/
 
+The ifZeroElse copy-loop effect lemma (the loop moves the tested value into
+its three scratch cells) needs composed tape-cell reasoning and is the next
+step.
+-/
 
 namespace LeanBF
 
@@ -158,6 +175,136 @@ theorem run_append : ∀ (n : Nat) (A B : Program) (s : State),
       change run (rest.length + n) (rest ++ B) (stepOne i s) = run n B (runSeq (i :: rest) s)
       rw [ih B (stepOne i s) h.2]
       rfl
+
+/-- Sequential execution composes across concatenation. -/
+theorem runSeq_append (A B : Program) : ∀ (s : State),
+    runSeq (A ++ B) s = runSeq B (runSeq A s) := by
+  induction A with
+  | nil => intro s; rfl
+  | cons i rest ih =>
+      intro s
+      change runSeq (i :: (rest ++ B)) s = runSeq B (runSeq (i :: rest) s)
+      simp only [runSeq]
+      rw [ih (stepOne i s)]
+
+/-- A run over `n` pointer-right moves moves the pointer `n` cells right. -/
+theorem runSeq_replicate_inc_ptr (n : Nat) : ∀ (s : State),
+    (runSeq (List.replicate n .inc_ptr) s).ptr = s.ptr + (n : Int) := by
+  induction n with
+  | zero => intro s; simp only [List.replicate, runSeq]; norm_num
+  | succ n ih =>
+      intro s
+      rw [List.replicate_succ]
+      simp only [runSeq, stepOne]
+      rw [ih (s.incPtr)]
+      simp only [State.incPtr]
+      norm_num
+      ring
+
+/-- A run over `n` pointer-left moves moves the pointer `n` cells left. -/
+theorem runSeq_replicate_dec_ptr (n : Nat) : ∀ (s : State),
+    (runSeq (List.replicate n .dec_ptr) s).ptr = s.ptr - (n : Int) := by
+  induction n with
+  | zero => intro s; simp only [List.replicate, runSeq]; norm_num
+  | succ n ih =>
+      intro s
+      rw [List.replicate_succ]
+      simp only [runSeq, stepOne]
+      rw [ih (s.decPtr)]
+      simp only [State.decPtr]
+      norm_num
+      ring
+
+/-- Pointer moves do not change the tape. -/
+theorem runSeq_replicate_inc_ptr_tape (n : Nat) : ∀ (s : State),
+    (runSeq (List.replicate n .inc_ptr) s).tape = s.tape := by
+  induction n with
+  | zero => intro s; simp only [List.replicate, runSeq]
+  | succ n ih =>
+      intro s
+      rw [List.replicate_succ]
+      simp only [runSeq, stepOne]
+      rw [ih (s.incPtr)]
+      simp only [State.incPtr]
+
+/-- Pointer moves do not change the tape. -/
+theorem runSeq_replicate_dec_ptr_tape (n : Nat) : ∀ (s : State),
+    (runSeq (List.replicate n .dec_ptr) s).tape = s.tape := by
+  induction n with
+  | zero => intro s; simp only [List.replicate, runSeq]
+  | succ n ih =>
+      intro s
+      rw [List.replicate_succ]
+      simp only [runSeq, stepOne]
+      rw [ih (s.decPtr)]
+      simp only [State.decPtr]
+
+/-- `movePtr` moves the pointer to its target. -/
+theorem runSeq_movePtr_ptr (i j : Int) (s : State) (hptr : s.ptr = i) :
+    (runSeq (Compiler.movePtr i j) s).ptr = j := by
+  unfold Compiler.movePtr
+  by_cases h : i < j
+  · rw [if_pos h]
+    rw [runSeq_replicate_inc_ptr (j - i).toNat s]
+    rw [hptr]
+    have hnn : 0 ≤ j - i := sub_nonneg.mpr (Int.le_of_lt h)
+    rw [Int.toNat_of_nonneg hnn]
+    ring
+  · rw [if_neg h]
+    rw [runSeq_replicate_dec_ptr (i - j).toNat s]
+    rw [hptr]
+    have hnn : 0 ≤ i - j := sub_nonneg.mpr (Int.le_of_not_gt h)
+    rw [Int.toNat_of_nonneg hnn]
+    ring
+
+/-- `movePtr` does not change the tape. -/
+theorem runSeq_movePtr_tape (i j : Int) (s : State) :
+    (runSeq (Compiler.movePtr i j) s).tape = s.tape := by
+  unfold Compiler.movePtr
+  by_cases h : i < j
+  · rw [if_pos h]
+    exact runSeq_replicate_inc_ptr_tape (j - i).toNat s
+  · rw [if_neg h]
+    exact runSeq_replicate_dec_ptr_tape (i - j).toNat s
+
+/-- Pointer moves do not change the input or output. -/
+theorem runSeq_replicate_inc_ptr_io (n : Nat) : ∀ (s : State),
+    (runSeq (List.replicate n .inc_ptr) s).input = s.input ∧
+    (runSeq (List.replicate n .inc_ptr) s).output = s.output := by
+  induction n with
+  | zero => intro s; simp only [List.replicate, runSeq]; constructor <;> trivial
+  | succ n ih =>
+      intro s
+      rw [List.replicate_succ]
+      simp only [runSeq, stepOne]
+      rw [(ih (s.incPtr)).1, (ih (s.incPtr)).2]
+      simp only [State.incPtr]
+      constructor <;> trivial
+
+/-- Pointer moves do not change the input or output. -/
+theorem runSeq_replicate_dec_ptr_io (n : Nat) : ∀ (s : State),
+    (runSeq (List.replicate n .dec_ptr) s).input = s.input ∧
+    (runSeq (List.replicate n .dec_ptr) s).output = s.output := by
+  induction n with
+  | zero => intro s; simp only [List.replicate, runSeq]; constructor <;> trivial
+  | succ n ih =>
+      intro s
+      rw [List.replicate_succ]
+      simp only [runSeq, stepOne]
+      rw [(ih (s.decPtr)).1, (ih (s.decPtr)).2]
+      simp only [State.decPtr]
+      constructor <;> trivial
+
+/-- `movePtr` does not change the input or output. -/
+theorem runSeq_movePtr_io (i j : Int) (s : State) :
+    (runSeq (Compiler.movePtr i j) s).input = s.input ∧
+    (runSeq (Compiler.movePtr i j) s).output = s.output := by
+  unfold Compiler.movePtr
+  by_cases h : i < j
+  · rw [if_pos h]
+    exact runSeq_replicate_inc_ptr_io (j - i).toNat s
+  · rw [if_neg h]
+    exact runSeq_replicate_dec_ptr_io (i - j).toNat s
 
 /-- The copy loop: `[test - s1 + s2 + s4 +]`, moving the tested value into
     three cells. -/

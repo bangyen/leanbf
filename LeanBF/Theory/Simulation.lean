@@ -41,6 +41,10 @@ the compiled empty program halts from any simulating state.
 * `runToCompletion_eq_of_ge`: Completing within `n` steps means completing
   within any larger bound.
 * `runToCompletion_append`: Completed runs compose across concatenation.
+* `runToCompletion_length_loop_free`: A loop-free program is fully executed
+  in as many steps as it has instructions (fuel-capped form).
+* `runToCompletion_copyLoop`: The copy loop moves the tested value into three
+  cells (fuel-capped form).
 -/
 
 namespace LeanBF

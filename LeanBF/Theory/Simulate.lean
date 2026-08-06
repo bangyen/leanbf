@@ -45,6 +45,7 @@ the `turingCompleteness` statement.
 * `runsTo_window_jzdec1`: The `jzdec1` window.
 * `runsTo_window_jzdec2`: The `jzdec2` window.
 * `runsTo_window_halt`: The `halt` window clears the running flag.
+* `runsTo_window_done`: A window with the `done` flag set runs nothing.
 -/
 
 namespace LeanBF
@@ -2110,6 +2111,92 @@ theorem runsTo_window_halt (ms : Minsky.State) (s : State)
     refine ⟨s', hwin, ?_⟩
     simp only [hpc0]
     exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
+
+
+
+/-- A window whose `done` flag is set runs nothing. -/
+theorem runsTo_window_done (block : Program) (ms : Minsky.State) (s : State)
+    (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 1) :
+    ∃ s', RunsTo (Compiler.window block, s) s' ∧
+      s'.ptr = 4 ∧ s'.tape 1 = ms.pc ∧ s'.tape 2 = ms.c1 ∧ s'.tape 3 = ms.c2 ∧
+        s'.tape 4 = 1 ∧ s'.tape 0 = 1 ∧ s'.tape 5 = 0 ∧ s'.tape 6 = 0 ∧
+        s'.tape 7 = 0 ∧ s'.tape 8 = 0 := by
+  rcases hsim with ⟨hsptr, hspc, hsc1, hsc2, hsrunning⟩
+  let s_else : State := elseBodyState 4 5 6 7 8 1 s
+  have helse : RunsTo ([], s_else) s_else := RunsTo.halt s_else
+  have h1e : s_else.ptr = 4 := by simp only [s_else, elseBodyState]
+  have h2e : s_else.tape 5 = 0 := by
+    simp only [s_else, elseBodyState]
+    rw [if_neg (by decide : ¬ (5 : Int) = 4), if_true]
+  have h3e : s_else.tape 7 = 0 := by
+    simp only [s_else, elseBodyState]
+    rw [if_neg (by decide : ¬ (7 : Int) = 4), if_neg (by decide : ¬ (7 : Int) = 5),
+      if_neg (by decide : ¬ (7 : Int) = 6), if_true]
+  have h4e : s_else.tape 8 = 0 := by
+    simp only [s_else, elseBodyState]
+    rw [if_neg (by decide : ¬ (8 : Int) = 4), if_neg (by decide : ¬ (8 : Int) = 5),
+      if_neg (by decide : ¬ (8 : Int) = 6), if_neg (by decide : ¬ (8 : Int) = 7), if_true]
+  let innerThen : Program := Compiler.movePtr 1 4 ++ [.inc_val] ++ Compiler.movePtr 4 1 ++ block
+  let tb : Program := Compiler.movePtr 4 1 ++
+    Compiler.ifZeroElse 1 9 10 11 12 innerThen [.dec_val] ++ Compiler.movePtr 1 4
+  have hif : RunsTo (Compiler.ifZeroElse 4 5 6 7 8 tb [], s)
+      (ifZeroElsePost 4 5 6 7 8 s_else) :=
+    runsTo_ifZeroElse_succ 0 4 5 6 7 8 tb [] s s_else hsptr hdone
+      ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide,
+        by decide, by decide, by decide⟩ helse h1e h2e h3e h4e
+  have hprog : Compiler.window block = Compiler.ifZeroElse 4 5 6 7 8 tb [] := by
+    simp only [Compiler.window, innerThen, tb, List.append_assoc]
+  let a2 : State := ifZeroElsePost 4 5 6 7 8 s_else
+  have ha2ptr : a2.ptr = 4 := by simp only [a2, ifZeroElsePost]
+  have ha2tape1 : a2.tape 1 = ms.pc := by
+    simp only [a2, ifZeroElsePost, s_else]
+    rw [if_neg (by decide : ¬ (1 : Int) = 5), if_neg (by decide : ¬ (1 : Int) = 6),
+      if_neg (by decide : ¬ (1 : Int) = 7), if_neg (by decide : ¬ (1 : Int) = 8)]
+    simp only [elseBodyState]
+    rw [if_neg (by decide : ¬ (1 : Int) = 4)]
+    exact hspc
+  have ha2tape2 : a2.tape 2 = ms.c1 := by
+    simp only [a2, ifZeroElsePost, s_else]
+    rw [if_neg (by decide : ¬ (2 : Int) = 5), if_neg (by decide : ¬ (2 : Int) = 6),
+      if_neg (by decide : ¬ (2 : Int) = 7), if_neg (by decide : ¬ (2 : Int) = 8)]
+    simp only [elseBodyState]
+    rw [if_neg (by decide : ¬ (2 : Int) = 4)]
+    exact hsc1
+  have ha2tape3 : a2.tape 3 = ms.c2 := by
+    simp only [a2, ifZeroElsePost, s_else]
+    rw [if_neg (by decide : ¬ (3 : Int) = 5), if_neg (by decide : ¬ (3 : Int) = 6),
+      if_neg (by decide : ¬ (3 : Int) = 7), if_neg (by decide : ¬ (3 : Int) = 8)]
+    simp only [elseBodyState]
+    rw [if_neg (by decide : ¬ (3 : Int) = 4)]
+    exact hsc2
+  have ha2tape4 : a2.tape 4 = 1 := by
+    simp only [a2, ifZeroElsePost, s_else]
+    rw [if_neg (by decide : ¬ (4 : Int) = 5), if_neg (by decide : ¬ (4 : Int) = 6),
+      if_neg (by decide : ¬ (4 : Int) = 7), if_neg (by decide : ¬ (4 : Int) = 8)]
+    simp only [elseBodyState]
+    rw [if_true]
+  have ha2run : a2.tape 0 = 1 := by
+    simp only [a2, ifZeroElsePost, s_else]
+    rw [if_neg (by decide : ¬ (0 : Int) = 5), if_neg (by decide : ¬ (0 : Int) = 6),
+      if_neg (by decide : ¬ (0 : Int) = 7), if_neg (by decide : ¬ (0 : Int) = 8)]
+    simp only [elseBodyState]
+    rw [if_neg (by decide : ¬ (0 : Int) = 4)]
+    exact hsrunning
+  have ha2tape5 : a2.tape 5 = 0 := by simp only [a2, ifZeroElsePost]; rw [if_true]
+  have ha2tape6 : a2.tape 6 = 0 := by
+    simp only [a2, ifZeroElsePost]
+    rw [if_neg (by decide : ¬ (6 : Int) = 5), if_true]
+  have ha2tape7 : a2.tape 7 = 0 := by
+    simp only [a2, ifZeroElsePost]
+    rw [if_neg (by decide : ¬ (7 : Int) = 5), if_neg (by decide : ¬ (7 : Int) = 6), if_true]
+  have ha2tape8 : a2.tape 8 = 0 := by
+    simp only [a2, ifZeroElsePost]
+    rw [if_neg (by decide : ¬ (8 : Int) = 5), if_neg (by decide : ¬ (8 : Int) = 6),
+      if_neg (by decide : ¬ (8 : Int) = 7), if_true]
+  have hwin : RunsTo (Compiler.window block, s) a2 := by
+    simpa only [hprog] using hif
+  exact ⟨a2, hwin, ha2ptr, ha2tape1, ha2tape2, ha2tape3, ha2tape4, ha2run, ha2tape5,
+    ha2tape6, ha2tape7, ha2tape8⟩
 
 
 end LeanBF

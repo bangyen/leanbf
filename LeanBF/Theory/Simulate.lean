@@ -513,7 +513,10 @@ theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) 
     ∃ s', RunsTo (Compiler.compileInstr (.jzdec1 ifZero ifNonZero), s) s' ∧
       s'.ptr = 1 ∧ s'.tape 1 = (if ms.c1 = 0 then ifZero else ifNonZero) ∧
         s'.tape 2 = (if ms.c1 = 0 then ms.c1 else ms.c1 - 1) ∧
-        s'.tape 3 = ms.c2 ∧ s'.tape 0 = 1 := by
+        s'.tape 3 = ms.c2 ∧ s'.tape 0 = 1 ∧
+        s'.tape 4 = s.tape 4 ∧ s'.tape 5 = s.tape 5 ∧ s'.tape 6 = s.tape 6 ∧
+        s'.tape 8 = s.tape 8 ∧ s'.tape 9 = s.tape 9 ∧ s'.tape 10 = s.tape 10 ∧
+        s'.tape 12 = s.tape 12 := by
   let a1 : State := { s with ptr := 2 }
   have h1 : RunsTo (Compiler.movePtr 1 2, s) a1 := by
     simpa only [a1] using runsTo_movePtr 1 2 s hptr
@@ -607,12 +610,61 @@ theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) 
       simpa only [Compiler.compileInstr, thenBody, elseBody, List.append_assoc] using
         (RunsTo_append (Compiler.movePtr 2 1) a2 a3
           (RunsTo_append (Compiler.ifZeroElse 2 13 14 15 16 thenBody elseBody) a1 a2 h1 hif) h3)
-    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rfl
     · simp only [a3, ha2tape1, hzero, if_true]
     · simp only [a3, ha2tape2, hzero, if_true]
     · simp only [a3, ha2tape3]
     · simp only [a3, ha2run]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (4 : Int) = 1),
+        if_neg (by decide : ¬ (4 : Int) = 2),
+        if_neg (by decide : ¬ (4 : Int) = 13),
+        if_neg (by decide : ¬ (4 : Int) = 14),
+        if_neg (by decide : ¬ (4 : Int) = 15),
+        if_neg (by decide : ¬ (4 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (5 : Int) = 1),
+        if_neg (by decide : ¬ (5 : Int) = 2),
+        if_neg (by decide : ¬ (5 : Int) = 13),
+        if_neg (by decide : ¬ (5 : Int) = 14),
+        if_neg (by decide : ¬ (5 : Int) = 15),
+        if_neg (by decide : ¬ (5 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (6 : Int) = 1),
+        if_neg (by decide : ¬ (6 : Int) = 2),
+        if_neg (by decide : ¬ (6 : Int) = 13),
+        if_neg (by decide : ¬ (6 : Int) = 14),
+        if_neg (by decide : ¬ (6 : Int) = 15),
+        if_neg (by decide : ¬ (6 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (8 : Int) = 1),
+        if_neg (by decide : ¬ (8 : Int) = 2),
+        if_neg (by decide : ¬ (8 : Int) = 13),
+        if_neg (by decide : ¬ (8 : Int) = 14),
+        if_neg (by decide : ¬ (8 : Int) = 15),
+        if_neg (by decide : ¬ (8 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (9 : Int) = 1),
+        if_neg (by decide : ¬ (9 : Int) = 2),
+        if_neg (by decide : ¬ (9 : Int) = 13),
+        if_neg (by decide : ¬ (9 : Int) = 14),
+        if_neg (by decide : ¬ (9 : Int) = 15),
+        if_neg (by decide : ¬ (9 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (10 : Int) = 1),
+        if_neg (by decide : ¬ (10 : Int) = 2),
+        if_neg (by decide : ¬ (10 : Int) = 13),
+        if_neg (by decide : ¬ (10 : Int) = 14),
+        if_neg (by decide : ¬ (10 : Int) = 15),
+        if_neg (by decide : ¬ (10 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (12 : Int) = 1),
+        if_neg (by decide : ¬ (12 : Int) = 2),
+        if_neg (by decide : ¬ (12 : Int) = 13),
+        if_neg (by decide : ¬ (12 : Int) = 14),
+        if_neg (by decide : ¬ (12 : Int) = 15),
+        if_neg (by decide : ¬ (12 : Int) = 16)]
   · have hw : ms.c1 = (ms.c1 - 1) + 1 := by
       rw [Nat.sub_add_cancel (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hzero))]
     let w : Nat := ms.c1 - 1
@@ -712,12 +764,61 @@ theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) 
       simpa only [Compiler.compileInstr, thenBody, elseBody, List.append_assoc] using
         (RunsTo_append (Compiler.movePtr 2 1) a2 a3
           (RunsTo_append (Compiler.ifZeroElse 2 13 14 15 16 thenBody elseBody) a1 a2 h1 hif) h3)
-    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rfl
     · simp only [a3, ha2tape1, hzero, if_false]
     · simp only [a3, ha2tape2, hzero, if_false]
     · simp only [a3, ha2tape3]
     · simp only [a3, ha2run]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (4 : Int) = 1),
+        if_neg (by decide : ¬ (4 : Int) = 2),
+        if_neg (by decide : ¬ (4 : Int) = 13),
+        if_neg (by decide : ¬ (4 : Int) = 14),
+        if_neg (by decide : ¬ (4 : Int) = 15),
+        if_neg (by decide : ¬ (4 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (5 : Int) = 1),
+        if_neg (by decide : ¬ (5 : Int) = 2),
+        if_neg (by decide : ¬ (5 : Int) = 13),
+        if_neg (by decide : ¬ (5 : Int) = 14),
+        if_neg (by decide : ¬ (5 : Int) = 15),
+        if_neg (by decide : ¬ (5 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (6 : Int) = 1),
+        if_neg (by decide : ¬ (6 : Int) = 2),
+        if_neg (by decide : ¬ (6 : Int) = 13),
+        if_neg (by decide : ¬ (6 : Int) = 14),
+        if_neg (by decide : ¬ (6 : Int) = 15),
+        if_neg (by decide : ¬ (6 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (8 : Int) = 1),
+        if_neg (by decide : ¬ (8 : Int) = 2),
+        if_neg (by decide : ¬ (8 : Int) = 13),
+        if_neg (by decide : ¬ (8 : Int) = 14),
+        if_neg (by decide : ¬ (8 : Int) = 15),
+        if_neg (by decide : ¬ (8 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (9 : Int) = 1),
+        if_neg (by decide : ¬ (9 : Int) = 2),
+        if_neg (by decide : ¬ (9 : Int) = 13),
+        if_neg (by decide : ¬ (9 : Int) = 14),
+        if_neg (by decide : ¬ (9 : Int) = 15),
+        if_neg (by decide : ¬ (9 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (10 : Int) = 1),
+        if_neg (by decide : ¬ (10 : Int) = 2),
+        if_neg (by decide : ¬ (10 : Int) = 13),
+        if_neg (by decide : ¬ (10 : Int) = 14),
+        if_neg (by decide : ¬ (10 : Int) = 15),
+        if_neg (by decide : ¬ (10 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (12 : Int) = 1),
+        if_neg (by decide : ¬ (12 : Int) = 2),
+        if_neg (by decide : ¬ (12 : Int) = 13),
+        if_neg (by decide : ¬ (12 : Int) = 14),
+        if_neg (by decide : ¬ (12 : Int) = 15),
+        if_neg (by decide : ¬ (12 : Int) = 16)]
 
 
 theorem runsTo_compileInstr_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State)
@@ -727,7 +828,10 @@ theorem runsTo_compileInstr_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State)
     ∃ s', RunsTo (Compiler.compileInstr (.jzdec2 ifZero ifNonZero), s) s' ∧
       s'.ptr = 1 ∧ s'.tape 1 = (if ms.c2 = 0 then ifZero else ifNonZero) ∧
         s'.tape 2 = ms.c1 ∧
-        s'.tape 3 = (if ms.c2 = 0 then ms.c2 else ms.c2 - 1) ∧ s'.tape 0 = 1 := by
+        s'.tape 3 = (if ms.c2 = 0 then ms.c2 else ms.c2 - 1) ∧ s'.tape 0 = 1 ∧
+        s'.tape 4 = s.tape 4 ∧ s'.tape 5 = s.tape 5 ∧ s'.tape 6 = s.tape 6 ∧
+        s'.tape 8 = s.tape 8 ∧ s'.tape 9 = s.tape 9 ∧ s'.tape 10 = s.tape 10 ∧
+        s'.tape 12 = s.tape 12 := by
   let a1 : State := { s with ptr := 3 }
   have h1 : RunsTo (Compiler.movePtr 1 3, s) a1 := by
     simpa only [a1] using runsTo_movePtr 1 3 s hptr
@@ -826,12 +930,61 @@ theorem runsTo_compileInstr_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State)
       simpa only [Compiler.compileInstr, thenBody, elseBody, List.append_assoc] using
         (RunsTo_append (Compiler.movePtr 3 1) a2 a3
           (RunsTo_append (Compiler.ifZeroElse 3 13 14 15 16 thenBody elseBody) a1 a2 h1 hif) h3)
-    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rfl
     · simp only [a3, ha2tape1, hzero, if_true]
     · simp only [a3, ha2tape2]
     · simp only [a3, ha2tape3, hzero, if_true]
     · simp only [a3, ha2run]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (4 : Int) = 1),
+        if_neg (by decide : ¬ (4 : Int) = 3),
+        if_neg (by decide : ¬ (4 : Int) = 13),
+        if_neg (by decide : ¬ (4 : Int) = 14),
+        if_neg (by decide : ¬ (4 : Int) = 15),
+        if_neg (by decide : ¬ (4 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (5 : Int) = 1),
+        if_neg (by decide : ¬ (5 : Int) = 3),
+        if_neg (by decide : ¬ (5 : Int) = 13),
+        if_neg (by decide : ¬ (5 : Int) = 14),
+        if_neg (by decide : ¬ (5 : Int) = 15),
+        if_neg (by decide : ¬ (5 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (6 : Int) = 1),
+        if_neg (by decide : ¬ (6 : Int) = 3),
+        if_neg (by decide : ¬ (6 : Int) = 13),
+        if_neg (by decide : ¬ (6 : Int) = 14),
+        if_neg (by decide : ¬ (6 : Int) = 15),
+        if_neg (by decide : ¬ (6 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (8 : Int) = 1),
+        if_neg (by decide : ¬ (8 : Int) = 3),
+        if_neg (by decide : ¬ (8 : Int) = 13),
+        if_neg (by decide : ¬ (8 : Int) = 14),
+        if_neg (by decide : ¬ (8 : Int) = 15),
+        if_neg (by decide : ¬ (8 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (9 : Int) = 1),
+        if_neg (by decide : ¬ (9 : Int) = 3),
+        if_neg (by decide : ¬ (9 : Int) = 13),
+        if_neg (by decide : ¬ (9 : Int) = 14),
+        if_neg (by decide : ¬ (9 : Int) = 15),
+        if_neg (by decide : ¬ (9 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (10 : Int) = 1),
+        if_neg (by decide : ¬ (10 : Int) = 3),
+        if_neg (by decide : ¬ (10 : Int) = 13),
+        if_neg (by decide : ¬ (10 : Int) = 14),
+        if_neg (by decide : ¬ (10 : Int) = 15),
+        if_neg (by decide : ¬ (10 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
+        if_neg (by decide : ¬ (12 : Int) = 1),
+        if_neg (by decide : ¬ (12 : Int) = 3),
+        if_neg (by decide : ¬ (12 : Int) = 13),
+        if_neg (by decide : ¬ (12 : Int) = 14),
+        if_neg (by decide : ¬ (12 : Int) = 15),
+        if_neg (by decide : ¬ (12 : Int) = 16)]
   · have hw : ms.c2 = (ms.c2 - 1) + 1 := by
       rw [Nat.sub_add_cancel (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hzero))]
     let w : Nat := ms.c2 - 1
@@ -931,12 +1084,61 @@ theorem runsTo_compileInstr_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State)
       simpa only [Compiler.compileInstr, thenBody, elseBody, List.append_assoc] using
         (RunsTo_append (Compiler.movePtr 3 1) a2 a3
           (RunsTo_append (Compiler.ifZeroElse 3 13 14 15 16 thenBody elseBody) a1 a2 h1 hif) h3)
-    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rfl
     · simp only [a3, ha2tape1, hzero, if_false]
     · simp only [a3, ha2tape2]
     · simp only [a3, ha2tape3, hzero, if_false]
     · simp only [a3, ha2run]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (4 : Int) = 1),
+        if_neg (by decide : ¬ (4 : Int) = 3),
+        if_neg (by decide : ¬ (4 : Int) = 13),
+        if_neg (by decide : ¬ (4 : Int) = 14),
+        if_neg (by decide : ¬ (4 : Int) = 15),
+        if_neg (by decide : ¬ (4 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (5 : Int) = 1),
+        if_neg (by decide : ¬ (5 : Int) = 3),
+        if_neg (by decide : ¬ (5 : Int) = 13),
+        if_neg (by decide : ¬ (5 : Int) = 14),
+        if_neg (by decide : ¬ (5 : Int) = 15),
+        if_neg (by decide : ¬ (5 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (6 : Int) = 1),
+        if_neg (by decide : ¬ (6 : Int) = 3),
+        if_neg (by decide : ¬ (6 : Int) = 13),
+        if_neg (by decide : ¬ (6 : Int) = 14),
+        if_neg (by decide : ¬ (6 : Int) = 15),
+        if_neg (by decide : ¬ (6 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (8 : Int) = 1),
+        if_neg (by decide : ¬ (8 : Int) = 3),
+        if_neg (by decide : ¬ (8 : Int) = 13),
+        if_neg (by decide : ¬ (8 : Int) = 14),
+        if_neg (by decide : ¬ (8 : Int) = 15),
+        if_neg (by decide : ¬ (8 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (9 : Int) = 1),
+        if_neg (by decide : ¬ (9 : Int) = 3),
+        if_neg (by decide : ¬ (9 : Int) = 13),
+        if_neg (by decide : ¬ (9 : Int) = 14),
+        if_neg (by decide : ¬ (9 : Int) = 15),
+        if_neg (by decide : ¬ (9 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (10 : Int) = 1),
+        if_neg (by decide : ¬ (10 : Int) = 3),
+        if_neg (by decide : ¬ (10 : Int) = 13),
+        if_neg (by decide : ¬ (10 : Int) = 14),
+        if_neg (by decide : ¬ (10 : Int) = 15),
+        if_neg (by decide : ¬ (10 : Int) = 16)]
+    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
+        if_neg (by decide : ¬ (12 : Int) = 1),
+        if_neg (by decide : ¬ (12 : Int) = 3),
+        if_neg (by decide : ¬ (12 : Int) = 13),
+        if_neg (by decide : ¬ (12 : Int) = 14),
+        if_neg (by decide : ¬ (12 : Int) = 15),
+        if_neg (by decide : ¬ (12 : Int) = 16)]
 
 
 /-- The state in which `block` runs inside a window: the `done` flag is set and

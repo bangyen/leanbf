@@ -44,6 +44,7 @@ the `turingCompleteness` statement.
 * `runsTo_window_inc2`: The `inc2` window.
 * `runsTo_window_jzdec1`: The `jzdec1` window.
 * `runsTo_window_jzdec2`: The `jzdec2` window.
+* `runsTo_window_halt`: The `halt` window clears the running flag.
 -/
 
 namespace LeanBF
@@ -325,6 +326,7 @@ theorem runsTo_compileInstr_halt (s : State) (hptr : s.ptr = 1)
     (hpc : s.tape 1 = 0) (hrun : s.tape 0 = 1) :
     ∃ s', RunsTo (Compiler.compileInstr .halt, s) s' ∧
       s'.ptr = 1 ∧ s'.tape 1 = 0 ∧ s'.tape 0 = 0 ∧
+        s'.tape 2 = s.tape 2 ∧ s'.tape 3 = s.tape 3 ∧
         s'.tape 4 = s.tape 4 ∧ s'.tape 5 = s.tape 5 ∧ s'.tape 6 = s.tape 6 ∧
         s'.tape 8 = s.tape 8 ∧ s'.tape 9 = s.tape 9 ∧ s'.tape 10 = s.tape 10 ∧
         s'.tape 12 = s.tape 12 := by
@@ -355,13 +357,17 @@ theorem runsTo_compileInstr_halt (s : State) (hptr : s.ptr = 1)
     simpa only [Compiler.compileInstr, List.append_assoc] using
       (RunsTo_append (Compiler.movePtr 0 1) a2 a3
         (RunsTo_append (Compiler.clearHere) a1 a2 h1 h2) h3)
-  refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rfl
   · simp only [a3, a2, a1]
     rw [if_neg (by decide : ¬ (1 : Int) = 0)]
     exact hpc
   · simp only [a3, a2, a1, hrun]
     rw [if_true]
+  · simp only [a3, a2, a1]
+    rw [if_neg (by decide : ¬ (2 : Int) = 0)]
+  · simp only [a3, a2, a1]
+    rw [if_neg (by decide : ¬ (3 : Int) = 0)]
   · simp only [a3, a2, a1]
     rw [if_neg (by decide : ¬ (4 : Int) = 0)]
   · simp only [a3, a2, a1]
@@ -1158,15 +1164,15 @@ def windowBlockStart (s : State) : State :=
 /-- A window whose `pc` cell is zero runs `block` exactly once and sets the
     `done` flag. -/
 theorem runsTo_window_match (block : Program) (ms ms' : Minsky.State) (s s'' : State)
-    (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 0) (hpc : ms.pc = 0)
+    (running : Nat) (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 0) (hpc : ms.pc = 0)
     (hblock : RunsTo (block, windowBlockStart s) s'')
     (hpost : s''.ptr = 1 ∧ s''.tape 1 = ms'.pc ∧ s''.tape 2 = ms'.c1 ∧
-      s''.tape 3 = ms'.c2 ∧ s''.tape 0 = 1 ∧ s''.tape 4 = 1 ∧
+      s''.tape 3 = ms'.c2 ∧ s''.tape 0 = running ∧ s''.tape 4 = 1 ∧
       s''.tape 5 = 0 ∧ s''.tape 6 = 0 ∧ s''.tape 8 = 0 ∧
       s''.tape 9 = 0 ∧ s''.tape 10 = 0 ∧ s''.tape 12 = 0) :
     ∃ s', RunsTo (Compiler.window block, s) s' ∧
       s'.ptr = 4 ∧ s'.tape 1 = ms'.pc ∧ s'.tape 2 = ms'.c1 ∧
-        s'.tape 3 = ms'.c2 ∧ s'.tape 4 = 1 ∧ s'.tape 0 = 1 ∧
+        s'.tape 3 = ms'.c2 ∧ s'.tape 4 = 1 ∧ s'.tape 0 = running ∧
         s'.tape 5 = 0 ∧ s'.tape 6 = 0 ∧ s'.tape 7 = 0 ∧ s'.tape 8 = 0 := by
   rcases hsim with ⟨hsptr, hspc, hsc1, hsc2, hsrunning⟩
   rcases hpost with ⟨hpptr, hppc, hpc1, hpc2, hprun, hp4, hp5, hp6, hp8, hp9, hp10, hp12⟩
@@ -1251,7 +1257,7 @@ theorem runsTo_window_match (block : Program) (ms ms' : Minsky.State) (s s'' : S
     rw [if_neg (by decide : ¬ (3 : Int) = 9), if_neg (by decide : ¬ (3 : Int) = 10),
       if_neg (by decide : ¬ (3 : Int) = 11), if_neg (by decide : ¬ (3 : Int) = 12)]
     exact hpc2
-  have hiRun : iPost.tape 0 = 1 := by
+  have hiRun : iPost.tape 0 = running := by
     simp only [iPost, ifZeroElsePost]
     rw [if_neg (by decide : ¬ (0 : Int) = 9), if_neg (by decide : ¬ (0 : Int) = 10),
       if_neg (by decide : ¬ (0 : Int) = 11), if_neg (by decide : ¬ (0 : Int) = 12)]
@@ -1318,7 +1324,7 @@ theorem runsTo_window_match (block : Program) (ms ms' : Minsky.State) (s s'' : S
   have ha2tape4 : a2.tape 4 = 1 := by
     simp only [a2, ifZeroElsePost]
     exact hiDone
-  have ha2run : a2.tape 0 = 1 := by
+  have ha2run : a2.tape 0 = running := by
     simp only [a2, ifZeroElsePost, s_then]
     rw [if_neg (by decide : ¬ (0 : Int) = 5), if_neg (by decide : ¬ (0 : Int) = 6),
       if_neg (by decide : ¬ (0 : Int) = 7), if_neg (by decide : ¬ (0 : Int) = 8)]
@@ -1714,7 +1720,7 @@ theorem runsTo_window_inc1 (next : Nat) (ms : Minsky.State) (s : State)
       · rw [hp12]
         exact hb0tape12
     let ms' : Minsky.State := { pc := next, c1 := ms.c1 + 1, c2 := ms.c2 }
-    rcases runsTo_window_match (Compiler.compileInstr (.inc1 next)) ms ms' s s''
+    rcases runsTo_window_match (Compiler.compileInstr (.inc1 next)) ms ms' s s'' 1
         hsim hdone hpc0 hblock hpost with
       ⟨s', hwin, wptr, wpc, wc1, wc2, wdone, wrun, w5, w6, w7, w8⟩
     refine ⟨s', hwin, ?_⟩
@@ -1805,7 +1811,7 @@ theorem runsTo_window_inc2 (next : Nat) (ms : Minsky.State) (s : State)
       · rw [hp12]
         exact hb0tape12
     let ms' : Minsky.State := { pc := next, c1 := ms.c1, c2 := ms.c2 + 1 }
-    rcases runsTo_window_match (Compiler.compileInstr (.inc2 next)) ms ms' s s''
+    rcases runsTo_window_match (Compiler.compileInstr (.inc2 next)) ms ms' s s'' 1
         hsim hdone hpc0 hblock hpost with
       ⟨s', hwin, wptr, wpc, wc1, wc2, wdone, wrun, w5, w6, w7, w8⟩
     refine ⟨s', hwin, ?_⟩
@@ -1901,7 +1907,7 @@ theorem runsTo_window_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : S
     let ms' : Minsky.State :=
       { pc := (if ms.c1 = 0 then ifZero else ifNonZero),
         c1 := (if ms.c1 = 0 then ms.c1 else ms.c1 - 1), c2 := ms.c2 }
-    rcases runsTo_window_match (Compiler.compileInstr (.jzdec1 ifZero ifNonZero)) ms ms' s s''
+    rcases runsTo_window_match (Compiler.compileInstr (.jzdec1 ifZero ifNonZero)) ms ms' s s'' 1
         hsim hdone hpc0 hblock hpost with
       ⟨s', hwin, wptr, wpc, wc1, wc2, wdone, wrun, w5, w6, w7, w8⟩
     refine ⟨s', hwin, ?_⟩
@@ -1997,7 +2003,7 @@ theorem runsTo_window_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : S
     let ms' : Minsky.State :=
       { pc := (if ms.c2 = 0 then ifZero else ifNonZero),
         c1 := ms.c1, c2 := (if ms.c2 = 0 then ms.c2 else ms.c2 - 1) }
-    rcases runsTo_window_match (Compiler.compileInstr (.jzdec2 ifZero ifNonZero)) ms ms' s s''
+    rcases runsTo_window_match (Compiler.compileInstr (.jzdec2 ifZero ifNonZero)) ms ms' s s'' 1
         hsim hdone hpc0 hblock hpost with
       ⟨s', hwin, wptr, wpc, wc1, wc2, wdone, wrun, w5, w6, w7, w8⟩
     refine ⟨s', hwin, ?_⟩
@@ -2010,6 +2016,100 @@ theorem runsTo_window_jzdec2 (ifZero ifNonZero : Nat) (ms : Minsky.State) (s : S
     simp only [hpc0]
     exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
 
+
+
+
+/-- The `halt` window: if the `pc` is zero, run the `halt` block (which clears
+    the running flag) and set `done`; otherwise decrement the `pc`. -/
+theorem runsTo_window_halt (ms : Minsky.State) (s : State)
+    (hsim : SimulatesAt ms 4 s) (hdone : s.tape 4 = 0) :
+    ∃ s', RunsTo (Compiler.window (Compiler.compileInstr .halt), s) s' ∧
+      (if ms.pc = 0 then
+        s'.ptr = 4 ∧ s'.tape 1 = 0 ∧ s'.tape 2 = ms.c1 ∧ s'.tape 3 = ms.c2 ∧
+          s'.tape 4 = 1 ∧ s'.tape 0 = 0 ∧ s'.tape 5 = 0 ∧ s'.tape 6 = 0 ∧
+          s'.tape 7 = 0 ∧ s'.tape 8 = 0
+      else
+        s'.ptr = 4 ∧ s'.tape 1 = ms.pc - 1 ∧ s'.tape 2 = ms.c1 ∧ s'.tape 3 = ms.c2 ∧
+          s'.tape 4 = 0 ∧ s'.tape 0 = 1 ∧ s'.tape 5 = 0 ∧ s'.tape 6 = 0 ∧
+          s'.tape 7 = 0 ∧ s'.tape 8 = 0) := by
+  by_cases hpc0 : ms.pc = 0
+  · have hsptr : s.ptr = 4 := hsim.1
+    have hspc : s.tape 1 = ms.pc := hsim.2.1
+    have hsc1 : s.tape 2 = ms.c1 := hsim.2.2.1
+    have hsc2 : s.tape 3 = ms.c2 := hsim.2.2.2.1
+    have hsrunning : s.tape 0 = 1 := hsim.2.2.2.2
+    rcases windowBlockStart_tape s with ⟨wptr, wtape1, wtape2, wtape3, wtape0, wtape4, wtape5,
+      wtape6, wtape8, wtape9, wtape10, wtape12⟩
+    let b0 : State := windowBlockStart s
+    have hb0ptr : b0.ptr = 1 := by
+      change (windowBlockStart s).ptr = 1
+      rfl
+    have hb0pc : b0.tape 1 = 0 := by
+      change (windowBlockStart s).tape 1 = 0
+      rfl
+    have hb0c1 : b0.tape 2 = ms.c1 := by rw [wtape2]; exact hsc1
+    have hb0c2 : b0.tape 3 = ms.c2 := by rw [wtape3]; exact hsc2
+    have hb0run : b0.tape 0 = 1 := by rw [wtape0]; exact hsrunning
+    have hb0tape4 : b0.tape 4 = 1 := by
+      change (windowBlockStart s).tape 4 = 1
+      rfl
+    have hb0tape5 : b0.tape 5 = 0 := by
+      change (windowBlockStart s).tape 5 = 0
+      rfl
+    have hb0tape6 : b0.tape 6 = 0 := by
+      change (windowBlockStart s).tape 6 = 0
+      rfl
+    have hb0tape8 : b0.tape 8 = 0 := by
+      change (windowBlockStart s).tape 8 = 0
+      rfl
+    have hb0tape9 : b0.tape 9 = 0 := by
+      change (windowBlockStart s).tape 9 = 0
+      rfl
+    have hb0tape10 : b0.tape 10 = 0 := by
+      change (windowBlockStart s).tape 10 = 0
+      rfl
+    have hb0tape12 : b0.tape 12 = 0 := by
+      change (windowBlockStart s).tape 12 = 0
+      rfl
+    rcases runsTo_compileInstr_halt b0 hb0ptr hb0pc hb0run with
+      ⟨s'', hblock, hp1, hpc', hrun0, hc1', hc2', hp4, hp5, hp6, hp8, hp9, hp10, hp12⟩
+    have hpost : s''.ptr = 1 ∧ s''.tape 1 = 0 ∧ s''.tape 2 = ms.c1 ∧ s''.tape 3 = ms.c2 ∧
+        s''.tape 0 = 0 ∧ s''.tape 4 = 1 ∧ s''.tape 5 = 0 ∧ s''.tape 6 = 0 ∧ s''.tape 8 = 0 ∧
+        s''.tape 9 = 0 ∧ s''.tape 10 = 0 ∧ s''.tape 12 = 0 := by
+      repeat' constructor
+      · exact hp1
+      · exact hpc'
+      · rw [hc1']
+        exact hb0c1
+      · rw [hc2']
+        exact hb0c2
+      · exact hrun0
+      · rw [hp4]
+        exact hb0tape4
+      · rw [hp5]
+        exact hb0tape5
+      · rw [hp6]
+        exact hb0tape6
+      · rw [hp8]
+        exact hb0tape8
+      · rw [hp9]
+        exact hb0tape9
+      · rw [hp10]
+        exact hb0tape10
+      · rw [hp12]
+        exact hb0tape12
+    let ms' : Minsky.State := { pc := 0, c1 := ms.c1, c2 := ms.c2 }
+    rcases runsTo_window_match (Compiler.compileInstr .halt) ms ms' s s'' 0
+        hsim hdone hpc0 hblock hpost with
+      ⟨s', hwin, wptr, wpc, wc1, wc2, wdone, wrun, w5, w6, w7, w8⟩
+    refine ⟨s', hwin, ?_⟩
+    simp only [hpc0]
+    exact ⟨wptr, wpc, wc1, wc2, wdone, wrun, w5, w6, w7, w8⟩
+  · rcases runsTo_window_skip (Compiler.compileInstr .halt) ms s hsim hdone hpc0 with
+      ⟨s', hwin, kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
+    refine ⟨s', hwin, ?_⟩
+    simp only [hpc0]
+    exact ⟨kptr, kpc, kc1, kc2, kdone, krun, k5, k6, k7, k8⟩
 
 
 end LeanBF

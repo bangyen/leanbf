@@ -11,8 +11,9 @@ import LeanBF.Core.State
 /-!
 # Turing Completeness
 
-`turingCompleteness` is currently an open conjecture, not a theorem: proving
-it is the project's main goal (see the Roadmap in the README).
+`turingCompleteness` is the statement that `Compiler.compileProgram`
+simulates the two-counter Minsky machine. Its proof lives in
+`Theory.Simulate.turingCompleteness_proof`.
 
 ## Main definitions
 
@@ -70,18 +71,13 @@ theorem simulates_simState (ms : Minsky.State) : Simulates ms (simState ms) := b
 
 /--
 The statement of Brainfuck Turing completeness: for every Minsky machine `m`,
-there exists a Brainfuck program `bf` such that if `m` halts from an initial
-state, `bf` also halts from a simulating initial state.
-
-This is a conjecture, not a theorem: the proof is open work (see the Roadmap
-in the README).
+the compiled Brainfuck program `Compiler.compileProgram m` halts whenever `m`
+does, starting from the canonical simulating state `simState ms`.
 -/
 def turingCompleteness : Prop :=
   ∀ (m : Minsky.Program),
-    ∃ (bf : Program),
-      ∀ (ms ms_final : Minsky.State) (bfs : State),
-        Simulates ms bfs →
-        Minsky.RunsTo m ms ms_final →
-        ∃ (bfs_final : State), RunsTo (bf, bfs) bfs_final
+    ∀ (ms ms_final : Minsky.State),
+      Minsky.RunsTo m ms ms_final →
+      ∃ (bfs_final : State), RunsTo (Compiler.compileProgram m, simState ms) bfs_final
 
 end LeanBF

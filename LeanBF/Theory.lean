@@ -8,6 +8,7 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Loop
 import LeanBF.Theory.Semantics
+import LeanBF.Theory.Simulate
 import LeanBF.Theory.Simulation
 import LeanBF.Theory.State
 

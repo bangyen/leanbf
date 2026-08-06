@@ -3,6 +3,7 @@ Copyright (c) 2026 Bangyen Pham. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
+import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 
 /-!
@@ -3062,6 +3063,22 @@ theorem runsTo_compileProgram (m : Minsky.Program) (ms ms' : Minsky.State) (s : 
       · exact hpost.2.2.2.1
       · exact hpost.2.2.2.2.1
       · exact hpost.2.2.2.2.2.1
+
+
+
+/-- Brainfuck is Turing complete: the two-counter Minsky machine is simulated
+    by `Compiler.compileProgram`. -/
+theorem turingCompleteness_proof : turingCompleteness := by
+  unfold turingCompleteness
+  intro m ms ms_final hruns
+  have hsim : Simulates ms (simState ms) := simulates_simState ms
+  have hclean : (simState ms).tape 5 = 0 ∧ (simState ms).tape 6 = 0 ∧
+      (simState ms).tape 7 = 0 ∧ (simState ms).tape 8 = 0 := by
+    simp only [simState]
+    repeat' constructor <;> rfl
+  rcases runsTo_compileProgram m ms ms_final (simState ms) hruns hsim hclean with
+    ⟨bfs_final, hrun, hpost⟩
+  exact ⟨bfs_final, hrun⟩
 
 
 end LeanBF

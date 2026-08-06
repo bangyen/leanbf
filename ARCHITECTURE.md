@@ -105,8 +105,10 @@ project convention that `Core` files contain only definitions.
   configuration invariant through a `RunsTo` run, `step_preserves_tape_above`
   pins down that a single step only modifies the current cell, and
   `RunsTo_preserves_tape_above` composes them: a run whose configurations
-  keep the pointer below `n` preserves every cell above `n` (`+ -` is
-  shown to preserve all cells above the pointer).
+  keep the pointer below `n` preserves every cell at or above `n`. As a
+  demonstration at the compiler's footprint, `movePtr_incVal_preserves_above`
+  shows the window sweep `movePtr 0 16 ++ [+ ]` preserves every cell above
+  the window, and `+ -` preserves all cells at or above the pointer.
 - `Theory/BodyLoop.lean`: the `ifZeroElse` then/else body loop. The loop
   `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` runs an arbitrary
   `body` exactly once when the tested cell `s` is non-zero and not at all when

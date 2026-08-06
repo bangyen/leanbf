@@ -23,7 +23,7 @@ example {cfg : Program × State} (s_final : State) (P : Program → State → Pr
 
 example (n : Int) (p : Program) (s : State) (p' : Program) (s' : State)
     (h : step p s = some (p', s')) (hptr : s.ptr < n) :
-    ∀ i : Int, n < i → s'.tape i = s.tape i :=
+    ∀ i : Int, n ≤ i → s'.tape i = s.tape i :=
   step_preserves_tape_above n p s p' s' h hptr
 
 example {cfg : Program × State} (s_final : State) (n : Int) (h : RunsTo cfg s_final)
@@ -31,11 +31,15 @@ example {cfg : Program × State} (s_final : State) (n : Int) (h : RunsTo cfg s_f
     (hPstep : ∀ {p : Program} {s : State}, P p s → ∀ {p' : Program} {s' : State},
       step p s = some (p', s') → P p' s')
     (hPptr : ∀ {p : Program} {s : State}, P p s → s.ptr < n) :
-    ∀ i : Int, n < i → s_final.tape i = cfg.2.tape i :=
+    ∀ i : Int, n ≤ i → s_final.tape i = cfg.2.tape i :=
   RunsTo_preserves_tape_above s_final n h P hPinit hPstep hPptr
 
 example (s : State) :
     ∀ i : Int, s.ptr + 1 < i → (runSeq [.inc_val, .dec_val] s).tape i = s.tape i :=
   runSeq_incVal_decVal_preserves s
+
+example (s : State) (hptr : s.ptr = 0) :
+    ∀ i : Int, 16 < i → (runSeq (Compiler.movePtr 0 16 ++ [.inc_val]) s).tape i = s.tape i :=
+  movePtr_incVal_preserves_above s hptr
 
 end LeanBF.Tests

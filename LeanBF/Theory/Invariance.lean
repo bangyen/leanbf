@@ -5,6 +5,7 @@ Authors: Bangyen Pham
 -/
 import LeanBF.Core.Semantics
 import LeanBF.Core.State
+import LeanBF.Theory.BodyLoop
 import LeanBF.Theory.Loop
 
 /-!
@@ -20,11 +21,15 @@ facts from individual instructions and windows to whole runs.
 * `RunsTo_inv`: A configuration invariant preserved by every step holds at
   the final configuration.
 * `step_preserves_tape_above`: A single step only modifies the current cell,
-  so every cell above the pointer is preserved.
+  so every cell at or above the pointer's bound is preserved.
 * `RunsTo_preserves_tape_above`: A run whose configurations keep the pointer
-  below `n` preserves every cell above `n`.
-* `runSeq_incVal_decVal_preserves`: Cells above the starting pointer are
-  preserved by `[+ -]` run sequentially.
+  below n preserves every cell at or above n.
+* `runSeq_incVal_decVal_preserves`: Cells at or above the starting pointer
+  are preserved by `[+ -]` run sequentially.
+* `drop_replicate_succ`: Dropping `k` from `k + 1` copies of `a` yields `a`
+  followed by dropping `k + 1`.
+* `movePtr_incVal_preserves_above`: Running the compiler's window sweep
+  (`movePtr 0 16 ++ [+ ]`) preserves every cell above the window.
 -/
 
 namespace LeanBF
@@ -41,11 +46,11 @@ theorem RunsTo_inv {cfg : Program × State} (s_final : State) (P : Program → S
   | step p s s' p' s_final hstep' hrest ih =>
       exact ih (hstep hinit hstep')
 
-/-- A single step only modifies the current cell, so every cell above the
-    pointer is preserved. -/
+/-- A single step only modifies the current cell, so every cell at or above
+    the pointer's bound is preserved. -/
 theorem step_preserves_tape_above (n : Int) (p : Program) (s : State) (p' : Program) (s' : State)
     (h : step p s = some (p', s')) (hptr : s.ptr < n) :
-    ∀ i : Int, n < i → s'.tape i = s.tape i := by
+    ∀ i : Int, n ≤ i → s'.tape i = s.tape i := by
   cases p with
   | nil => cases h
   | cons instr rest =>
@@ -117,8 +122,8 @@ theorem step_preserves_tape_above (n : Int) (p : Program) (s : State) (p' : Prog
             rfl
 
 /--
-A run whose configurations keep the pointer below `n` preserves every cell
-above `n`: each step only modifies the current cell, which is below `n`.
+A run whose configurations keep the pointer below `n` preserves every cell at
+or above `n`: each step only modifies the current cell, which is below `n`.
 -/
 theorem RunsTo_preserves_tape_above {cfg : Program × State} (s_final : State) (n : Int)
     (h : RunsTo cfg s_final) (P : Program → State → Prop)
@@ -126,9 +131,9 @@ theorem RunsTo_preserves_tape_above {cfg : Program × State} (s_final : State) (
     (hPstep : ∀ {p : Program} {s : State}, P p s → ∀ {p' : Program} {s' : State},
       step p s = some (p', s') → P p' s')
     (hPptr : ∀ {p : Program} {s : State}, P p s → s.ptr < n) :
-    ∀ i : Int, n < i → s_final.tape i = cfg.2.tape i := by
+    ∀ i : Int, n ≤ i → s_final.tape i = cfg.2.tape i := by
   let Q : Program → State → Prop :=
-    fun p s => P p s ∧ ∀ i : Int, n < i → s.tape i = cfg.2.tape i
+    fun p s => P p s ∧ ∀ i : Int, n ≤ i → s.tape i = cfg.2.tape i
   have hQfin : Q ([] : Program) s_final := by
     apply RunsTo_inv s_final Q h
     · constructor
@@ -196,6 +201,98 @@ theorem runSeq_incVal_decVal_preserves (s : State) :
       · exact Or.inl rfl
       · rfl)
     hstep' hPptr
-  exact hpres
+  intro i hi
+  exact hpres i (by omega)
+
+lemma drop_replicate_succ {α : Type} (n k : Nat) (a : α) (hk : k < n) :
+    List.drop k (List.replicate n a) = a :: List.drop (k + 1) (List.replicate n a) := by
+  induction k generalizing n with
+  | zero =>
+      cases n with
+      | zero => cases hk
+      | succ n => rfl
+  | succ k ih =>
+      cases n with
+      | zero => cases hk
+      | succ n =>
+          have hk' : k < n := by omega
+          rw [List.replicate_succ]
+          rw [List.drop_succ_cons]
+          rw [List.drop_succ_cons]
+          rw [ih n hk']
+
+/-- Running `movePtr 0 16 ++ [+ ]` across the window cells preserves every
+    cell above the window. -/
+theorem movePtr_incVal_preserves_above (s : State) (hptr : s.ptr = 0) :
+    ∀ i : Int, 16 < i → (runSeq (Compiler.movePtr 0 16 ++ [.inc_val]) s).tape i = s.tape i := by
+  let prog : Program := Compiler.movePtr 0 16 ++ [.inc_val]
+  let cfg : Program × State := (prog, s)
+  have hloopfree : LoopFree prog := by
+    unfold prog
+    exact loop_free_append (Compiler.movePtr 0 16) [.inc_val] (loop_free_movePtr 0 16)
+      (loop_free_single .inc_val (by intro body h; cases h))
+  have hruns : RunsTo cfg (runSeq prog s) := runsTo_of_loopFree prog s hloopfree
+  let P : Program → State → Prop := fun p s' =>
+    (∃ k : Nat, k ≤ 16 ∧ p = List.drop k (Compiler.movePtr 0 16) ++ [.inc_val] ∧ s'.ptr = k) ∨
+    (p = [] ∧ s'.ptr = 16)
+  have hPinit : P cfg.1 cfg.2 := by
+    exact Or.inl ⟨0, by omega, by simp only [cfg, prog, List.drop], by rw [hptr]; rfl⟩
+  have hPstep : ∀ {p : Program} {s' : State}, P p s' → ∀ {p'' : Program} {s'' : State},
+      step p s' = some (p'', s'') → P p'' s'' := by
+    intro p s' hp p'' s'' hstep
+    rcases hp with hpre | hfinal
+    · rcases hpre with ⟨k, hk, hp, hptrk⟩
+      by_cases hk16 : k < 16
+      · have hcons : List.drop k (Compiler.movePtr 0 16) =
+            .inc_ptr :: List.drop (k + 1) (Compiler.movePtr 0 16) := by
+          change List.drop k (List.replicate 16 (.inc_ptr : Instruction)) =
+            (.inc_ptr : Instruction) ::
+              List.drop (k + 1) (List.replicate 16 (.inc_ptr : Instruction))
+          exact drop_replicate_succ 16 k (.inc_ptr : Instruction) hk16
+        have hstep' : step (List.drop k (Compiler.movePtr 0 16) ++ [.inc_val]) s' =
+            some (List.drop (k + 1) (Compiler.movePtr 0 16) ++ [.inc_val], s'.incPtr) := by
+          rw [hcons]
+          rfl
+        rw [hp, hstep'] at hstep
+        injection hstep with hpair
+        injection hpair with hp'' hs''
+        subst p''
+        subst s''
+        exact Or.inl ⟨k + 1, by omega, rfl, by
+          change s'.ptr + 1 = (k + 1 : Int)
+          rw [hptrk]⟩
+      · have hk16' : k = 16 := by omega
+        subst k
+        have hdrop16 : List.drop 16 (Compiler.movePtr 0 16) = [] := by
+          change List.drop 16 (List.replicate 16 (.inc_ptr : Instruction)) = []
+          rfl
+        have hstep' : step [.inc_val] s' = some ([], s'.incVal) := by rfl
+        rw [hp, hdrop16] at hstep
+        change step [.inc_val] s' = some (p'', s'') at hstep
+        rw [hstep'] at hstep
+        injection hstep with hpair
+        injection hpair with hp'' hs''
+        subst p''
+        subst s''
+        exact Or.inr ⟨rfl, by
+          change s'.ptr = (16 : Int)
+          rw [hptrk]
+          norm_num⟩
+    · rcases hfinal with ⟨hp, hptr'⟩
+      subst p
+      simp only [step] at hstep
+      cases hstep
+  have hPptr : ∀ {p : Program} {s' : State}, P p s' → s'.ptr < 17 := by
+    intro p s' hp
+    rcases hp with hpre | hfinal
+    · rcases hpre with ⟨k, hk, hp, hptrk⟩
+      rw [hptrk]
+      omega
+    · rcases hfinal with ⟨hp, hptr'⟩
+      rw [hptr']
+      omega
+  have hpres := RunsTo_preserves_tape_above (runSeq prog s) (17 : Int) hruns P hPinit hPstep hPptr
+  intro i hi
+  exact hpres i (by omega)
 
 end LeanBF

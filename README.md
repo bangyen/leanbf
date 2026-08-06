@@ -60,7 +60,9 @@ The implementation is organized into `Core` (definitions), `Theory`
 - **Run-level tape invariance** (`Theory.Invariance`): `RunsTo_inv` (a
   general configuration invariant), `step_preserves_tape_above` (a single
   step only modifies the current cell), and `RunsTo_preserves_tape_above`
-  (a pointer-bounded run preserves every cell above the bound).
+  (a pointer-bounded run preserves every cell at or above the bound) —
+  applied to the compiler's window sweep (`movePtr 0 16 ++ [+ ]`) to show
+  cells above the window survive the run.
 - **Body-loop machinery** (`Theory.BodyLoop`): the `ifZeroElse` then/else
   loops — `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` — run an
   arbitrary body program exactly once when the tested cell is non-zero and not

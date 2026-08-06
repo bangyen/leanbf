@@ -24,6 +24,9 @@ jobs:
       - name: Enforce warning-free Lean build
         run: lake --wfail build
 
+      - name: Run the linter
+        run: lake lint
+
       - name: Run guard checks
         run: |
           chmod +x scripts/check_all.sh

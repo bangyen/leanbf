@@ -64,4 +64,16 @@ example : let s : State :=
       input := [], output := [] }
   exact run_copyLoop 3 2 5 6 8 1 2 4 s rfl rfl rfl rfl rfl (by decide)
 
+example (v w : Nat) (s1 s3 : Int) (s : State) (hsep : s1 ≠ s3) :
+    s.ptr = s1 → s.tape s1 = v → s.tape s3 = w →
+      ∃ n : Nat, run n (flagLoop s1 s3) s = some (flagLoopPost s1 s3 w v s) := by
+  intro hptr hv hw
+  exact run_flagLoop v w s1 s3 s hptr hv hw hsep
+
+example (v a : Nat) (test s4 : Int) (s : State) (hsep : test ≠ s4) :
+    s.ptr = s4 → s.tape s4 = v → s.tape test = a →
+      ∃ n : Nat, run n (restoreLoop test s4) s = some (restoreLoopPost test s4 a v s) := by
+  intro hptr hv ha
+  exact run_restoreLoop v a test s4 s hptr hv ha hsep
+
 end LeanBF.Tests

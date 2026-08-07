@@ -94,11 +94,13 @@ project convention that `Core` files contain only definitions.
   `runSeq_read_input` — reads consume the input prefix) and divergence
   (`loop_incVal_never_halts` — a non-zero cell makes `[+ ]` run forever).
   The empty program has no step and halts.
-- `Theory/Loop.lean`: loop-correctness machinery. `stepOne`/`runSeq` execute
-  a single instruction or a whole loop-free program, `LoopFree` characterizes
-  programs without `[`, and `run_length_loop_free`/`run_append` let a run be
-  split across a loop-free prefix and its tail. These underpin the dispatch
-  simulation.
+- `Theory/Loop/` (aggregator `Theory/Loop.lean`): loop-correctness machinery.
+  `Basics` has `stepOne`/`runSeq` (execute a single instruction or a whole
+  loop-free program), the `LoopFree` predicate, and
+  `run_length_loop_free`/`run_append` letting a run be split across a
+  loop-free prefix and its tail; `CopyLoop`, `FlagLoop`, and `RestoreClear`
+  pin down the three fixed loops used by `ifZeroElse`. These underpin the
+  dispatch simulation.
 - `Theory/Simulation.lean`: simulation infrastructure and the first result.
   `runToCompletion` runs until the program halts or a fuel cap is hit, and
   its results convert into `RunsTo` chains (`RunsTo_of_haltsWithin`). The
@@ -113,29 +115,33 @@ project convention that `Core` files contain only definitions.
   demonstration at the compiler's footprint, `movePtr_incVal_preserves_above`
   shows the window sweep `movePtr 0 16 ++ [+ ]` preserves every cell above
   the window, and `+ -` preserves all cells at or above the pointer.
-- `Theory/BodyLoop.lean`: the `ifZeroElse` then/else body loop. The loop
+- `Theory/BodyLoop/` (aggregator `Theory/BodyLoop.lean`): the `ifZeroElse`
+  then/else body loop. The loop
   `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` runs an arbitrary
   `body` exactly once when the tested cell `s` is non-zero and not at all when
   it is zero, ending with the pointer back on `test` and `s` cleared. It is
   pinned down in `run` form (`run_bodyLoop_zero`/`run_bodyLoop_succ`),
   `RunsTo` form (`runsTo_bodyLoop_zero`/`runsTo_bodyLoop_succ`), and
   fuel-capped `runToCompletion` form (`runToCompletion_bodyLoop_zero`/
-  `runToCompletion_bodyLoop_succ`). The module also hosts the exact-run bridge
-  (`RunsExactly`, `run_of_RunsTo`) and the run-composition lemmas
-  (`runToCompletion_append`, `RunsTo_append`-style chaining) that the
-  `ifZeroElse` lemma will use.
-- `Theory/IfZeroElse.lean`: the `Compiler.ifZeroElse` conditional itself. It
-  records the `RunsTo` forms of the three fixed loops
-  (`runsTo_copyLoop`/`runsTo_flagLoop`/`runsTo_restoreLoop`), the pointer and
-  scratch helpers (`runsTo_movePtr`, `runsTo_clearScratch`, `runsTo_setOne`),
-  the setup segment (`runsTo_setup_zero`/`runsTo_setup_succ`), and the main
-  results `runsTo_ifZeroElse_zero`/`runsTo_ifZeroElse_succ`: from a state with
+  `runToCompletion_bodyLoop_succ`). The `Basics` module hosts the exact-run
+  bridge (`RunsExactly`, `run_of_RunsTo`) and `RunToCompletion` the
+  run-composition lemmas (`runToCompletion_append`, `RunsTo_append`-style
+  chaining) that the `ifZeroElse` lemma uses.
+- `Theory/IfZeroElse/` (aggregator `Theory/IfZeroElse.lean`): the
+  `Compiler.ifZeroElse` conditional itself. `LoopRuns` records the `RunsTo`
+  forms of the three fixed loops
+  (`runsTo_copyLoop`/`runsTo_flagLoop`/`runsTo_restoreLoop`), `Blocks` the
+  pointer and scratch helpers (`runsTo_movePtr`, `runsTo_clearScratch`,
+  `runsTo_setOne`), `Setup` the setup segment
+  (`runsTo_setup_zero`/`runsTo_setup_succ`), and the main results
+  `runsTo_ifZeroElse_zero`/`runsTo_ifZeroElse_succ`: from a state with
   the pointer on `test`, `Compiler.ifZeroElse` runs `thenBody` exactly once
   when the tested cell is `0` and `elseBody` exactly once otherwise,
   preserving `test` and restoring the scratch cells to `0`. `run` and
   `runToCompletion` forms follow (`run_ifZeroElse_*`,
   `runToCompletion_ifZeroElse_*`).
-- `Theory/Simulate.lean`: the dispatch simulation. Each compiled instruction
+- `Theory/Simulate/` (aggregator `Theory/Simulate.lean`): the dispatch
+  simulation. Each compiled instruction
   block is proven to update the simulating cells (`runsTo_compileInstr_*`),
   each dispatch window runs its block when the `pc` matches and skips or
   decrements otherwise (`runsTo_window_match`/`runsTo_window_skip`/
@@ -143,9 +149,8 @@ project convention that `Core` files contain only definitions.
   dispatch loop runs exactly the matching window (`runsTo_dispatch`, with the
   `dispatchMs`/`dispatchDone`/`dispatchRunning` effect), and the compiled
   program's loop body clears `done`, dispatches, and clears the running flag
-  at a halt (`runsTo_compileBody`, `runsTo_compileProgram`). This proves
-  `turingCompleteness_proof`: Brainfuck simulates the two-counter Minsky
-  machine.
+  when no window matches (`runsTo_compileBody`). The completeness proof is in
+  `CompileProgram` (`runsTo_compileProgram`, `turingCompleteness_proof`).
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
   `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`, and

@@ -6,8 +6,8 @@ Authors: Bangyen Pham
 
 import LeanBF.Core.Compiler
 import LeanBF.Core.Semantics
-import Mathlib.Tactic.Ring
 import LeanBF.Theory.Loop.Basics
+import Mathlib.Tactic.Ring
 
 /-!
 # Flag Loop

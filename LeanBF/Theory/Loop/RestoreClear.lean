@@ -6,8 +6,8 @@ Authors: Bangyen Pham
 
 import LeanBF.Core.Compiler
 import LeanBF.Core.Semantics
-import Mathlib.Tactic.Ring
 import LeanBF.Theory.Loop.Basics
+import Mathlib.Tactic.Ring
 
 /-!
 # Restore Loop and Clear
@@ -26,7 +26,7 @@ loop `[-]` zeroes the current cell.
 
 * `loop_free_restoreLoopBody`: The restore-loop body is loop-free.
 * `runSeq_restoreLoopBody`: The restore-loop body moves one unit from `s4`
-  back to `test`.
+  back to test.
 * `run_restoreLoop`: The restore loop moves `s4` back into `test`.
 * `run_clearHere`: The clear loop `[-]` clears the current cell.
 -/

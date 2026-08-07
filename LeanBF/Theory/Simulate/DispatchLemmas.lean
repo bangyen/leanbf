@@ -8,15 +8,15 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Simulate.Basics
 import LeanBF.Theory.Simulate.CompileInstr
-import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.CompileInstrJzdec1
 import LeanBF.Theory.Simulate.CompileInstrJzdec2
-import LeanBF.Theory.Simulate.WindowMatch
-import LeanBF.Theory.Simulate.WindowSkip
+import LeanBF.Theory.Simulate.DispatchStep
+import LeanBF.Theory.Simulate.JzdecThenElse
+import LeanBF.Theory.Simulate.WindowDone
 import LeanBF.Theory.Simulate.WindowInc
 import LeanBF.Theory.Simulate.WindowJzdecHalt
-import LeanBF.Theory.Simulate.WindowDone
-import LeanBF.Theory.Simulate.DispatchStep
+import LeanBF.Theory.Simulate.WindowMatch
+import LeanBF.Theory.Simulate.WindowSkip
 
 /-!
 # Dispatch Lemmas
@@ -27,7 +27,7 @@ out-of-range program counter falls off.
 ## Theorems
 
 * `stepInstr_pc_irrelevant`: `stepInstr` is independent of the program
-  counter except for `halt`.
+  counter except for halt.
 * `dispatchMs_step`: Only the pc-matching instruction changes the state.
 * `dispatch_halt`: A `halt` instruction stops the machine.
 * `dispatch_none`: An out-of-range program counter falls off the program.

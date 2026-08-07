@@ -36,17 +36,18 @@ movement.
 * `run_length_loop_free`: A loop-free program runs to `runSeq` completion.
 * `run_append`: Splitting a run across a loop-free prefix and its tail.
 * `runSeq_append`: Sequential execution distributes across concatenation.
-* `runSeq_replicate_inc_ptr`/`dec_ptr`: Repeating `>`/`<` moves the pointer.
-* `runSeq_replicate_inc_ptr_tape`/`dec_ptr_tape`: Repeated pointer moves
-  leave the tape unchanged.
-* `runSeq_movePtr_ptr`/`tape`/`io`: `movePtr` moves the pointer and preserves
-  the tape and I/O.
-* `runSeq_replicate_inc_ptr_io`/`dec_ptr_io`: Repeated pointer moves leave
-  the I/O unchanged.
+* `runSeq_replicate_inc_ptr`: Repeating `>` moves the pointer.
+* `runSeq_replicate_dec_ptr`: Repeating `<` moves the pointer.
+* `runSeq_replicate_inc_ptr_tape`: Repeated `>` leaves the tape unchanged.
+* `runSeq_replicate_dec_ptr_tape`: Repeated `<` leaves the tape unchanged.
+* `runSeq_movePtr_ptr`: `movePtr` ends with the pointer on its target.
+* `runSeq_movePtr_tape`: `movePtr` leaves the tape unchanged.
+* `runSeq_replicate_inc_ptr_io`: Repeated `>` leaves the I/O unchanged.
+* `runSeq_replicate_dec_ptr_io`: Repeated `<` leaves the I/O unchanged.
+* `runSeq_movePtr_io`: `movePtr` leaves the I/O unchanged.
 -/
 
 namespace LeanBF
-
 
 /-- The state effect of a single non-loop instruction. -/
 def stepOne (i : Instruction) (s : State) : State :=

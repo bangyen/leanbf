@@ -8,16 +8,16 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Simulate.Basics
 import LeanBF.Theory.Simulate.CompileInstr
-import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.CompileInstrJzdec1
 import LeanBF.Theory.Simulate.CompileInstrJzdec2
-import LeanBF.Theory.Simulate.WindowMatch
-import LeanBF.Theory.Simulate.WindowSkip
+import LeanBF.Theory.Simulate.DispatchLemmas
+import LeanBF.Theory.Simulate.DispatchStep
+import LeanBF.Theory.Simulate.JzdecThenElse
+import LeanBF.Theory.Simulate.WindowDone
 import LeanBF.Theory.Simulate.WindowInc
 import LeanBF.Theory.Simulate.WindowJzdecHalt
-import LeanBF.Theory.Simulate.WindowDone
-import LeanBF.Theory.Simulate.DispatchStep
-import LeanBF.Theory.Simulate.DispatchLemmas
+import LeanBF.Theory.Simulate.WindowMatch
+import LeanBF.Theory.Simulate.WindowSkip
 
 /-!
 # The Compile-Program Loop Body
@@ -29,6 +29,8 @@ clear the running flag if no window matched.
 
 * `runsTo_compileBody`: The loop body maps a simulating state to the
   dispatched machine state.
+* `step_getElem`: A running machine's current instruction steps to its
+  stepInstr effect.
 -/
 
 namespace LeanBF

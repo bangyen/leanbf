@@ -8,9 +8,9 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Simulate.Basics
 import LeanBF.Theory.Simulate.CompileInstr
-import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.CompileInstrJzdec1
 import LeanBF.Theory.Simulate.CompileInstrJzdec2
+import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.WindowMatch
 import LeanBF.Theory.Simulate.WindowSkip
 

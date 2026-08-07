@@ -21,9 +21,12 @@ preserving the tested cell and restoring the scratch cells, in `RunsTo`,
 * `runsTo_ifZeroElse_zero`: A zero tested cell runs `thenBody` exactly once.
 * `runsTo_ifZeroElse_succ`: A non-zero tested cell runs `elseBody` exactly
   once.
-* `run_ifZeroElse_zero`/`run_ifZeroElse_succ`: The run forms.
-* `runToCompletion_ifZeroElse_zero`/`runToCompletion_ifZeroElse_succ`: The
-  fuel-capped forms.
+* `run_ifZeroElse_zero`: The run form with a zero tested cell.
+* `run_ifZeroElse_succ`: The run form with a non-zero tested cell.
+* `runToCompletion_ifZeroElse_zero`: The fuel-capped form with a zero tested
+  cell.
+* `runToCompletion_ifZeroElse_succ`: The fuel-capped form with a non-zero
+  tested cell.
 -/
 
 namespace LeanBF

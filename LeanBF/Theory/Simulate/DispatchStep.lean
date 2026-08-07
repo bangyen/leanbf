@@ -8,14 +8,14 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Simulate.Basics
 import LeanBF.Theory.Simulate.CompileInstr
-import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.CompileInstrJzdec1
 import LeanBF.Theory.Simulate.CompileInstrJzdec2
-import LeanBF.Theory.Simulate.WindowMatch
-import LeanBF.Theory.Simulate.WindowSkip
+import LeanBF.Theory.Simulate.JzdecThenElse
+import LeanBF.Theory.Simulate.WindowDone
 import LeanBF.Theory.Simulate.WindowInc
 import LeanBF.Theory.Simulate.WindowJzdecHalt
-import LeanBF.Theory.Simulate.WindowDone
+import LeanBF.Theory.Simulate.WindowMatch
+import LeanBF.Theory.Simulate.WindowSkip
 
 /-!
 # Dispatch Step
@@ -26,10 +26,15 @@ runs exactly the matching window.
 
 ## Theorems
 
-* `stepInstr_jzdec1_pc`/`c1`/`c2` and `stepInstr_jzdec2_pc`/`c1`/`c2`: The
-  `jzdec` field updates.
-* `dispatchDone_succ`/`dispatchRunning_succ`/`dispatchMs_succ`: The dispatch
-  on a non-zero program counter.
+* `stepInstr_jzdec1_pc`: The jzdec1 pc update.
+* `stepInstr_jzdec1_c1`: The jzdec1 c1 update.
+* `stepInstr_jzdec1_c2`: The jzdec1 c2 update.
+* `stepInstr_jzdec2_pc`: The jzdec2 pc update.
+* `stepInstr_jzdec2_c1`: The jzdec2 c1 update.
+* `stepInstr_jzdec2_c2`: The jzdec2 c2 update.
+* `dispatchDone_succ`: The dispatch on a non-zero program counter.
+* `dispatchRunning_succ`: The dispatch on a non-zero program counter.
+* `dispatchMs_succ`: The dispatch on a non-zero program counter.
 * `runsTo_dispatch`: The flattened window dispatch runs exactly the matching
   window.
 -/

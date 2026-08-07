@@ -18,10 +18,9 @@ program counter, and the non-zero branch decrements the counter and sets the
 
 ## Theorems
 
-* `runsTo_jzdecThen`: The `jzdec` zero branch sets the `ifZero` program
-  counter.
-* `runsTo_jzdecElse`: The `jzdec` non-zero branch decrements the counter and
-  sets the `ifNonZero` program counter.
+* `runsTo_jzdecThen`: The jzdec zero branch sets the ifZero program counter.
+* `runsTo_jzdecElse`: The jzdec non-zero branch decrements the counter and
+  sets the ifNonZero program counter.
 -/
 
 namespace LeanBF

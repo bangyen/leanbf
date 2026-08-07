@@ -20,6 +20,8 @@ when the tested cell is zero and the `elseBodyState` when it is non-zero.
   zero.
 * `runsTo_setup_succ`: The setup reaches the `elseBodyState` when `test` is
   non-zero.
+* `ifZeroElse_eq_chain`: The setup, branch, and restore runs chain into the
+  ifZeroElse post state.
 -/
 
 namespace LeanBF

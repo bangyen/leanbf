@@ -34,6 +34,9 @@ shared setup prefix and its state constructors.
 * `runsTo_setOne`: Set the `s3` cell to `1` and move to `s1`.
 * `runsTo_clearScratch`: The scratch-clearing block zeroes the four scratch
   cells.
+* `thenPost_eq`: The then-branch post state equals `thenBodyState`.
+* `elsePost_eq`: The else-branch post state equals `elseBodyState`.
+* `RunsTo_eq_program`: A `RunsTo` to equal programs is extensional.
 -/
 
 namespace LeanBF

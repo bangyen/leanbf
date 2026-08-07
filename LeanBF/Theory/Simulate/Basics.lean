@@ -20,8 +20,8 @@ incrementing the current cell, and the `runSeq` fact for repeated increments.
 
 ## Theorems
 
-* `runSeq_replicate_inc_val`: Incrementing the current cell `n` times adds
-  `n` to it.
+* `runSeq_replicate_inc_val`: Incrementing the current cell n times adds
+  n to it.
 * `runsTo_setHere`: Setting the current cell to `n` writes `n`.
 * `runsTo_inc_val`: A single `+` increments the current cell.
 -/

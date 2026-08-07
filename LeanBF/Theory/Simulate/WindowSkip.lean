@@ -8,9 +8,9 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Simulate.Basics
 import LeanBF.Theory.Simulate.CompileInstr
-import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.CompileInstrJzdec1
 import LeanBF.Theory.Simulate.CompileInstrJzdec2
+import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.WindowMatch
 
 /-!
@@ -21,9 +21,7 @@ A window whose `pc` cell is non-zero decrements the `pc`, and
 
 ## Theorems
 
-* `runsTo_dec_val`: A single `-` decrements the current cell.
-* `runsTo_window_skip`: A window whose `pc` cell is non-zero decrements the
-  `pc`.
+* `runsTo_window_skip`: A window whose pc cell is non-zero decrements the pc.
 * `windowBlockStart_tape`: The prepared window state's cells.
 -/
 

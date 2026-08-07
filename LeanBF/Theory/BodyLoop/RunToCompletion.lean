@@ -6,10 +6,10 @@ Authors: Bangyen Pham
 
 import LeanBF.Core.Compiler
 import LeanBF.Core.Semantics
+import LeanBF.Theory.BodyLoop.Basics
 import LeanBF.Theory.Loop
 import LeanBF.Theory.Semantics
 import LeanBF.Theory.Simulation
-import LeanBF.Theory.BodyLoop.Basics
 
 /-!
 # Body Loop Completion
@@ -32,7 +32,6 @@ runs compose across concatenation, and the body loop is shown to complete.
 -/
 
 namespace LeanBF
-
 
 /-- A completed fuel-capped run gives a `RunsTo` chain with the same final
     state. -/

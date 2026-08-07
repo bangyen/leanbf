@@ -8,9 +8,9 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Simulate.Basics
 import LeanBF.Theory.Simulate.CompileInstr
-import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.CompileInstrJzdec1
 import LeanBF.Theory.Simulate.CompileInstrJzdec2
+import LeanBF.Theory.Simulate.JzdecThenElse
 
 /-!
 # The Matching Window
@@ -24,8 +24,9 @@ it runs the block and restores the pointer to the `pc` cell.
 
 ## Theorems
 
-* `runsTo_window_match`: A window whose `pc` cell is zero runs `block` and
-  restores the pointer to the `pc` cell.
+* `runsTo_window_match`: A window whose pc cell is zero runs `block` and
+  restores the pointer to the pc cell.
+* `runsTo_dec_val`: A single `-` decrements the current cell.
 -/
 
 namespace LeanBF

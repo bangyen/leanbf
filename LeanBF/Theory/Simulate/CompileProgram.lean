@@ -7,18 +7,18 @@ Authors: Bangyen Pham
 import LeanBF.Theory.Completeness
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Simulate.Basics
+import LeanBF.Theory.Simulate.CompileBody
 import LeanBF.Theory.Simulate.CompileInstr
-import LeanBF.Theory.Simulate.JzdecThenElse
 import LeanBF.Theory.Simulate.CompileInstrJzdec1
 import LeanBF.Theory.Simulate.CompileInstrJzdec2
-import LeanBF.Theory.Simulate.WindowMatch
-import LeanBF.Theory.Simulate.WindowSkip
+import LeanBF.Theory.Simulate.DispatchLemmas
+import LeanBF.Theory.Simulate.DispatchStep
+import LeanBF.Theory.Simulate.JzdecThenElse
+import LeanBF.Theory.Simulate.WindowDone
 import LeanBF.Theory.Simulate.WindowInc
 import LeanBF.Theory.Simulate.WindowJzdecHalt
-import LeanBF.Theory.Simulate.WindowDone
-import LeanBF.Theory.Simulate.DispatchStep
-import LeanBF.Theory.Simulate.DispatchLemmas
-import LeanBF.Theory.Simulate.CompileBody
+import LeanBF.Theory.Simulate.WindowMatch
+import LeanBF.Theory.Simulate.WindowSkip
 
 /-!
 # Compile Program and Completeness

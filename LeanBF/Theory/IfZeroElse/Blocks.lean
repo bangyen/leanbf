@@ -34,6 +34,12 @@ shared setup prefix and its state constructors.
 * `runsTo_setOne`: Set the `s3` cell to `1` and move to `s1`.
 * `runsTo_clearScratch`: The scratch-clearing block zeroes the four scratch
   cells.
+* `ifZeroElsePost_tape`: `ifZeroElsePost` preserves every cell outside the
+  four scratch cells.
+* `thenBodyState_tape`: `thenBodyState` preserves every cell outside the
+  block's footprint.
+* `elseBodyState_tape`: `elseBodyState` preserves every cell outside the
+  block's footprint.
 * `thenPost_eq`: The then-branch post state equals `thenBodyState`.
 * `elsePost_eq`: The else-branch post state equals `elseBodyState`.
 * `RunsTo_eq_program`: A `RunsTo` to equal programs is extensional.
@@ -231,6 +237,24 @@ def ifZeroElsePost (test s1 s2 s3 s4 : Int) (s : State) : State :=
       if i = s2 then 0 else
       if i = s3 then 0 else
       if i = s4 then 0 else s.tape i }
+
+/-- `ifZeroElsePost` preserves every cell outside the four scratch cells. -/
+theorem ifZeroElsePost_tape (test s1 s2 s3 s4 : Int) (s : State) {i : Int}
+    (h1 : i ≠ s1) (h2 : i ≠ s2) (h3 : i ≠ s3) (h4 : i ≠ s4) :
+    (ifZeroElsePost test s1 s2 s3 s4 s).tape i = s.tape i := by
+  simp only [ifZeroElsePost, if_neg h1, if_neg h2, if_neg h3, if_neg h4]
+
+/-- `thenBodyState` preserves every cell outside the block's footprint. -/
+theorem thenBodyState_tape (test s1 s2 s3 s4 : Int) (s : State) {i : Int}
+    (h1 : i ≠ test) (h2 : i ≠ s1) (h3 : i ≠ s2) (h4 : i ≠ s3) (h5 : i ≠ s4) :
+    (thenBodyState test s1 s2 s3 s4 s).tape i = s.tape i := by
+  simp only [thenBodyState, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5]
+
+/-- `elseBodyState` preserves every cell outside the block's footprint. -/
+theorem elseBodyState_tape (test s1 s2 s3 s4 : Int) (v : Nat) (s : State) {i : Int}
+    (h1 : i ≠ test) (h2 : i ≠ s1) (h3 : i ≠ s2) (h4 : i ≠ s3) (h5 : i ≠ s4) :
+    (elseBodyState test s1 s2 s3 s4 v s).tape i = s.tape i := by
+  simp only [elseBodyState, if_neg h1, if_neg h2, if_neg h3, if_neg h4, if_neg h5]
 
 lemma thenPost_eq (test s1 s2 s3 s4 : ℕ) (s_then : State)
     (h2 : s_then.tape s1 = 0) (h3 : s_then.tape s2 = 0)

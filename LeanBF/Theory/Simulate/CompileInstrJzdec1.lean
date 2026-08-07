@@ -126,61 +126,43 @@ theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) 
       simpa only [Compiler.compileInstr, thenBody, elseBody, List.append_assoc] using
         (RunsTo_append (Compiler.movePtr 2 1) a2 a3
           (RunsTo_append (Compiler.ifZeroElse 2 13 14 15 16 thenBody elseBody) a1 a2 h1 hif) h3)
+    have ha3cell : ∀ {i : Int}, i ≠ (1 : Int) → i ≠ (2 : Int) → i ≠ (13 : Int) →
+        i ≠ (14 : Int) → i ≠ (15 : Int) → i ≠ (16 : Int) → a3.tape i = s.tape i := by
+      intro i h1 h2 h13 h14 h15 h16
+      change (ifZeroElsePost 2 13 14 15 16 s_then).tape i = s.tape i
+      calc
+        (ifZeroElsePost 2 13 14 15 16 s_then).tape i = s_then.tape i := by
+          rw [ifZeroElsePost_tape 2 13 14 15 16 s_then h13 h14 h15 h16]
+        _ = (thenBodyState 2 13 14 15 16 a1).tape i := by simp only [s_then, if_neg h1]
+        _ = a1.tape i := by rw [thenBodyState_tape 2 13 14 15 16 a1 h2 h13 h14 h15 h16]
+        _ = s.tape i := by rfl
     refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rfl
     · simp only [a3, ha2tape1, hzero, if_true]
     · simp only [a3, ha2tape2, hzero, if_true]
     · simp only [a3, ha2tape3]
     · simp only [a3, ha2run]
-    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
-        if_neg (by decide : ¬ (4 : Int) = 1),
-        if_neg (by decide : ¬ (4 : Int) = 2),
-        if_neg (by decide : ¬ (4 : Int) = 13),
-        if_neg (by decide : ¬ (4 : Int) = 14),
-        if_neg (by decide : ¬ (4 : Int) = 15),
-        if_neg (by decide : ¬ (4 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
-        if_neg (by decide : ¬ (5 : Int) = 1),
-        if_neg (by decide : ¬ (5 : Int) = 2),
-        if_neg (by decide : ¬ (5 : Int) = 13),
-        if_neg (by decide : ¬ (5 : Int) = 14),
-        if_neg (by decide : ¬ (5 : Int) = 15),
-        if_neg (by decide : ¬ (5 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
-        if_neg (by decide : ¬ (6 : Int) = 1),
-        if_neg (by decide : ¬ (6 : Int) = 2),
-        if_neg (by decide : ¬ (6 : Int) = 13),
-        if_neg (by decide : ¬ (6 : Int) = 14),
-        if_neg (by decide : ¬ (6 : Int) = 15),
-        if_neg (by decide : ¬ (6 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
-        if_neg (by decide : ¬ (8 : Int) = 1),
-        if_neg (by decide : ¬ (8 : Int) = 2),
-        if_neg (by decide : ¬ (8 : Int) = 13),
-        if_neg (by decide : ¬ (8 : Int) = 14),
-        if_neg (by decide : ¬ (8 : Int) = 15),
-        if_neg (by decide : ¬ (8 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
-        if_neg (by decide : ¬ (9 : Int) = 1),
-        if_neg (by decide : ¬ (9 : Int) = 2),
-        if_neg (by decide : ¬ (9 : Int) = 13),
-        if_neg (by decide : ¬ (9 : Int) = 14),
-        if_neg (by decide : ¬ (9 : Int) = 15),
-        if_neg (by decide : ¬ (9 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
-        if_neg (by decide : ¬ (10 : Int) = 1),
-        if_neg (by decide : ¬ (10 : Int) = 2),
-        if_neg (by decide : ¬ (10 : Int) = 13),
-        if_neg (by decide : ¬ (10 : Int) = 14),
-        if_neg (by decide : ¬ (10 : Int) = 15),
-        if_neg (by decide : ¬ (10 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_then, thenBodyState, a1,
-        if_neg (by decide : ¬ (12 : Int) = 1),
-        if_neg (by decide : ¬ (12 : Int) = 2),
-        if_neg (by decide : ¬ (12 : Int) = 13),
-        if_neg (by decide : ¬ (12 : Int) = 14),
-        if_neg (by decide : ¬ (12 : Int) = 15),
-        if_neg (by decide : ¬ (12 : Int) = 16)]
+    · exact ha3cell (by decide : ¬ (4 : Int) = 1) (by decide : ¬ (4 : Int) = 2)
+        (by decide : ¬ (4 : Int) = 13) (by decide : ¬ (4 : Int) = 14)
+        (by decide : ¬ (4 : Int) = 15) (by decide : ¬ (4 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (5 : Int) = 1) (by decide : ¬ (5 : Int) = 2)
+        (by decide : ¬ (5 : Int) = 13) (by decide : ¬ (5 : Int) = 14)
+        (by decide : ¬ (5 : Int) = 15) (by decide : ¬ (5 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (6 : Int) = 1) (by decide : ¬ (6 : Int) = 2)
+        (by decide : ¬ (6 : Int) = 13) (by decide : ¬ (6 : Int) = 14)
+        (by decide : ¬ (6 : Int) = 15) (by decide : ¬ (6 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (8 : Int) = 1) (by decide : ¬ (8 : Int) = 2)
+        (by decide : ¬ (8 : Int) = 13) (by decide : ¬ (8 : Int) = 14)
+        (by decide : ¬ (8 : Int) = 15) (by decide : ¬ (8 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (9 : Int) = 1) (by decide : ¬ (9 : Int) = 2)
+        (by decide : ¬ (9 : Int) = 13) (by decide : ¬ (9 : Int) = 14)
+        (by decide : ¬ (9 : Int) = 15) (by decide : ¬ (9 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (10 : Int) = 1) (by decide : ¬ (10 : Int) = 2)
+        (by decide : ¬ (10 : Int) = 13) (by decide : ¬ (10 : Int) = 14)
+        (by decide : ¬ (10 : Int) = 15) (by decide : ¬ (10 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (12 : Int) = 1) (by decide : ¬ (12 : Int) = 2)
+        (by decide : ¬ (12 : Int) = 13) (by decide : ¬ (12 : Int) = 14)
+        (by decide : ¬ (12 : Int) = 15) (by decide : ¬ (12 : Int) = 16)
   · have hw : ms.c1 = (ms.c1 - 1) + 1 := by
       rw [Nat.sub_add_cancel (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hzero))]
     let w : Nat := ms.c1 - 1
@@ -280,60 +262,43 @@ theorem runsTo_compileInstr_jzdec1 (ifZero ifNonZero : Nat) (ms : Minsky.State) 
       simpa only [Compiler.compileInstr, thenBody, elseBody, List.append_assoc] using
         (RunsTo_append (Compiler.movePtr 2 1) a2 a3
           (RunsTo_append (Compiler.ifZeroElse 2 13 14 15 16 thenBody elseBody) a1 a2 h1 hif) h3)
+    have ha3cell : ∀ {i : Int}, i ≠ (1 : Int) → i ≠ (2 : Int) → i ≠ (13 : Int) →
+        i ≠ (14 : Int) → i ≠ (15 : Int) → i ≠ (16 : Int) → a3.tape i = s.tape i := by
+      intro i h1 h2 h13 h14 h15 h16
+      change (ifZeroElsePost 2 13 14 15 16 s_else).tape i = s.tape i
+      calc
+        (ifZeroElsePost 2 13 14 15 16 s_else).tape i = s_else.tape i := by
+          rw [ifZeroElsePost_tape 2 13 14 15 16 s_else h13 h14 h15 h16]
+        _ = (elseBodyState 2 13 14 15 16 ms.c1 a1).tape i := by
+          simp only [s_else, if_neg h1, if_neg h2]
+        _ = a1.tape i := by rw [elseBodyState_tape 2 13 14 15 16 ms.c1 a1 h2 h13 h14 h15 h16]
+        _ = s.tape i := by rfl
     refine ⟨a3, hchain, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · rfl
     · simp only [a3, ha2tape1, hzero, if_false]
     · simp only [a3, ha2tape2, hzero, if_false]
     · simp only [a3, ha2tape3]
     · simp only [a3, ha2run]
-    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
-        if_neg (by decide : ¬ (4 : Int) = 1),
-        if_neg (by decide : ¬ (4 : Int) = 2),
-        if_neg (by decide : ¬ (4 : Int) = 13),
-        if_neg (by decide : ¬ (4 : Int) = 14),
-        if_neg (by decide : ¬ (4 : Int) = 15),
-        if_neg (by decide : ¬ (4 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
-        if_neg (by decide : ¬ (5 : Int) = 1),
-        if_neg (by decide : ¬ (5 : Int) = 2),
-        if_neg (by decide : ¬ (5 : Int) = 13),
-        if_neg (by decide : ¬ (5 : Int) = 14),
-        if_neg (by decide : ¬ (5 : Int) = 15),
-        if_neg (by decide : ¬ (5 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
-        if_neg (by decide : ¬ (6 : Int) = 1),
-        if_neg (by decide : ¬ (6 : Int) = 2),
-        if_neg (by decide : ¬ (6 : Int) = 13),
-        if_neg (by decide : ¬ (6 : Int) = 14),
-        if_neg (by decide : ¬ (6 : Int) = 15),
-        if_neg (by decide : ¬ (6 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
-        if_neg (by decide : ¬ (8 : Int) = 1),
-        if_neg (by decide : ¬ (8 : Int) = 2),
-        if_neg (by decide : ¬ (8 : Int) = 13),
-        if_neg (by decide : ¬ (8 : Int) = 14),
-        if_neg (by decide : ¬ (8 : Int) = 15),
-        if_neg (by decide : ¬ (8 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
-        if_neg (by decide : ¬ (9 : Int) = 1),
-        if_neg (by decide : ¬ (9 : Int) = 2),
-        if_neg (by decide : ¬ (9 : Int) = 13),
-        if_neg (by decide : ¬ (9 : Int) = 14),
-        if_neg (by decide : ¬ (9 : Int) = 15),
-        if_neg (by decide : ¬ (9 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
-        if_neg (by decide : ¬ (10 : Int) = 1),
-        if_neg (by decide : ¬ (10 : Int) = 2),
-        if_neg (by decide : ¬ (10 : Int) = 13),
-        if_neg (by decide : ¬ (10 : Int) = 14),
-        if_neg (by decide : ¬ (10 : Int) = 15),
-        if_neg (by decide : ¬ (10 : Int) = 16)]
-    · simp only [a3, a2, ifZeroElsePost, s_else, elseBodyState, a1,
-        if_neg (by decide : ¬ (12 : Int) = 1),
-        if_neg (by decide : ¬ (12 : Int) = 2),
-        if_neg (by decide : ¬ (12 : Int) = 13),
-        if_neg (by decide : ¬ (12 : Int) = 14),
-        if_neg (by decide : ¬ (12 : Int) = 15),
-        if_neg (by decide : ¬ (12 : Int) = 16)]
+    · exact ha3cell (by decide : ¬ (4 : Int) = 1) (by decide : ¬ (4 : Int) = 2)
+        (by decide : ¬ (4 : Int) = 13) (by decide : ¬ (4 : Int) = 14)
+        (by decide : ¬ (4 : Int) = 15) (by decide : ¬ (4 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (5 : Int) = 1) (by decide : ¬ (5 : Int) = 2)
+        (by decide : ¬ (5 : Int) = 13) (by decide : ¬ (5 : Int) = 14)
+        (by decide : ¬ (5 : Int) = 15) (by decide : ¬ (5 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (6 : Int) = 1) (by decide : ¬ (6 : Int) = 2)
+        (by decide : ¬ (6 : Int) = 13) (by decide : ¬ (6 : Int) = 14)
+        (by decide : ¬ (6 : Int) = 15) (by decide : ¬ (6 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (8 : Int) = 1) (by decide : ¬ (8 : Int) = 2)
+        (by decide : ¬ (8 : Int) = 13) (by decide : ¬ (8 : Int) = 14)
+        (by decide : ¬ (8 : Int) = 15) (by decide : ¬ (8 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (9 : Int) = 1) (by decide : ¬ (9 : Int) = 2)
+        (by decide : ¬ (9 : Int) = 13) (by decide : ¬ (9 : Int) = 14)
+        (by decide : ¬ (9 : Int) = 15) (by decide : ¬ (9 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (10 : Int) = 1) (by decide : ¬ (10 : Int) = 2)
+        (by decide : ¬ (10 : Int) = 13) (by decide : ¬ (10 : Int) = 14)
+        (by decide : ¬ (10 : Int) = 15) (by decide : ¬ (10 : Int) = 16)
+    · exact ha3cell (by decide : ¬ (12 : Int) = 1) (by decide : ¬ (12 : Int) = 2)
+        (by decide : ¬ (12 : Int) = 13) (by decide : ¬ (12 : Int) = 14)
+        (by decide : ¬ (12 : Int) = 15) (by decide : ¬ (12 : Int) = 16)
 
 end LeanBF

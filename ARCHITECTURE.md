@@ -149,7 +149,7 @@ project convention that `Core` files contain only definitions.
   `dispatchMs`/`dispatchDone`/`dispatchRunning` effect), and the compiled
   program's loop body clears `done`, dispatches, and clears the running flag
   when no window matches (`runsTo_compileBody`). The completeness proof is in
-  `CompileProgram` (`runsTo_compileProgram`, `turingCompleteness_proof`).
+  `CompileLoop` (`runsTo_compileProgram`, `turingCompleteness_proof`).
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
   `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`, and

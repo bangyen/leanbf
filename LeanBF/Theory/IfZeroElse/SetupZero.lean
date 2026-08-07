@@ -22,7 +22,6 @@ when the tested cell is zero.
 
 namespace LeanBF
 
-
 /-- The setup reaches the `thenBodyState` when `test` is zero. -/
 theorem runsTo_setup_zero (test s1 s2 s3 s4 : Int) (s0 : State)
     (hptr : s0.ptr = test) (hv : s0.tape test = 0)

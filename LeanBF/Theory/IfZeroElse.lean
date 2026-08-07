@@ -8,6 +8,8 @@ import LeanBF.Theory.IfZeroElse.Blocks
 import LeanBF.Theory.IfZeroElse.IfZeroElse
 import LeanBF.Theory.IfZeroElse.LoopRuns
 import LeanBF.Theory.IfZeroElse.Setup
+import LeanBF.Theory.IfZeroElse.SetupSucc
+import LeanBF.Theory.IfZeroElse.SetupZero
 
 /-!
 # ifZeroElse Aggregator

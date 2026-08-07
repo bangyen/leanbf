@@ -90,10 +90,13 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Prove `turingCompleteness`** | High | Done. `Theory.Simulate` wires `compileInstr`/`compileProgram` into the dispatch simulation: each window runs its instruction's block, the dispatch loop runs exactly the matching window, the loop body maps a simulating state to the stepped machine, and `turingCompleteness_proof` closes the statement by induction on `Minsky.RunsTo`. |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
-| **Run-level tape lemmas** | Low | Done. `Theory.Invariance` provides a general `RunsTo` invariant lemma (`RunsTo_inv`) and lifts the single-step cell-preservation facts to whole runs (`RunsTo_preserves_tape_above`), so a run whose configurations keep the pointer below a bound preserves every tape cell above it. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
+| **Output determinism** | Medium | For a fixed program and input, the output is unique: a program is a function `input → output`. An immediate corollary of `step` being a total function; mirrors the same property on leanfunge's roadmap. |
+| **Run-level determinism** | Medium | The reachable configuration at `n` steps is unique (functionality of `run`), giving a run-level confluence statement that underlies output determinism. |
+| **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |
+| **Loop-free programs always halt** | Low | A `LoopFree` program terminates in exactly as many steps as it has instructions; a `halts`-level corollary of `run_length_loop_free` (`Theory.Loop.RunSeq`). |
+| **Halting problem undecidability** | High | The capstone: `turingCompleteness` plus the classical fact that two-counter-machine halting is undecidable. Blocked on an external computability library, as mathlib does not contain the classical 2CM universality result. |
 
 ## Scope & Limitations
 

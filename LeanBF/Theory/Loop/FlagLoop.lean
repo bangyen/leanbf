@@ -7,6 +7,7 @@ Authors: Bangyen Pham
 import LeanBF.Core.Compiler
 import LeanBF.Core.Semantics
 import LeanBF.Theory.Loop.Basics
+import LeanBF.Theory.Loop.RunSeq
 import Mathlib.Tactic.Ring
 
 /-!

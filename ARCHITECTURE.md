@@ -96,11 +96,10 @@ project convention that `Core` files contain only definitions.
   The empty program has no step and halts.
 - `Theory/Loop/` (aggregator `Theory/Loop.lean`): loop-correctness machinery.
   `Basics` has `stepOne`/`runSeq` (execute a single instruction or a whole
-  loop-free program), the `LoopFree` predicate, and
-  `run_length_loop_free`/`run_append` letting a run be split across a
-  loop-free prefix and its tail; `CopyLoop`, `FlagLoop`, and `RestoreClear`
-  pin down the three fixed loops used by `ifZeroElse`. These underpin the
-  dispatch simulation.
+  loop-free program) and the `LoopFree` predicate; `RunSeq` has the run-level
+  facts (`run_length_loop_free`, `run_append`, and the `movePtr` run facts);
+  `CopyLoop`, `FlagLoop`, and `RestoreClear` pin down the three fixed loops
+  used by `ifZeroElse`. These underpin the dispatch simulation.
 - `Theory/Simulation.lean`: simulation infrastructure and the first result.
   `runToCompletion` runs until the program halts or a fuel cap is hit, and
   its results convert into `RunsTo` chains (`RunsTo_of_haltsWithin`). The

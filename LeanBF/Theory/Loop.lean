@@ -8,6 +8,7 @@ import LeanBF.Theory.Loop.Basics
 import LeanBF.Theory.Loop.CopyLoop
 import LeanBF.Theory.Loop.FlagLoop
 import LeanBF.Theory.Loop.RestoreClear
+import LeanBF.Theory.Loop.RunSeq
 
 /-!
 # Loop Aggregator

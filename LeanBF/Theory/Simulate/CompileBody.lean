@@ -29,8 +29,6 @@ clear the running flag if no window matched.
 
 * `runsTo_compileBody`: The loop body maps a simulating state to the
   dispatched machine state.
-* `step_getElem`: A running machine's current instruction steps to its
-  stepInstr effect.
 -/
 
 namespace LeanBF
@@ -239,53 +237,39 @@ theorem runsTo_compileBody (m : Minsky.Program) (ms : Minsky.State) (s : State)
           by decide, by decide, by decide⟩ hThen hsptr h2t h3t h4t
     let a4 : State := ifZeroElsePost 4 5 6 7 8 m3
     have ha4run : a4.tape 0 = 0 := by
-      simp only [a4, ifZeroElsePost, m3, m2, m1]
-      rw [if_neg (by decide : ¬ (0 : Int) = 5)]
-      rw [if_neg (by decide : ¬ (0 : Int) = 6)]
-      rw [if_neg (by decide : ¬ (0 : Int) = 7)]
-      rw [if_neg (by decide : ¬ (0 : Int) = 8)]
-      rfl
+      change (ifZeroElsePost 4 5 6 7 8 m3).tape 0 = 0
+      rw [ifZeroElsePost_tape 4 5 6 7 8 m3 (by decide : ¬ (0 : Int) = 5)
+        (by decide : ¬ (0 : Int) = 6) (by decide : ¬ (0 : Int) = 7) (by decide : ¬ (0 : Int) = 8)]
+      simp only [m3, m2, m1, if_true]
+    have hm3cell : ∀ {i : Int}, i ≠ (0 : Int) → i ≠ (4 : Int) → i ≠ (5 : Int) →
+        i ≠ (6 : Int) → i ≠ (7 : Int) → i ≠ (8 : Int) → m3.tape i = a3.tape i := by
+      intro i h0 h4 h5 h6 h7 h8
+      change m3.tape i = a3.tape i
+      simp only [m3, m2, m1, if_neg h0]
+      rw [thenBodyState_tape 4 5 6 7 8 a3 h4 h5 h6 h7 h8]
     have ha4pc : a4.tape 1 = (dispatchMs m ms).pc := by
-      simp only [a4, ifZeroElsePost, m3, m2, m1]
-      rw [if_neg (by decide : ¬ (1 : Int) = 5)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 6)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 7)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 8)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 0)]
-      simp only [thenBodyState]
-      rw [if_neg (by decide : ¬ (1 : Int) = 4)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 5)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 6)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 7)]
-      rw [if_neg (by decide : ¬ (1 : Int) = 8)]
+      change (ifZeroElsePost 4 5 6 7 8 m3).tape 1 = (dispatchMs m ms).pc
+      rw [ifZeroElsePost_tape 4 5 6 7 8 m3 (by decide : ¬ (1 : Int) = 5)
+        (by decide : ¬ (1 : Int) = 6) (by decide : ¬ (1 : Int) = 7) (by decide : ¬ (1 : Int) = 8)]
+      rw [hm3cell (by decide : ¬ (1 : Int) = 0) (by decide : ¬ (1 : Int) = 4)
+        (by decide : ¬ (1 : Int) = 5) (by decide : ¬ (1 : Int) = 6)
+        (by decide : ¬ (1 : Int) = 7) (by decide : ¬ (1 : Int) = 8)]
       exact h3pc
     have ha4c1 : a4.tape 2 = (dispatchMs m ms).c1 := by
-      simp only [a4, ifZeroElsePost, m3, m2, m1]
-      rw [if_neg (by decide : ¬ (2 : Int) = 5)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 6)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 7)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 8)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 0)]
-      simp only [thenBodyState]
-      rw [if_neg (by decide : ¬ (2 : Int) = 4)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 5)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 6)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 7)]
-      rw [if_neg (by decide : ¬ (2 : Int) = 8)]
+      change (ifZeroElsePost 4 5 6 7 8 m3).tape 2 = (dispatchMs m ms).c1
+      rw [ifZeroElsePost_tape 4 5 6 7 8 m3 (by decide : ¬ (2 : Int) = 5)
+        (by decide : ¬ (2 : Int) = 6) (by decide : ¬ (2 : Int) = 7) (by decide : ¬ (2 : Int) = 8)]
+      rw [hm3cell (by decide : ¬ (2 : Int) = 0) (by decide : ¬ (2 : Int) = 4)
+        (by decide : ¬ (2 : Int) = 5) (by decide : ¬ (2 : Int) = 6)
+        (by decide : ¬ (2 : Int) = 7) (by decide : ¬ (2 : Int) = 8)]
       exact h3c1
     have ha4c2 : a4.tape 3 = (dispatchMs m ms).c2 := by
-      simp only [a4, ifZeroElsePost, m3, m2, m1]
-      rw [if_neg (by decide : ¬ (3 : Int) = 5)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 6)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 7)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 8)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 0)]
-      simp only [thenBodyState]
-      rw [if_neg (by decide : ¬ (3 : Int) = 4)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 5)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 6)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 7)]
-      rw [if_neg (by decide : ¬ (3 : Int) = 8)]
+      change (ifZeroElsePost 4 5 6 7 8 m3).tape 3 = (dispatchMs m ms).c2
+      rw [ifZeroElsePost_tape 4 5 6 7 8 m3 (by decide : ¬ (3 : Int) = 5)
+        (by decide : ¬ (3 : Int) = 6) (by decide : ¬ (3 : Int) = 7) (by decide : ¬ (3 : Int) = 8)]
+      rw [hm3cell (by decide : ¬ (3 : Int) = 0) (by decide : ¬ (3 : Int) = 4)
+        (by decide : ¬ (3 : Int) = 5) (by decide : ¬ (3 : Int) = 6)
+        (by decide : ¬ (3 : Int) = 7) (by decide : ¬ (3 : Int) = 8)]
       exact h3c2
     have ha4tape5 : a4.tape 5 = 0 := by simp only [a4, ifZeroElsePost]; rw [if_true]
     have ha4tape6 : a4.tape 6 = 0 := by
@@ -323,54 +307,5 @@ theorem runsTo_compileBody (m : Minsky.Program) (ms : Minsky.State) (s : State)
     · simp only [a5, ha4tape6]
     · simp only [a5, ha4tape7]
     · simp only [a5, ha4tape8]
-
-lemma step_getElem (m : Minsky.Program) (ms ms' : Minsky.State)
-    (h : Minsky.step m ms = some ms') :
-    ∃ instr : Minsky.Instruction, (m : List Minsky.Instruction)[ms.pc]? = some instr ∧
-      instr ≠ .halt ∧ Minsky.stepInstr instr ms = ms' := by
-  unfold Minsky.step at h
-  cases hpc : (m : List Minsky.Instruction)[ms.pc]? with
-  | none =>
-      rw [hpc] at h
-      cases h
-  | some ins =>
-      cases ins with
-      | inc1 next =>
-          rw [hpc] at h
-          simp only [Option.some.injEq] at h
-          have hne' : (.inc1 next : Minsky.Instruction) ≠ .halt := by
-            intro h'
-            cases h'
-          exact ⟨.inc1 next, rfl, hne', h⟩
-      | inc2 next =>
-          rw [hpc] at h
-          simp only [Option.some.injEq] at h
-          have hne' : (.inc2 next : Minsky.Instruction) ≠ .halt := by
-            intro h'
-            cases h'
-          exact ⟨.inc2 next, rfl, hne', h⟩
-      | jzdec1 ifZero ifNonZero =>
-          rw [hpc] at h
-          have hstep : Minsky.stepInstr (.jzdec1 ifZero ifNonZero) ms = ms' := by
-            by_cases hc : ms.c1 = 0
-            <;> simp only [hc, reduceIte, Option.some.injEq, Minsky.stepInstr] at h ⊢
-            <;> exact h
-          have hne' : (.jzdec1 ifZero ifNonZero : Minsky.Instruction) ≠ .halt := by
-            intro h'
-            cases h'
-          exact ⟨.jzdec1 ifZero ifNonZero, rfl, hne', hstep⟩
-      | jzdec2 ifZero ifNonZero =>
-          rw [hpc] at h
-          have hstep : Minsky.stepInstr (.jzdec2 ifZero ifNonZero) ms = ms' := by
-            by_cases hc : ms.c2 = 0
-            <;> simp only [hc, reduceIte, Option.some.injEq, Minsky.stepInstr] at h ⊢
-            <;> exact h
-          have hne' : (.jzdec2 ifZero ifNonZero : Minsky.Instruction) ≠ .halt := by
-            intro h'
-            cases h'
-          exact ⟨.jzdec2 ifZero ifNonZero, rfl, hne', hstep⟩
-      | halt =>
-          rw [hpc] at h
-          cases h
 
 end LeanBF

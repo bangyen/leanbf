@@ -31,6 +31,8 @@ out-of-range program counter falls off.
 * `dispatchMs_step`: Only the pc-matching instruction changes the state.
 * `dispatch_halt`: A `halt` instruction stops the machine.
 * `dispatch_none`: An out-of-range program counter falls off the program.
+* `step_getElem`: A running machine's current instruction steps to its
+  stepInstr effect.
 -/
 
 namespace LeanBF
@@ -150,5 +152,54 @@ theorem dispatch_none (m : Minsky.Program) (ms : Minsky.State)
           rw [show k + 1 - (head :: tail).length = k - tail.length
           from by simp only [List.length_cons, Nat.succ_sub_succ]]
           exact ⟨hd, hr, hm⟩
+
+lemma step_getElem (m : Minsky.Program) (ms ms' : Minsky.State)
+    (h : Minsky.step m ms = some ms') :
+    ∃ instr : Minsky.Instruction, (m : List Minsky.Instruction)[ms.pc]? = some instr ∧
+      instr ≠ .halt ∧ Minsky.stepInstr instr ms = ms' := by
+  unfold Minsky.step at h
+  cases hpc : (m : List Minsky.Instruction)[ms.pc]? with
+  | none =>
+      rw [hpc] at h
+      cases h
+  | some ins =>
+      cases ins with
+      | inc1 next =>
+          rw [hpc] at h
+          simp only [Option.some.injEq] at h
+          have hne' : (.inc1 next : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.inc1 next, rfl, hne', h⟩
+      | inc2 next =>
+          rw [hpc] at h
+          simp only [Option.some.injEq] at h
+          have hne' : (.inc2 next : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.inc2 next, rfl, hne', h⟩
+      | jzdec1 ifZero ifNonZero =>
+          rw [hpc] at h
+          have hstep : Minsky.stepInstr (.jzdec1 ifZero ifNonZero) ms = ms' := by
+            by_cases hc : ms.c1 = 0
+            <;> simp only [hc, reduceIte, Option.some.injEq, Minsky.stepInstr] at h ⊢
+            <;> exact h
+          have hne' : (.jzdec1 ifZero ifNonZero : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.jzdec1 ifZero ifNonZero, rfl, hne', hstep⟩
+      | jzdec2 ifZero ifNonZero =>
+          rw [hpc] at h
+          have hstep : Minsky.stepInstr (.jzdec2 ifZero ifNonZero) ms = ms' := by
+            by_cases hc : ms.c2 = 0
+            <;> simp only [hc, reduceIte, Option.some.injEq, Minsky.stepInstr] at h ⊢
+            <;> exact h
+          have hne' : (.jzdec2 ifZero ifNonZero : Minsky.Instruction) ≠ .halt := by
+            intro h'
+            cases h'
+          exact ⟨.jzdec2 ifZero ifNonZero, rfl, hne', hstep⟩
+      | halt =>
+          rw [hpc] at h
+          cases h
 
 end LeanBF

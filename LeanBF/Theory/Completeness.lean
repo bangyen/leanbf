@@ -19,6 +19,7 @@ simulates the two-counter Minsky machine. Its proof lives in
 
 * `Simulates`: A Brainfuck state that simulates a Minsky state.
 * `simState`: The canonical Brainfuck state that simulates a Minsky state.
+* `HaltsWith`: A halted Brainfuck state holding a Minsky state's counters.
 * `turingCompleteness`: The statement of Brainfuck Turing completeness.
 
 ## Theorems
@@ -70,14 +71,27 @@ theorem simulates_simState (ms : Minsky.State) : Simulates ms (simState ms) := b
         · rfl
 
 /--
+A Brainfuck state `bfs` is a halted state holding the counters of the Minsky
+state `ms`: the pointer is back at the `running` cell, the running flag is
+cleared, and `c1`/`c2` sit in cells 2 and 3. The `pc` is not constrained, as
+the dispatch loop zeroes it on halting.
+-/
+def HaltsWith (ms : Minsky.State) (bfs : State) : Prop :=
+  bfs.ptr = 0 ∧ bfs.tape 0 = 0 ∧ bfs.tape 2 = ms.c1 ∧ bfs.tape 3 = ms.c2
+
+/--
 The statement of Brainfuck Turing completeness: for every Minsky machine `m`,
 the compiled Brainfuck program `Compiler.compileProgram m` halts whenever `m`
-does, starting from the canonical simulating state `simState ms`.
+does, starting from the canonical simulating state `simState ms`, and the
+halting state holds `m`'s final counters. This is `HaltsWith` rather than
+`Simulates ms_final`: at a terminal state the dispatch loop clears the running
+flag, so `bfs_final.tape 0` is `0` where `Simulates` demands `1`.
 -/
 def turingCompleteness : Prop :=
   ∀ (m : Minsky.Program),
     ∀ (ms ms_final : Minsky.State),
       Minsky.RunsTo m ms ms_final →
-      ∃ (bfs_final : State), RunsTo (Compiler.compileProgram m, simState ms) bfs_final
+      ∃ (bfs_final : State), RunsTo (Compiler.compileProgram m, simState ms) bfs_final ∧
+        HaltsWith ms_final bfs_final
 
 end LeanBF

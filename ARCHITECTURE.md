@@ -159,9 +159,15 @@ project convention that `Core` files contain only definitions.
   `CompileLoop` (`runsTo_compileProgram`, `turingCompleteness_proof`).
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
-  `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`, and
-  the statement of the project's central goal, `turingCompleteness`. The
-  proof is `Theory.Simulate.turingCompleteness_proof`.
+  `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`,
+  `HaltsWith` (a halted state holding a Minsky state's counters: pointer at
+  `0`, running flag cleared, `c1`/`c2` in cells 2 and 3), and the statement of
+  the project's central goal, `turingCompleteness` — the compiled program
+  halts holding the machine's final counters. `HaltsWith` rather than
+  `Simulates ms_final`, because halting clears the running flag. The proof is
+  `Theory.Simulate.turingCompleteness_proof`, which bridges the
+  `dispatchMs`-phrased post-condition of `runsTo_compileProgram` to
+  `ms_final` via `terminal_of_RunsTo`.
 
 ## Example Programs
 
@@ -193,7 +199,8 @@ way, with `quadruple_executes` giving the exact interpreter run (`c2 = 8`).
 
 - `LeanBF/Core`: Definitions (Instruction, State, Semantics, Minsky,
   Compiler).
-- `LeanBF/Theory`: Theorems (currently only the Completeness statement).
+- `LeanBF/Theory`: Theorems (tape algebra, semantics, determinism, loop
+  machinery, invariance, the dispatch simulation, and completeness).
 - `LeanBF/Examples`: Example programs.
 - `Tests`: Executable `example` statements that re-assert the definitions.
 - `scripts`: Repository guard checks (naming, imports, copyright, formatting).

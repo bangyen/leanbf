@@ -40,9 +40,12 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   conditional, and `compileInstr`/`compileProgram` assemble the loop. The
   compiled programs are exercised end-to-end in `Tests` with `decide`.
 - **Completeness** (`Theory.Completeness` + `Theory.Simulate`): `Simulates`
-  (a Brainfuck state that simulates a Minsky state) and the theorem
-  `turingCompleteness`, proven by the dispatch simulation in
-  `Theory.Simulate` and closed by `turingCompleteness_proof`.
+  (a Brainfuck state that simulates a Minsky state), `HaltsWith` (a halted
+  state holding a Minsky state's counters), and the theorem
+  `turingCompleteness` — whenever the Minsky machine runs to `ms_final`, the
+  compiled program halts with `ms_final`'s counters in cells 2 and 3. It is
+  proven by the dispatch simulation in `Theory.Simulate` and closed by
+  `turingCompleteness_proof`.
 - **Verified example programs** (`LeanBF.Examples`): the classic
   `Hello World!` program, machine-checked with `decide` to print exactly
   `Hello World!` and a newline and to halt, plus two concrete Minsky machines
@@ -97,7 +100,6 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Strengthen the completeness statement** | High | `turingCompleteness` currently claims only that the compiled program halts. `runsTo_compileProgram` already proves the stronger post-condition — final pointer at `0`, running flag cleared, and `ms_final`'s counters in cells 1-3 — but `turingCompleteness_proof` discards it. Re-plumb the statement to carry the counters, so completeness says the compiled program computes the right answer rather than merely terminating. Note the result is not `Simulates ms_final`, which requires `tape 0 = 1`; at a terminal state `dispatchMs` zeroes `pc` and clears the flag. |
 | **Completeness converse** | Medium | The reverse direction: if `Compiler.compileProgram m` halts from `simState ms`, then `m` halts from `ms`. Needs an invariant over the dispatch loop showing every halting Brainfuck run is tracked by a Minsky run — substantially harder than the forward direction, which the compiler hands over directly. |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
@@ -128,11 +130,10 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
 **Limitations.**
 
 - The completeness theorem is proven: `Theory.Simulate.turingCompleteness_proof`
-  shows `Compiler.compileProgram` simulates the two-counter Minsky machine.
-  The `turingCompleteness` statement itself asserts only that the compiled
-  program halts whenever the Minsky machine does; the stronger post-condition
-  on the final counters is available from `runsTo_compileProgram` but is not
-  yet carried by the top-level statement (see the roadmap).
+  shows `Compiler.compileProgram` simulates the two-counter Minsky machine and
+  halts holding its final counters (`HaltsWith`). The halting state is not
+  `Simulates ms_final`: the dispatch loop clears the running flag on halting,
+  so cell `0` is `0` where `Simulates` demands `1`.
 - Completeness is one-directional: a halting compiled Brainfuck run is not yet
   proven to imply that the source Minsky machine halts.
 

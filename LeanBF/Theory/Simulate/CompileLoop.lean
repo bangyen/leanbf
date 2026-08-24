@@ -20,6 +20,7 @@ machine to completion, and the `turingCompleteness` proof.
   dispatched machine state.
 * `runsTo_compileProgram`: The compiled program runs the Minsky machine and
   clears the running flag.
+* `terminal_of_RunsTo`: The final state of a Minsky run is terminal.
 * `turingCompleteness_proof`: The proof of `turingCompleteness`.
 -/
 
@@ -394,6 +395,16 @@ theorem runsTo_compileProgram (m : Minsky.Program) (ms ms' : Minsky.State) (s : 
       · exact hpost.2.2.2.1
       · exact hpost.2.2.2.2
 
+/-- The final state of a Minsky run is terminal: its program counter either
+    addresses a `halt` or runs off the end of the program. -/
+theorem terminal_of_RunsTo (m : Minsky.Program) (ms ms_final : Minsky.State)
+    (h : Minsky.RunsTo m ms ms_final) :
+    (m : List Minsky.Instruction)[ms_final.pc]? = some .halt ∨
+      (m : List Minsky.Instruction)[ms_final.pc]? = none := by
+  induction h with
+  | halt s hterminal => exact hterminal
+  | step s s' s_final hstep hrest ih => exact ih
+
 /-- Brainfuck is Turing complete: the two-counter Minsky machine is simulated
     by `Compiler.compileProgram`. -/
 theorem turingCompleteness_proof : turingCompleteness := by
@@ -405,7 +416,18 @@ theorem turingCompleteness_proof : turingCompleteness := by
     simp only [simState]
     repeat' constructor <;> norm_num
   rcases runsTo_compileProgram m ms ms_final (simState ms) hruns hsim hclean with
-    ⟨bfs_final, hrun, hpost⟩
-  exact ⟨bfs_final, hrun⟩
+    ⟨bfs_final, hrun, hptr, hflag, _, hc1, hc2⟩
+  have hterminal : (m : List Minsky.Instruction)[ms_final.pc]? = some .halt ∨
+      (m : List Minsky.Instruction)[ms_final.pc]? = none := terminal_of_RunsTo m ms ms_final hruns
+  have hcount : (dispatchMs m ms_final).c1 = ms_final.c1 ∧
+      (dispatchMs m ms_final).c2 = ms_final.c2 := by
+    rcases hterminal with h | h
+    · rcases dispatch_halt m ms_final h with ⟨_, _, hd⟩
+      rw [hd]
+      exact ⟨rfl, rfl⟩
+    · rcases dispatch_none m ms_final h with ⟨_, _, hd⟩
+      rw [hd]
+      exact ⟨rfl, rfl⟩
+  exact ⟨bfs_final, hrun, hptr, hflag, hc1.trans hcount.1, hc2.trans hcount.2⟩
 
 end LeanBF

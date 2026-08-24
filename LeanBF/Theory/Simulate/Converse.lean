@@ -57,7 +57,7 @@ theorem runsExactly_append_suffix (cfg : Program × State) (s1 : State)
     (hB : RunsTo cfg s1) : ∀ (C : Program) (n : Nat) (t : State),
     RunsExactly n (cfg.1 ++ C) cfg.2 t → ∃ m, RunsExactly m C s1 t ∧ m ≤ n := by
   induction hB with
-  | halt s0 => intro C n t h; exact ⟨n, by simpa using h, Nat.le_refl n⟩
+  | halt s0 => intro C n t h; exact ⟨n, by simpa only [List.nil_append] using h, Nat.le_refl n⟩
   | step p s0 s2 p' s_fin hstep hrest ih =>
       intro C n t h
       have happ : step (p ++ C) s0 = some (p' ++ C, s2) := step_append p C s0 s2 p' hstep

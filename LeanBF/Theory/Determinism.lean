@@ -37,9 +37,9 @@ theorem run_deterministic (n : ℕ) (prog : Program) (s : State) (t₁ t₂ : St
     (h₁ : run n prog s = some t₁) (h₂ : run n prog s = some t₂) : t₁ = t₂ :=
   Option.some_inj.mp (h₁ ▸ h₂)
 
-/-- At most one halting state is reachable from a configuration. The step
-    relation is the graph of a partial function, so the reflexive-transitive
-    closure relates each configuration to at most one halting state. -/
+/-- At most one halting state is reachable from a configuration. Each
+    configuration has at most one successor, so the reflexive-transitive
+    closure relates it to at most one halting state. -/
 theorem runsTo_deterministic : ∀ (c : Program × State) (t₁ t₂ : State),
     RunsTo c t₁ → RunsTo c t₂ → t₁ = t₂ := by
   intro c t₁ t₂ h₁

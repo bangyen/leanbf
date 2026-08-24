@@ -7,6 +7,7 @@ Authors: Bangyen Pham
 import LeanBF.Theory.Simulate.CompileInstr
 import LeanBF.Theory.Simulate.CompileInstrJzdec
 import LeanBF.Theory.Simulate.CompileLoop
+import LeanBF.Theory.Simulate.Converse
 import LeanBF.Theory.Simulate.Dispatch
 import LeanBF.Theory.Simulate.WindowInstr
 import LeanBF.Theory.Simulate.WindowMatchSkip

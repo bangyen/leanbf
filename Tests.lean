@@ -6,6 +6,7 @@ Authors: Bangyen Pham
 import Tests.BodyLoop
 import Tests.Compiler
 import Tests.Completeness
+import Tests.Converse
 import Tests.Determinism
 import Tests.Examples
 import Tests.IfZeroElse

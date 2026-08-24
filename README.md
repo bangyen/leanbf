@@ -13,7 +13,9 @@ prover. It pins down a precise, total, deterministic formalization — the
 tape, the instruction set, and a small-step operational semantics are all
 pure Lean definitions — and proves Brainfuck's Turing completeness by
 simulating a two-counter Minsky machine (`turingCompleteness`, closed by
-`Theory.Simulate`). Every transition of the interpreter is a pure Lean
+`Theory.Simulate`), in both directions: the compiled program halts holding
+the machine's final counters, and a halting compiled run implies the machine
+halts. Every transition of the interpreter is a pure Lean
 function; nothing is executed by an external trusted interpreter.
 
 ## Architecture
@@ -45,7 +47,11 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   `turingCompleteness` — whenever the Minsky machine runs to `ms_final`, the
   compiled program halts with `ms_final`'s counters in cells 2 and 3. It is
   proven by the dispatch simulation in `Theory.Simulate` and closed by
-  `turingCompleteness_proof`.
+  `turingCompleteness_proof`. The converse holds too
+  (`Theory.Simulate.Converse`): if the compiled program halts, the source
+  Minsky machine halts (`minsky_halts_of_compiled_halts`), by strong
+  induction on the exact length of the halting Brainfuck run. Simulation is
+  therefore established in both directions.
 - **Verified example programs** (`LeanBF.Examples`): the classic
   `Hello World!` program, machine-checked with `decide` to print exactly
   `Hello World!` and a newline and to halt, plus two concrete Minsky machines
@@ -100,12 +106,11 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Completeness converse** | Medium | The reverse direction: if `Compiler.compileProgram m` halts from `simState ms`, then `m` halts from `ms`. Needs an invariant over the dispatch loop showing every halting Brainfuck run is tracked by a Minsky run — substantially harder than the forward direction, which the compiler hands over directly. |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
 | **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |
 | **Loop-free programs always halt** | Low | A `LoopFree` program terminates in exactly as many steps as it has instructions; a `halts`-level corollary of `run_length_loop_free` (`Theory.Loop.RunSeq`). |
-| **Halting problem undecidability** | High | The capstone: `turingCompleteness` plus the classical fact that two-counter-machine halting is undecidable. Blocked on an external computability library, as mathlib does not contain the classical 2CM universality result. |
+| **Halting problem undecidability** | High | The capstone: `turingCompleteness` plus the classical fact that two-counter-machine halting is undecidable. Both simulation directions are now in place — `minsky_halts_of_compiled_halts` supplies the reduction from Brainfuck halting to 2CM halting — so what remains is the classical undecidability result itself. Still blocked on an external computability library, as mathlib does not contain the 2CM universality result. |
 
 ## Scope & Limitations
 
@@ -134,8 +139,6 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
   halts holding its final counters (`HaltsWith`). The halting state is not
   `Simulates ms_final`: the dispatch loop clears the running flag on halting,
   so cell `0` is `0` where `Simulates` demands `1`.
-- Completeness is one-directional: a halting compiled Brainfuck run is not yet
-  proven to imply that the source Minsky machine halts.
 
 ## Installation & Building
 

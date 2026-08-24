@@ -157,6 +157,15 @@ project convention that `Core` files contain only definitions.
   program's loop body clears `done`, dispatches, and clears the running flag
   when no window matches (`runsTo_compileBody`). The completeness proof is in
   `CompileLoop` (`runsTo_compileProgram`, `turingCompleteness_proof`).
+- `Theory/Simulate/Converse.lean`: the reverse direction. Where the forward
+  proof hands the Brainfuck run over from the Minsky run, the converse
+  recovers the Minsky run from the Brainfuck one
+  (`minsky_halts_of_compiled_halts`), by strong induction on the exact length
+  of the halting Brainfuck run. The supporting lemmas are `runsExactly_step`
+  (peeling one step shortens an exact run) and `runsExactly_append_suffix`
+  (a run over `B ++ C` restricted to the `C` phase is no longer than the
+  whole); each loop iteration costs at least the loop-entry step, so the
+  measure strictly decreases.
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
   `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`,

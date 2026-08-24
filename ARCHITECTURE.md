@@ -104,7 +104,8 @@ project convention that `Core` files contain only definitions.
 - `Theory/Loop/` (aggregator `Theory/Loop.lean`): loop-correctness machinery.
   `Basics` has `stepOne`/`runSeq` (execute a single instruction or a whole
   loop-free program) and the `LoopFree` predicate; `RunSeq` has the run-level
-  facts (`run_length_loop_free`, `run_append`, and the `movePtr` run facts);
+  facts (`run_length_loop_free`, `run_append`, the `movePtr` run facts, and
+  loop-free termination — `stepsToHalt_loop_free`/`halts_of_loopFree`);
   `CopyLoop`, `FlagLoop`, and `RestoreClear` pin down the three fixed loops
   used by `ifZeroElse`. These underpin the dispatch simulation.
 - `Theory/Simulation.lean`: simulation infrastructure and the first result.
@@ -165,7 +166,8 @@ project convention that `Core` files contain only definitions.
   (peeling one step shortens an exact run) and `runsExactly_append_suffix`
   (a run over `B ++ C` restricted to the `C` phase is no longer than the
   whole); each loop iteration costs at least the loop-entry step, so the
-  measure strictly decreases.
+  measure strictly decreases. `compiled_halts_iff` packages both directions
+  as a single equivalence.
 - `Theory/Completeness.lean`: `Simulates` (a Brainfuck state that simulates
   a Minsky state — pointer at cell `0`, `tape 1 = pc`, `tape 2 = c1`,
   `tape 3 = c2`, `tape 0 = 1` for running), the canonical `simState`,

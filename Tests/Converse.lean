@@ -36,4 +36,15 @@ example (m : Minsky.Program) (ms : Minsky.State)
     ∃ ms', Minsky.step m ms = some ms' :=
   minsky_step_isSome m ms h
 
+/-- Halting equivalence packages both simulation directions. -/
+example (m : Minsky.Program) (ms : Minsky.State) :
+    halts (Compiler.compileProgram m) (simState ms) ↔
+      ∃ ms_final, Minsky.RunsTo m ms ms_final :=
+  compiled_halts_iff m ms
+
+/-- The forward half: a halting Minsky run makes the compiled program halt. -/
+example (m : Minsky.Program) (ms ms_final : Minsky.State)
+    (h : Minsky.RunsTo m ms ms_final) : halts (Compiler.compileProgram m) (simState ms) :=
+  (compiled_halts_iff m ms).mpr ⟨ms_final, h⟩
+
 end LeanBF.Tests

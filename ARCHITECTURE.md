@@ -77,6 +77,28 @@ The compiled blocks and the full dispatch loop are exercised in `Tests` with
 kernel `decide` reductions on small Minsky programs (`inc1`, `inc2`,
 `jzdec1`, `jzdec2`, `halt`) run to their halting state.
 
+### Parser (`LeanBF.Core.Parser`)
+
+`parse : String → Program` reads Brainfuck concrete syntax. The recursion is
+driven by an explicit fuel argument rather than the input list: a `[` parses
+its body and then continues on whatever the body left behind, and that
+leftover is not a structural subterm of the input, so the natural definition
+does not elaborate. Fuel makes the function total by construction, and
+`parse` passes the input length, which always suffices because every
+recursive call consumes a character.
+
+The parser follows the language's conventions: characters outside the eight
+commands are comments and are skipped, an unmatched `[` runs to the end of
+the input, and an unmatched `]` ends the program.
+
+Example programs are written as `Instruction` lists, which makes each one a
+hand transcription of the source quoted in its docstring.
+`parse_helloWorldSource` closes that gap for `Hello World!` by `rfl`, so the
+two representations cannot drift apart. Comparing programs this way needs
+`DecidableEq Instruction`, which the `deriving` handler cannot produce
+(`loop` nests a `List Instruction`); `Core.Instruction` defines it by mutual
+structural recursion instead.
+
 ## The Theory Layer
 
 Theorems are kept separate from definitions (`LeanBF/Theory`), mirroring the
@@ -209,7 +231,7 @@ way, with `quadruple_executes` giving the exact interpreter run (`c2 = 8`).
 ## Project Structure
 
 - `LeanBF/Core`: Definitions (Instruction, State, Semantics, Minsky,
-  Compiler).
+  Compiler, Parser).
 - `LeanBF/Theory`: Theorems (tape algebra, semantics, determinism, loop
   machinery, invariance, the dispatch simulation, and completeness).
 - `LeanBF/Examples`: Example programs.

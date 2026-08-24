@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
 import LeanBF.Core.Instruction
+import LeanBF.Core.Parser
 import LeanBF.Core.Semantics
 import LeanBF.Core.State
 
@@ -16,6 +17,7 @@ newline, expressed as an `Instruction` list and verified with the kernel
 
 ## Main definitions
 
+* `helloWorldSource`: The concrete Brainfuck source for `helloWorld`.
 * `helloWorld`: The program.
 * `helloState`: The initial state the program is run from.
 * `helloWorldOutput`: The expected output as a list of character codes, most
@@ -23,6 +25,8 @@ newline, expressed as an `Instruction` list and verified with the kernel
 
 ## Theorems
 
+* `parse_helloWorldSource`: The program is exactly what its concrete syntax
+  parses to.
 * `hello_world_output`: After 1000 steps the output is exactly
   `Hello World!` and a newline.
 * `hello_world_haltsWithin`: The program halts within 1000 steps.
@@ -66,6 +70,16 @@ def helloWorld : Program :=
   List.replicate 8 .dec_val ++ [.write] ++
   List.replicate 2 .inc_ptr ++ [.inc_val, .write] ++
   [.inc_ptr] ++ List.replicate 2 .inc_val ++ [.write]
+
+/-- The concrete Brainfuck source for `helloWorld`. -/
+def helloWorldSource : String :=
+  "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]" ++
+  ">>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
+
+/-- The hand-written `helloWorld` program is exactly what its concrete syntax
+    parses to, so the transcription in this file is machine-checked. -/
+theorem parse_helloWorldSource : parse helloWorldSource = helloWorld := by
+  rfl
 
 /-- The initial state of the program. -/
 def helloState : State := State.mkEmpty

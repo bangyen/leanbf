@@ -13,6 +13,7 @@ import Tests.IfZeroElse
 import Tests.Invariance
 import Tests.Loop
 import Tests.Minsky
+import Tests.Parser
 import Tests.Semantics
 import Tests.Simulate
 import Tests.State

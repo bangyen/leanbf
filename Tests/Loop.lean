@@ -76,4 +76,18 @@ example (v a : Nat) (test s4 : Int) (s : State) (hsep : test ≠ s4) :
   intro hptr hv ha
   exact run_restoreLoop v a test s4 s hptr hv ha hsep
 
+/-- A concrete loop-free program halts, taking one step per instruction. -/
+example : stepsToHalt 10 [.inc_val, .inc_ptr, .write] State.mkEmpty = 3 :=
+  stepsToHalt_loop_free [.inc_val, .inc_ptr, .write] State.mkEmpty 10
+    (loop_free_cons .inc_val _ (by intro body h; cases h)
+      (loop_free_cons .inc_ptr _ (by intro body h; cases h)
+        (loop_free_single .write (by intro body h; cases h))))
+    (by decide)
+
+example : halts [.inc_val, .inc_ptr, .write] State.mkEmpty :=
+  halts_of_loopFree [.inc_val, .inc_ptr, .write] State.mkEmpty
+    (loop_free_cons .inc_val _ (by intro body h; cases h)
+      (loop_free_cons .inc_ptr _ (by intro body h; cases h)
+        (loop_free_single .write (by intro body h; cases h))))
+
 end LeanBF.Tests

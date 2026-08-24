@@ -26,6 +26,8 @@ measure strictly decreases and the induction is well-founded.
 * `minsky_halts_of_compiled_halts_aux`: The induction on the run length.
 * `minsky_halts_of_compiled_halts`: A halting compiled run implies the Minsky
   machine halts.
+* `compiled_halts_iff`: The compiled program halts exactly when the Minsky
+  machine does.
 -/
 
 namespace LeanBF
@@ -164,5 +166,20 @@ theorem minsky_halts_of_compiled_halts (m : Minsky.Program) (ms : Minsky.State)
     repeat' constructor <;> norm_num
   exact minsky_halts_of_compiled_halts_aux m n ms (simState ms) bfs
     (simulates_simState ms) hclean hexact
+
+/-- Halting equivalence: the compiled Brainfuck program halts exactly when the
+    source Minsky machine does. This packages the two simulation directions,
+    and is the reduction a halting-problem argument consumes. -/
+theorem compiled_halts_iff (m : Minsky.Program) (ms : Minsky.State) :
+    halts (Compiler.compileProgram m) (simState ms) ↔
+      ∃ ms_final, Minsky.RunsTo m ms ms_final := by
+  constructor
+  · rintro ⟨n, hn⟩
+    rcases RunsTo_of_haltsWithin n (Compiler.compileProgram m) (simState ms) hn with ⟨bfs, hbfs⟩
+    exact minsky_halts_of_compiled_halts m ms bfs hbfs
+  · rintro ⟨ms_final, hr⟩
+    rcases turingCompleteness_proof m ms ms_final hr with ⟨bfs, hbfs, _⟩
+    rcases run_of_RunsTo (Compiler.compileProgram m, simState ms) bfs hbfs with ⟨n, hrun, hsteps⟩
+    exact ⟨n + 1, by unfold haltsWithin; rw [hsteps]; omega⟩
 
 end LeanBF

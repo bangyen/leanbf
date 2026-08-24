@@ -51,7 +51,9 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   (`Theory.Simulate.Converse`): if the compiled program halts, the source
   Minsky machine halts (`minsky_halts_of_compiled_halts`), by strong
   induction on the exact length of the halting Brainfuck run. Simulation is
-  therefore established in both directions.
+  therefore established in both directions, and the two halves package into
+  the halting equivalence `compiled_halts_iff`: the compiled program halts
+  exactly when the source machine does.
 - **Verified example programs** (`LeanBF.Examples`): the classic
   `Hello World!` program, machine-checked with `decide` to print exactly
   `Hello World!` and a newline and to halt, plus two concrete Minsky machines
@@ -59,6 +61,10 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   via `runsTo_compileProgram` to halt with the final counter values on the
   tape — and, via `run_of_RunsTo`, confirmed to complete under the
   interpreter's executable `run` in exactly `n` steps.
+- **Loop-free termination** (`Theory.Loop.RunSeq`): a program with no `[`
+  halts in exactly as many steps as it has instructions
+  (`stepsToHalt_loop_free`), and therefore always halts
+  (`halts_of_loopFree`).
 - **Tape algebra** (`Theory.State`) and **semantics lemmas**
   (`Theory.Semantics`): the cell operations act only on the addressed cell
   and round-trip with the current value (`currentVal_incVal_decVal`), and the
@@ -107,10 +113,8 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
-| **Halting equivalence** | Medium | Package the two simulation directions as a single `iff`: `halts (compileProgram m) (simState ms) ↔ ∃ ms_final, Minsky.RunsTo m ms ms_final`. Both halves exist — `RunsTo_of_haltsWithin` into `minsky_halts_of_compiled_halts` one way, `turingCompleteness_proof` into `run_of_RunsTo` the other — so this is the packaging step, and it is exactly the reduction the undecidability capstone consumes. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
 | **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |
-| **Loop-free programs always halt** | Low | A `LoopFree` program terminates in exactly as many steps as it has instructions; a `halts`-level corollary of `run_length_loop_free` (`Theory.Loop.RunSeq`). |
 | **2CM universality bridge** | High | Compile mathlib's `Nat.Partrec.Code` (or `Turing.TM`) into a two-counter Minsky program, the missing input to the undecidability capstone. This is the classical Minsky construction — Gödel-encoding the tape into counter exponents — and is realistically larger than everything currently in the repo. |
 | **Halting problem undecidability** | High | The capstone: Brainfuck halting is undecidable. Both simulation directions are in place, so a Brainfuck decider would yield a 2CM decider; what is missing is the classical fact that *2CM* halting is undecidable. Mathlib has the halting problem for partial recursive codes (`ComputablePred.halting_problem`) but no counter-machine model, so that theorem cannot be applied directly — the gap is a universality bridge compiling `Partrec` codes (or mathlib's Turing machines) down to two counters. |
 

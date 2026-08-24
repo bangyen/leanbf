@@ -19,6 +19,9 @@ expected.
 ## Theorems
 
 * `run_length_loop_free`: A loop-free program runs to `runSeq` completion.
+* `stepsToHalt_loop_free`: A loop-free program halts in exactly as many
+  steps as it has instructions.
+* `halts_of_loopFree`: A loop-free program always halts.
 * `run_append`: Splitting a run across a loop-free prefix and its tail.
 * `runSeq_append`: Sequential execution distributes across concatenation.
 * `runSeq_replicate_inc_ptr`: Repeating `>` moves the pointer.
@@ -203,5 +206,28 @@ theorem runSeq_movePtr_io (i j : Int) (s : State) :
     exact runSeq_replicate_inc_ptr_io (j - i).toNat s
   · rw [if_neg h]
     exact runSeq_replicate_dec_ptr_io (i - j).toNat s
+
+/-- A loop-free program takes exactly as many steps to halt as it has
+    instructions, given at least that much fuel. -/
+theorem stepsToHalt_loop_free : ∀ (A : Program) (s : State) (n : Nat),
+    LoopFree A → A.length ≤ n → stepsToHalt n A s = A.length := by
+  intro A
+  induction A with
+  | nil => intro s n h hn; cases n <;> rfl
+  | cons i rest ih =>
+      intro s n h hn
+      cases n with
+      | zero => simp only [List.length_cons] at hn; omega
+      | succ k =>
+          simp only [stepsToHalt, step_cons_stepOne i rest s h.1]
+          rw [ih (stepOne i s) k h.2 (by simp only [List.length_cons] at hn; omega)]
+          simp only [List.length_cons]
+
+/-- A loop-free program always halts. -/
+theorem halts_of_loopFree (A : Program) (s : State) (h : LoopFree A) : halts A s :=
+  ⟨A.length + 1, by
+    unfold haltsWithin
+    rw [stepsToHalt_loop_free A s (A.length + 1) h (by omega)]
+    omega⟩
 
 end LeanBF

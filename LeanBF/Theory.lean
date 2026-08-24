@@ -5,6 +5,7 @@ Authors: Bangyen Pham
 -/
 import LeanBF.Theory.BodyLoop
 import LeanBF.Theory.Completeness
+import LeanBF.Theory.Determinism
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Invariance
 import LeanBF.Theory.Loop

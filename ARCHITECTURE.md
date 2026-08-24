@@ -94,6 +94,13 @@ project convention that `Core` files contain only definitions.
   `runSeq_read_input` — reads consume the input prefix) and divergence
   (`loop_incVal_never_halts` — a non-zero cell makes `[+ ]` run forever).
   The empty program has no step and halts.
+- `Theory/Determinism.lean`: determinism. Because `step` is a total
+  function, a configuration has at most one successor
+  (`step_deterministic`), the state after `n` steps is unique
+  (`run_deterministic`), and at most one halting state is reachable
+  (`runsTo_deterministic`, by induction on the run). The output corollaries
+  (`runsTo_output_deterministic`, `runsTo_output_function`) say a program is
+  a function from its input stream to its output stream.
 - `Theory/Loop/` (aggregator `Theory/Loop.lean`): loop-correctness machinery.
   `Basics` has `stepOne`/`runSeq` (execute a single instruction or a whole
   loop-free program) and the `LoopFree` predicate; `RunSeq` has the run-level

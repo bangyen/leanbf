@@ -54,6 +54,13 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   therefore established in both directions, and the two halves package into
   the halting equivalence `compiled_halts_iff`: the compiled program halts
   exactly when the source machine does.
+- **Concrete syntax** (`Core.Parser`): a total `parse : String → Program`,
+  driven by an explicit fuel argument because a `[` continues on whatever its
+  body left behind, which is not a structural subterm. Non-command characters
+  are comments, an unmatched `[` runs to end of input, and an unmatched `]`
+  ends the program. `parse_helloWorldSource` checks the hand-written
+  `Hello World!` transcription against the source it documents, so the two
+  can no longer drift apart.
 - **Verified example programs** (`LeanBF.Examples`): the classic
   `Hello World!` program, machine-checked with `decide` to print exactly
   `Hello World!` and a newline and to halt, plus two concrete Minsky machines
@@ -113,7 +120,6 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
-| **Concrete syntax and a parser** | Medium | Programs are only ever built as Lean terms; there is no `String → Program` parser, so example programs are hand-transcriptions of the Brainfuck source quoted in their docstrings, with nothing checking the two agree. A fuel-based parser is total by construction (the `[` case recurses on the leftover input, which is not structural, so plain recursion will not elaborate), and `parse <source> = helloWorld` then closes by `rfl`, turning that docstring comment into a machine-checked claim. Also worth deriving `DecidableEq Instruction` — the type currently derives only `BEq`, so `decide` cannot compare programs. |
 | **Program equivalence** | Medium | There is no notion of two programs being observationally equivalent (same halting behavior and output from any state). Defining it would give the vocabulary for optimization-style facts — `+-` and `><` cancel, `[-]` is `clearHere`, dead code after an unconditional halt is removable — none of which are currently statable, only their single-cell versions in `Theory.State`. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
 | **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |

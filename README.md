@@ -57,6 +57,13 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   and `[` — is pinned down, together with I/O round-trips (read/write echo,
   reads consume the input prefix) and a divergence theorem (`[+ ]` never
   halts from a non-zero cell).
+- **Determinism** (`Theory.Determinism`): the interpreter is deterministic —
+  `step` is a total function, so a configuration has at most one successor
+  (`step_deterministic`), the state after `n` steps is unique
+  (`run_deterministic`), and at most one halting state is reachable from a
+  configuration (`runsTo_deterministic`). It follows that a program is a
+  function from its input stream to its output stream
+  (`runsTo_output_deterministic`, `runsTo_output_function`).
 - **Simulation infrastructure** (`Theory.Simulation`): a fuel-capped runner
   whose results convert into `RunsTo` chains, and the first instance — the
   compiled empty Minsky program halts from any simulating state
@@ -90,10 +97,10 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
+| **Strengthen the completeness statement** | High | `turingCompleteness` currently claims only that the compiled program halts. `runsTo_compileProgram` already proves the stronger post-condition — final pointer at `0`, running flag cleared, and `ms_final`'s counters in cells 1-3 — but `turingCompleteness_proof` discards it. Re-plumb the statement to carry the counters, so completeness says the compiled program computes the right answer rather than merely terminating. Note the result is not `Simulates ms_final`, which requires `tape 0 = 1`; at a terminal state `dispatchMs` zeroes `pc` and clears the flag. |
+| **Completeness converse** | Medium | The reverse direction: if `Compiler.compileProgram m` halts from `simState ms`, then `m` halts from `ms`. Needs an invariant over the dispatch loop showing every halting Brainfuck run is tracked by a Minsky run — substantially harder than the forward direction, which the compiler hands over directly. |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
-| **Output determinism** | Medium | For a fixed program and input, the output is unique: a program is a function `input → output`. An immediate corollary of `step` being a total function; mirrors the same property on leanfunge's roadmap. |
-| **Run-level determinism** | Medium | The reachable configuration at `n` steps is unique (functionality of `run`), giving a run-level confluence statement that underlies output determinism. |
 | **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |
 | **Loop-free programs always halt** | Low | A `LoopFree` program terminates in exactly as many steps as it has instructions; a `halts`-level corollary of `run_length_loop_free` (`Theory.Loop.RunSeq`). |
 | **Halting problem undecidability** | High | The capstone: `turingCompleteness` plus the classical fact that two-counter-machine halting is undecidable. Blocked on an external computability library, as mathlib does not contain the classical 2CM universality result. |
@@ -122,6 +129,12 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
 
 - The completeness theorem is proven: `Theory.Simulate.turingCompleteness_proof`
   shows `Compiler.compileProgram` simulates the two-counter Minsky machine.
+  The `turingCompleteness` statement itself asserts only that the compiled
+  program halts whenever the Minsky machine does; the stronger post-condition
+  on the final counters is available from `runsTo_compileProgram` but is not
+  yet carried by the top-level statement (see the roadmap).
+- Completeness is one-directional: a halting compiled Brainfuck run is not yet
+  proven to imply that the source Minsky machine halts.
 
 ## Installation & Building
 

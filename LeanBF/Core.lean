@@ -7,6 +7,7 @@ import LeanBF.Core.Compiler
 import LeanBF.Core.Instruction
 import LeanBF.Core.Minsky
 import LeanBF.Core.Parser
+import LeanBF.Core.Register
 import LeanBF.Core.Semantics
 import LeanBF.Core.State
 

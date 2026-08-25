@@ -11,11 +11,13 @@ import Tests.Determinism
 import Tests.Displacement
 import Tests.Equivalence
 import Tests.Examples
+import Tests.Godel
 import Tests.IfZeroElse
 import Tests.Invariance
 import Tests.Loop
 import Tests.Minsky
 import Tests.Parser
+import Tests.Register
 import Tests.Semantics
 import Tests.Simulate
 import Tests.State

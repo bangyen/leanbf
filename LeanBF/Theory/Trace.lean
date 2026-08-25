@@ -45,8 +45,9 @@ have been.
 * `runsTo_of_reaches_runsTo`: Prefixing a halting run with a reachability.
 * `runsTo_terminal`: A halting run ends where the machine has no successor.
 * `runsTo_runFor`: A halting run is an iteration onto a terminal state.
-* `no_runsTo_of_diverges`: A machine that always has somewhere further to go
+* `no_runsTo_of_steps`: A machine that always takes at least one more step
   never halts.
+* `no_runsTo_of_diverges`: The same, when consecutive stages differ.
 -/
 
 namespace LeanBF
@@ -180,18 +181,23 @@ theorem runsTo_runFor (p : Program) (s t : State) (h : RunsTo p s t) :
       rcases ih with ⟨n, hn, hterm⟩
       exact ⟨n + 1, by simp only [runFor, hstep]; exact hn, hterm⟩
 
-/-- A machine with somewhere further to go at every stage never halts.
+/-- A machine that always has at least one more step to take never halts.
 
-    `inv` enumerates states the machine passes through, each reachable from
-    the last by at least one step — `hne` supplies the "at least", since a
-    reachability of zero steps would let the sequence stand still. So `inv n`
-    is at least `n` steps along, and the machine is still running there. A
-    halting run would be an iteration of some fixed length `n` onto a state
-    with no successor; taking the sequence `n + 1` steps out contradicts it,
-    the run being over by then. -/
-theorem no_runsTo_of_diverges (p : Program) (inv : Nat → State)
-    (hstep : ∀ j, Reaches p (inv j) (inv (j + 1)))
-    (hne : ∀ j, inv j ≠ inv (j + 1)) (t : State) : ¬ RunsTo p (inv 0) t := by
+    `inv` enumerates states the machine passes through, each reached from the
+    last by a positive number of steps. So `inv n` is at least `n` steps
+    along, and the machine is still running there. A halting run would be an
+    iteration of some fixed length `n` onto a state with no successor; taking
+    the sequence `n + 1` stages out contradicts it, the run being over by
+    then.
+
+    The step count is explicit rather than inferred from consecutive stages
+    differing. A machine can step without changing state — a `jzdec` on an
+    empty register naming its own address does exactly that — so the two
+    formulations are not interchangeable, and only this one is available to a
+    caller whose stages are not obviously distinct. -/
+theorem no_runsTo_of_steps (p : Program) (inv : Nat → State)
+    (hstep : ∀ j, ∃ c, 1 ≤ c ∧ runFor p c (inv j) = some (inv (j + 1)))
+    (t : State) : ¬ RunsTo p (inv 0) t := by
   intro hrun
   rcases runsTo_runFor p _ t hrun with ⟨n, hn, hterm⟩
   -- Each stage costs at least one step, so `inv j` is `j` or more steps out.
@@ -201,12 +207,7 @@ theorem no_runsTo_of_diverges (p : Program) (inv : Nat → State)
     | zero => exact ⟨0, le_refl _, rfl⟩
     | succ i ih =>
         rcases ih with ⟨c, hci, hc⟩
-        rcases runFor_of_reaches p _ _ (hstep i) with ⟨d, hd⟩
-        -- A zero-step move would make the two stages the same state.
-        have hd0 : d ≠ 0 := by
-          rintro rfl
-          simp only [runFor, Option.some.injEq] at hd
-          exact hne i hd
+        rcases hstep i with ⟨d, hd1, hd⟩
         exact ⟨c + d, by omega, by rw [runFor_add p c d _ _ hc]; exact hd⟩
   rcases hcount (n + 1) with ⟨c, hcn, hc⟩
   -- The run is over after `n` steps, but the sequence is still going at `c`.
@@ -216,6 +217,22 @@ theorem no_runsTo_of_diverges (p : Program) (inv : Nat → State)
   | succ e =>
       rw [hcd] at hc
       simp only [runFor, hterm, reduceCtorEq] at hc
+
+/-- A machine with somewhere further to go at every stage never halts, when
+    consecutive stages are known to differ. The difference supplies the
+    positive step count `no_runsTo_of_steps` asks for: a reachability of no
+    steps would leave the state where it was. -/
+theorem no_runsTo_of_diverges (p : Program) (inv : Nat → State)
+    (hstep : ∀ j, Reaches p (inv j) (inv (j + 1)))
+    (hne : ∀ j, inv j ≠ inv (j + 1)) (t : State) : ¬ RunsTo p (inv 0) t := by
+  refine no_runsTo_of_steps p inv (fun j => ?_) t
+  rcases runFor_of_reaches p _ _ (hstep j) with ⟨d, hd⟩
+  refine ⟨d, ?_, hd⟩
+  -- A zero-step move would make the two stages the same state.
+  rcases Nat.eq_zero_or_pos d with rfl | hpos
+  · simp only [runFor, Option.some.injEq] at hd
+    exact absurd hd (hne j)
+  · exact hpos
 
 end Register
 

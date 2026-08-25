@@ -9,12 +9,13 @@ import LeanBF.Theory.Idioms
 # Idiom Tests
 
 Kernel re-assertions of the Brainfuck idiom theorems, plus concrete runs of
-the move and duplicate loops on small tapes.
+the move, duplicate, and scan loops on small tapes.
 
 ## Main definitions
 
 * `moveStart`: A tape holding `3` at the pointer and `2` beside it.
 * `dupStart`: A tape holding `3` at the pointer and `2`, `1` beside it.
+* `scanStart`: A tape whose first zero to the right is three cells along.
 -/
 
 namespace LeanBF.Tests
@@ -85,6 +86,38 @@ def dupStart : State where
 /-- The duplicate loop drains `3` into both neighbours, ending `0`, `5`, `4`. -/
 example : ((run 40 dupLoop dupStart).map fun s => (s.ptr, s.tape 0, s.tape 1, s.tape 2))
     = some (0, 0, 5, 4) := by
+  decide
+
+example : parse "[>]" = scanLoop := parse_scanLoop
+
+example : parse "[<]" = scanLeftLoop := parse_scanLeftLoop
+
+example (k : Nat) (s : State) (hk : s.tape (s.ptr + (k : Int)) = 0)
+    (hlt : ∀ j : Nat, j < k → s.tape (s.ptr + (j : Int)) ≠ 0) :
+    RunsTo (scanLoop, s) { s with ptr := s.ptr + (k : Int) } :=
+  runsTo_scanLoop k s hk hlt
+
+example (k : Nat) (s : State) (hk : s.tape (s.ptr - (k : Int)) = 0)
+    (hlt : ∀ j : Nat, j < k → s.tape (s.ptr - (j : Int)) ≠ 0) :
+    RunsTo (scanLeftLoop, s) { s with ptr := s.ptr - (k : Int) } :=
+  runsTo_scanLeftLoop k s hk hlt
+
+/-- A tape that is nonzero for three cells and zero at the fourth. -/
+def scanStart : State where
+  ptr := 0
+  tape := fun i => if i = 0 then 7 else if i = 1 then 9 else if i = 2 then 4 else 0
+  input := []
+  output := []
+
+/-- The scan loop walks right to the first zero, three cells along, in the
+    `2 * 3 + 1` steps the semantics predict. -/
+example : ((run 20 scanLoop scanStart).map fun s => s.ptr) = some 3 := by
+  decide
+
+/-- The scan stops at the *first* zero, not a later one: starting on the zero
+    itself the pointer does not move. -/
+example : ((run 20 scanLoop { scanStart with ptr := 3 }).map fun s => s.ptr)
+    = some 3 := by
   decide
 
 end LeanBF.Tests

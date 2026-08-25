@@ -37,6 +37,17 @@ duplicate loop differs only in carrying a second neighbour through the
 induction; the shape is otherwise the same, which is what the move loop
 predicted.
 
+The scan loops are the exception the other three predicted. `[>]` walks right
+until it finds a zero, so unlike the draining loops it does not terminate on
+every tape: a tape that is nonzero everywhere to the right runs forever.
+`runsTo_scanLoop` therefore takes the distance `k` to a zero as a parameter,
+with the hypothesis that no earlier cell is zero — without that minimality the
+statement would be false, since the loop stops at the *first* zero it meets,
+not at the one chosen. The induction is on `k` rather than on a cell's value,
+and the pointer arithmetic is over `Int`, so the casts need `push_cast` where
+the earlier proofs needed nothing. Divergence in the absence of a zero is not
+proven here; only the terminating case is.
+
 ## Main definitions
 
 * `moveLoop`: The move loop `[->+<]`, draining a cell into its right
@@ -45,6 +56,8 @@ predicted.
 * `dupLoop`: The duplicate loop `[->+>+<<]`, draining a cell into its two
   right neighbours.
 * `dupLoopStep`: The state after one iteration of the duplicate loop.
+* `scanLoop`: The scan loop `[>]`, walking right to the next zero cell.
+* `scanLeftLoop`: The scan loop `[<]`, walking left to the next zero cell.
 
 ## Theorems
 
@@ -57,6 +70,12 @@ predicted.
 * `loop_free_dupLoopBody`: The duplicate loop's body contains no loop.
 * `runSeq_dupLoopBody`: One iteration adds a unit to each neighbour.
 * `runsTo_dupLoop`: The duplicate loop empties a cell into both neighbours.
+* `parse_scanLoop`: `scanLoop` is what `[>]` parses to.
+* `parse_scanLeftLoop`: `scanLeftLoop` is what `[<]` parses to.
+* `loop_free_scanBody`: The scan loop's body contains no loop.
+* `loop_free_scanLeftBody`: The left scan loop's body contains no loop.
+* `runsTo_scanLoop`: The scan loop stops on the nearest zero to the right.
+* `runsTo_scanLeftLoop`: The left scan stops on the nearest zero to the left.
 -/
 
 namespace LeanBF
@@ -344,5 +363,144 @@ theorem runsTo_dupLoop (a b c : Nat) (s : State)
       exact RunsTo.step dupLoop s s ([.dec_val, .inc_ptr, .inc_val, .inc_ptr,
         .inc_val, .dec_ptr, .dec_ptr] ++ dupLoop)
         _ hstep (RunsTo_append dupLoop s' _ hbody hrest)
+
+/-- The scan loop `[>]`: walk right until the pointer finds a zero cell. -/
+def scanLoop : Program :=
+  [.loop [.inc_ptr]]
+
+/-- The scan loop `[<]`: walk left until the pointer finds a zero cell. -/
+def scanLeftLoop : Program :=
+  [.loop [.dec_ptr]]
+
+/-- `scanLoop` is what the source `[>]` parses to. -/
+theorem parse_scanLoop : parse "[>]" = scanLoop := by
+  rfl
+
+/-- `scanLeftLoop` is what the source `[<]` parses to. -/
+theorem parse_scanLeftLoop : parse "[<]" = scanLeftLoop := by
+  rfl
+
+/-- The scan loop's body contains no loop. -/
+theorem loop_free_scanBody : LoopFree [Instruction.inc_ptr] :=
+  loop_free_single _ (by intro body h; cases h)
+
+/-- The left scan loop's body contains no loop. -/
+theorem loop_free_scanLeftBody : LoopFree [Instruction.dec_ptr] :=
+  loop_free_single _ (by intro body h; cases h)
+
+/-- The scan loop `[>]` stops on the nearest zero cell to the right: given a
+    zero `k` cells along with no zero before it, the loop ends with the pointer
+    exactly there, and the tape untouched.
+
+    The minimality hypothesis is essential, not decoration: the loop halts at
+    the first zero it meets, so without it the pointer need not reach `k`. -/
+theorem runsTo_scanLoop (k : Nat) (s : State)
+    (hk : s.tape (s.ptr + (k : Int)) = 0)
+    (hlt : ∀ j : Nat, j < k → s.tape (s.ptr + (j : Int)) ≠ 0) :
+    RunsTo (scanLoop, s) { s with ptr := s.ptr + (k : Int) } := by
+  induction k generalizing s with
+  | zero =>
+      have hzero : s.currentVal = 0 := by
+        simp only [State.currentVal]
+        simpa only [Nat.cast_zero, Int.add_zero] using hk
+      have hstep : step scanLoop s = some ([], s) := by
+        simp only [scanLoop, step, if_pos hzero]
+      have heq : { s with ptr := s.ptr + ((0 : Nat) : Int) } = s := by
+        apply State.ext
+        · simp only [Nat.cast_zero, Int.add_zero]
+        · rfl
+        · rfl
+        · rfl
+      rw [heq]
+      exact RunsTo.step scanLoop s s [] s hstep (RunsTo.halt s)
+  | succ k ih =>
+      have hnz : s.currentVal ≠ 0 := by
+        simp only [State.currentVal]
+        simpa only [Nat.cast_zero, Int.add_zero] using hlt 0 (by omega)
+      have hstep : step scanLoop s = some ([.inc_ptr] ++ scanLoop, s) := by
+        simp only [scanLoop, step, if_neg hnz, List.append_nil]
+      -- One iteration is a single `>`, which moves the pointer and nothing else.
+      have hbody : RunsTo ([Instruction.inc_ptr], s) s.incPtr := by
+        have h := runsTo_of_loopFree [Instruction.inc_ptr] s loop_free_scanBody
+        simpa only [runSeq, stepOne] using h
+      have hk' : (s.incPtr).tape ((s.incPtr).ptr + (k : Int)) = 0 := by
+        simp only [State.incPtr]
+        rw [show s.ptr + 1 + (k : Int) = s.ptr + ((k + 1 : Nat) : Int) by push_cast; ring]
+        exact hk
+      have hlt' : ∀ j : Nat, j < k → (s.incPtr).tape ((s.incPtr).ptr + (j : Int)) ≠ 0 := by
+        intro j hj
+        simp only [State.incPtr]
+        rw [show s.ptr + 1 + (j : Int) = s.ptr + ((j + 1 : Nat) : Int) by push_cast; ring]
+        exact hlt (j + 1) (by omega)
+      have hrest : RunsTo (scanLoop, s.incPtr)
+          { s.incPtr with ptr := (s.incPtr).ptr + (k : Int) } := ih (s.incPtr) hk' hlt'
+      have hfinal : { s.incPtr with ptr := (s.incPtr).ptr + (k : Int) }
+          = { s with ptr := s.ptr + ((k + 1 : Nat) : Int) } := by
+        apply State.ext
+        · simp only [State.incPtr]
+          push_cast
+          ring
+        · rfl
+        · rfl
+        · rfl
+      rw [hfinal] at hrest
+      exact RunsTo.step scanLoop s s ([.inc_ptr] ++ scanLoop) _ hstep
+        (RunsTo_append scanLoop s.incPtr _ hbody hrest)
+
+/-- The left scan loop `[<]` stops on the nearest zero cell to the left, the
+    mirror of `runsTo_scanLoop`. This is the one idiom here that the repository
+    already writes: `Examples.helloWorld` uses `[<]` to return to the start of
+    its working cells. -/
+theorem runsTo_scanLeftLoop (k : Nat) (s : State)
+    (hk : s.tape (s.ptr - (k : Int)) = 0)
+    (hlt : ∀ j : Nat, j < k → s.tape (s.ptr - (j : Int)) ≠ 0) :
+    RunsTo (scanLeftLoop, s) { s with ptr := s.ptr - (k : Int) } := by
+  induction k generalizing s with
+  | zero =>
+      have hzero : s.currentVal = 0 := by
+        simp only [State.currentVal]
+        simpa only [Nat.cast_zero, Int.sub_zero] using hk
+      have hstep : step scanLeftLoop s = some ([], s) := by
+        simp only [scanLeftLoop, step, if_pos hzero]
+      have heq : { s with ptr := s.ptr - ((0 : Nat) : Int) } = s := by
+        apply State.ext
+        · simp only [Nat.cast_zero, Int.sub_zero]
+        · rfl
+        · rfl
+        · rfl
+      rw [heq]
+      exact RunsTo.step scanLeftLoop s s [] s hstep (RunsTo.halt s)
+  | succ k ih =>
+      have hnz : s.currentVal ≠ 0 := by
+        simp only [State.currentVal]
+        simpa only [Nat.cast_zero, Int.sub_zero] using hlt 0 (by omega)
+      have hstep : step scanLeftLoop s = some ([.dec_ptr] ++ scanLeftLoop, s) := by
+        simp only [scanLeftLoop, step, if_neg hnz, List.append_nil]
+      have hbody : RunsTo ([Instruction.dec_ptr], s) s.decPtr := by
+        have h := runsTo_of_loopFree [Instruction.dec_ptr] s loop_free_scanLeftBody
+        simpa only [runSeq, stepOne] using h
+      have hk' : (s.decPtr).tape ((s.decPtr).ptr - (k : Int)) = 0 := by
+        simp only [State.decPtr]
+        rw [show s.ptr - 1 - (k : Int) = s.ptr - ((k + 1 : Nat) : Int) by push_cast; ring]
+        exact hk
+      have hlt' : ∀ j : Nat, j < k → (s.decPtr).tape ((s.decPtr).ptr - (j : Int)) ≠ 0 := by
+        intro j hj
+        simp only [State.decPtr]
+        rw [show s.ptr - 1 - (j : Int) = s.ptr - ((j + 1 : Nat) : Int) by push_cast; ring]
+        exact hlt (j + 1) (by omega)
+      have hrest : RunsTo (scanLeftLoop, s.decPtr)
+          { s.decPtr with ptr := (s.decPtr).ptr - (k : Int) } := ih (s.decPtr) hk' hlt'
+      have hfinal : { s.decPtr with ptr := (s.decPtr).ptr - (k : Int) }
+          = { s with ptr := s.ptr - ((k + 1 : Nat) : Int) } := by
+        apply State.ext
+        · simp only [State.decPtr]
+          push_cast
+          ring
+        · rfl
+        · rfl
+        · rfl
+      rw [hfinal] at hrest
+      exact RunsTo.step scanLeftLoop s s ([.dec_ptr] ++ scanLeftLoop) _ hstep
+        (RunsTo_append scanLeftLoop s.decPtr _ hbody hrest)
 
 end LeanBF

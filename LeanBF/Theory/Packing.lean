@@ -7,6 +7,7 @@ Authors: Bangyen Pham
 import LeanBF.Theory.Packing.Blocks
 import LeanBF.Theory.Packing.Compile
 import LeanBF.Theory.Packing.Divide
+import LeanBF.Theory.Packing.Simulate
 import LeanBF.Theory.Packing.Support
 
 /-!

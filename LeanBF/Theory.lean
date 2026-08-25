@@ -16,6 +16,7 @@ import LeanBF.Theory.Semantics
 import LeanBF.Theory.Simulate
 import LeanBF.Theory.Simulation
 import LeanBF.Theory.State
+import LeanBF.Theory.Transfer
 
 /-!
 # Theory Aggregator

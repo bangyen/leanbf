@@ -28,6 +28,7 @@ bound. A program only ever mentions finitely many.
 * `Register.Program`: A list of instructions.
 * `Register.setReg`: Replace one register's value.
 * `Register.step`: A single step, or `none` at a terminal program counter.
+* `Register.Reaches`: Reachability, without requiring a terminal endpoint.
 * `Register.RunsTo`: The reflexive-transitive closure of `step`.
 -/
 
@@ -36,6 +37,7 @@ namespace LeanBF
 namespace Register
 
 /-- A register machine state: a program counter and a register file. -/
+@[ext]
 structure State where
   /-- The program counter. -/
   pc : Nat
@@ -69,6 +71,15 @@ def step (p : Program) (s : State) : Option State :=
   | some (.jzdec r ifZero ifNonZero) =>
     if s.regs r = 0 then some { s with pc := ifZero }
     else some { setReg s r (s.regs r - 1) with pc := ifNonZero }
+
+/-- Reachability: `s'` is reachable from `s`, with no condition on where the
+    run stops. Unlike `RunsTo`, which requires the final configuration to be
+    terminal, this composes, so a program fragment's effect can be stated and
+    then chained with the fragment that follows it. -/
+inductive Reaches (p : Program) : State → State → Prop where
+  | refl (s : State) : Reaches p s s
+  | step (s s' s_final : State) :
+    step p s = some s' → Reaches p s' s_final → Reaches p s s_final
 
 /-- Reflexive-transitive closure of the register machine step. -/
 inductive RunsTo (p : Program) : State → State → Prop where

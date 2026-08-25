@@ -23,8 +23,15 @@ The loop occupies two instructions at `base`, and the theorem takes the
 program as a parameter with hypotheses pinning those two slots, so a fragment
 can be placed anywhere inside a larger program.
 
-`kdrain_reaches` scales this: each unit drained adds `k` to the target, so
-the fragment multiplies by a constant. That is what the Gödel encoding needs,
+`div_reaches` runs the other way, consuming `k` units of the source per unit
+added to the target, so the fragment divides by a constant. Division is not
+total, and the loop resolves that by encoding the remainder in *where* it
+stops: the exit address is `exitBase + n % k`. One fragment therefore answers
+both questions the Gödel decrement needs — the quotient, and whether the
+prime divided the packed value at all.
+
+`kdrain_reaches` scales the drain: each unit drained adds `k` to the target,
+so that fragment multiplies by a constant. That is what the Gödel encoding needs,
 since incrementing a packed register means multiplying the packed value by a
 prime. Its proof splits in two, an outer induction draining the source and an
 inner one (`inc_chain`) walking the chain of increments that runs per unit.
@@ -37,6 +44,9 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
 * `drained`: The state after the loop has run to completion.
 * `afterDec`: One outer iteration's state after decrementing the source.
 * `scaled`: The state after a scaled transfer has run to completion.
+* `consumed`: A mid-chain state of the division loop.
+* `bumpedAt`: A register raised by one, at a given pointer.
+* `divided`: The state after the division loop has run to completion.
 
 ## Theorems
 
@@ -46,6 +56,12 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
 * `drain_reaches`: The drain loop empties one register into another.
 * `inc_chain`: Walking the increment chain raises the target by its length.
 * `kdrain_reaches`: The scaled transfer moves `k` units per unit drained.
+* `consumed_regs_self`: The consumed register holds its remaining value.
+* `consumed_regs_other`: Other registers are untouched mid-chain.
+* `chain_short`: The source runs out mid-group, selecting a remainder exit.
+* `chain_full`: The source survives a whole group.
+* `div_reaches`: The division loop divides by `k`, branching on the
+  remainder.
 -/
 
 namespace LeanBF
@@ -245,6 +261,194 @@ theorem kdrain_reaches (p : Program) (a t base exit k : Nat) (hne : a ≠ t) (hk
               simp only [afterDec, if_neg hia]
       rw [← hcomb]
       exact Reaches.step s _ _ hstep1 (reaches_trans hchainRun hrest)
+
+/-- Mid-chain state: pointer at slot `j`, source holding `m`. -/
+def consumed (a base j m : Nat) (s : State) : State :=
+  { pc := base + j, regs := fun i => if i = a then m else s.regs i }
+
+theorem consumed_regs_self (a base j m : Nat) (s : State) :
+    (consumed a base j m s).regs a = m := by
+  simp only [consumed, if_true]
+
+theorem consumed_regs_other (a base j m i : Nat) (s : State) (h : i ≠ a) :
+    (consumed a base j m s).regs i = s.regs i := by
+  simp only [consumed, if_neg h]
+
+/-- The source runs out mid-chain: it exits at `exitBase + (j + m)` with the
+    source emptied. -/
+theorem chain_short (p : Program) (a base exitBase k : Nat)
+    (hchain : ∀ j, j < k → p[base + j]? =
+      some (Instruction.jzdec a (exitBase + j) (base + j + 1))) :
+    ∀ (m j : Nat), j + m < k → ∀ (s : State), s.pc = base + j → s.regs a = m →
+      Reaches p s (consumed a exitBase (j + m) 0 s) := by
+  intro m
+  induction m with
+  | zero =>
+      intro j hjk s hpc ha
+      have hstep : step p s = some { s with pc := exitBase + j } := by
+        simp only [step, hpc, hchain j (by omega), ha, if_pos]
+      have hst : ({ pc := exitBase + j, regs := s.regs } : State)
+          = consumed a exitBase (j + 0) 0 s := by
+        unfold consumed
+        ext i
+        · simp only
+          omega
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, hia, ha]
+          · rw [if_neg hia]
+      rw [← hst]
+      exact Reaches.step s _ _ hstep (Reaches.refl _)
+  | succ q ih =>
+      intro j hjk s hpc ha
+      have hstep : step p s = some (consumed a base (j + 1) q s) := by
+        unfold consumed
+        simp only [step, hpc, hchain j (by omega), ha, setReg]
+        rw [if_neg (by omega)]
+        congr 1
+      have hpc2 : (consumed a base (j + 1) q s).pc = base + (j + 1) := by
+        simp only [consumed]
+      have hrec := ih (j + 1) (by omega) (consumed a base (j + 1) q s) hpc2
+        (consumed_regs_self a base (j + 1) q s)
+      have hfin : consumed a exitBase (j + 1 + q) 0 (consumed a base (j + 1) q s)
+          = consumed a exitBase (j + (q + 1)) 0 s := by
+        unfold consumed
+        ext i
+        · simp only
+          omega
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, if_pos hia]
+          · rw [if_neg hia, if_neg hia, if_neg hia]
+      rw [← hfin]
+      exact Reaches.step s _ _ hstep hrec
+
+/-- The source survives the whole group: the chain completes at `base + k`
+    having consumed `k - j` units. -/
+theorem chain_full (p : Program) (a base exitBase k : Nat)
+    (hchain : ∀ j, j < k → p[base + j]? =
+      some (Instruction.jzdec a (exitBase + j) (base + j + 1))) :
+    ∀ (d j m : Nat), j + d = k → d ≤ m → ∀ (s : State), s.pc = base + j → s.regs a = m →
+      Reaches p s (consumed a base k (m - d) s) := by
+  intro d
+  induction d with
+  | zero =>
+      intro j m hjk _ s hpc ha
+      have hst : s = consumed a base k (m - 0) s := by
+        unfold consumed
+        ext i
+        · simp only [hpc]
+          omega
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, hia, ha, Nat.sub_zero]
+          · rw [if_neg hia]
+      rw [← hst]
+      exact Reaches.refl _
+  | succ e ih =>
+      intro j m hjk hle s hpc ha
+      have hm : 0 < m := by omega
+      have hstep : step p s = some (consumed a base (j + 1) (m - 1) s) := by
+        unfold consumed
+        simp only [step, hpc, hchain j (by omega), ha, setReg]
+        rw [if_neg (by omega)]
+        congr 1
+      have hpc2 : (consumed a base (j + 1) (m - 1) s).pc = base + (j + 1) := by
+        simp only [consumed]
+      have hrec := ih (j + 1) (m - 1) (by omega) (by omega) (consumed a base (j + 1) (m - 1) s)
+        hpc2 (consumed_regs_self a base (j + 1) (m - 1) s)
+      have hfin : consumed a base k (m - 1 - e) (consumed a base (j + 1) (m - 1) s)
+          = consumed a base k (m - (e + 1)) s := by
+        unfold consumed
+        ext i
+        · simp only
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, if_pos hia]
+            omega
+          · rw [if_neg hia, if_neg hia, if_neg hia]
+      rw [← hfin]
+      exact Reaches.step s _ _ hstep hrec
+
+/-- Raise register `t` by one, leaving the pointer at `pc`. -/
+def bumpedAt (t pc : Nat) (s : State) : State :=
+  { pc := pc, regs := fun i => if i = t then s.regs t + 1 else s.regs i }
+
+/-- The state after dividing: source emptied, target raised by the quotient,
+    pointer at the exit encoding the remainder. -/
+def divided (a t exitBase q r : Nat) (s : State) : State :=
+  { pc := exitBase + r,
+    regs := fun i => if i = a then 0 else if i = t then s.regs t + q else s.regs i }
+
+/-- The divide loop: `q` groups of `k` are consumed, each raising the target
+    once, and the leftover `r` selects the exit. -/
+theorem div_reaches (p : Program) (a t base exitBase k : Nat) (hne : a ≠ t)
+    (hchain : ∀ j, j < k → p[base + j]? =
+      some (Instruction.jzdec a (exitBase + j) (base + j + 1)))
+    (hinc : p[base + k]? = some (Instruction.inc t base)) :
+    ∀ (q r : Nat), r < k → ∀ (s : State), s.pc = base → s.regs a = k * q + r →
+      Reaches p s (divided a t exitBase q r s) := by
+  have hta : ¬ (t = a) := fun hc => hne hc.symm
+  intro q
+  induction q with
+  | zero =>
+      intro r hrk s hpc ha
+      have ha0 : s.regs a = r := by omega
+      have hshort := chain_short p a base exitBase k hchain r 0 (by omega) s (by omega) ha0
+      have hfin : consumed a exitBase (0 + r) 0 s = divided a t exitBase 0 r s := by
+        unfold consumed divided
+        ext i
+        · simp only
+          omega
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, if_pos hia]
+          · rw [if_neg hia, if_neg hia]
+            by_cases hit : i = t
+            · rw [if_pos hit, hit, Nat.add_zero]
+            · rw [if_neg hit]
+      rw [← hfin]
+      exact hshort
+  | succ n ih =>
+      intro r hrk s hpc ha
+      -- The source has at least k units, so the whole group is consumed.
+      have hexp : s.regs a = k * n + r + k := by
+        rw [ha]; ring
+      have hfull := chain_full p a base exitBase k hchain k 0 (s.regs a) (by omega)
+        (by omega) s (by omega) rfl
+      -- Then the inc at base + k raises the target and returns to base.
+      have hpcK : (consumed a base k (s.regs a - k) s).pc = base + k := by
+        simp only [consumed]
+      have hstepInc : step p (consumed a base k (s.regs a - k) s)
+          = some (bumpedAt t base (consumed a base k (s.regs a - k) s)) := by
+        unfold bumpedAt
+        simp only [step, hpcK, hinc, setReg]
+      have hpcB : (bumpedAt t base (consumed a base k (s.regs a - k) s)).pc = base := by
+        simp only [bumpedAt]
+      have hregA : (bumpedAt t base (consumed a base k (s.regs a - k) s)).regs a = k * n + r := by
+        simp only [bumpedAt, if_neg hne]
+        rw [consumed_regs_self, hexp]
+        omega
+      have hrec := ih r hrk _ hpcB hregA
+      have hfin : divided a t exitBase n r
+            (bumpedAt t base (consumed a base k (s.regs a - k) s))
+          = divided a t exitBase (n + 1) r s := by
+        unfold divided bumpedAt
+        ext i
+        · simp only
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, if_pos hia]
+          · rw [if_neg hia, if_neg hia]
+            by_cases hit : i = t
+            · subst hit
+              simp only [if_true,
+                consumed_regs_other a base k (s.regs a - k) i s hta]
+              omega
+            · simp only [if_neg hit,
+                consumed_regs_other a base k (s.regs a - k) i s hia]
+      rw [← hfin]
+      exact reaches_trans hfull (Reaches.step _ _ _ hstepInc hrec)
 
 end Register
 

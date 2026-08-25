@@ -15,6 +15,7 @@ the transitivity of reachability.
 
 * `drainProg`: A two-instruction drain loop followed by `halt`.
 * `tripleProg`: A scaled transfer loop moving three units per unit drained.
+* `divProg`: A division loop with three jzdec slots.
 -/
 
 namespace LeanBF.Tests
@@ -67,5 +68,29 @@ example (p : Program) (t base k : Nat)
     (d j : Nat) (hjk : j + d = k) (hd : 0 < d) (s : State) (hpc : s.pc = base + 1 + j) :
     Reaches p s (bumped t d base s) :=
   inc_chain p t base k hchain d j hjk hd s hpc
+
+/-- A division loop: three jzdec slots, then an increment. -/
+def divProg : Program :=
+  [.jzdec 0 4 1, .jzdec 0 5 2, .jzdec 0 6 3, .inc 1 0, .halt, .halt, .halt]
+
+/-- The chain slots sit where `div_reaches` requires, with exits at `4 + j`. -/
+example : divProg[0]? = some (Instruction.jzdec 0 (4 + 0) (0 + 0 + 1)) := rfl
+
+example : divProg[2]? = some (Instruction.jzdec 0 (4 + 2) (0 + 2 + 1)) := rfl
+
+/-- The increment sits just past the chain. -/
+example : divProg[3]? = some (Instruction.inc 1 0) := rfl
+
+/-- Dividing seven by three gives a quotient of two and a remainder of one,
+    so the loop stops at exit `4 + 1` with the target raised twice. -/
+example : (divided 0 1 4 2 1 { pc := 0, regs := fun i => if i = 0 then 7 else 0 }).pc = 5 := rfl
+
+example : (divided 0 1 4 2 1 { pc := 0, regs := fun i => if i = 0 then 7 else 0 }).regs 1 = 2 := rfl
+
+/-- Exact division stops at the first exit, which is the divisibility test. -/
+example : (divided 0 1 4 2 0 { pc := 0, regs := fun i => if i = 0 then 6 else 0 }).pc = 4 := rfl
+
+/-- The source is emptied either way. -/
+example : (divided 0 1 4 2 1 { pc := 0, regs := fun i => if i = 0 then 7 else 0 }).regs 0 = 0 := rfl
 
 end LeanBF.Tests

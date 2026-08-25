@@ -7,6 +7,7 @@ Authors: Bangyen Pham
 import Tests.Universal.Builder
 import Tests.Universal.Convention
 import Tests.Universal.Primrec
+import Tests.Universal.Search
 
 /-!
 # Universal Machine Test Aggregator

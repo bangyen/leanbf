@@ -429,6 +429,20 @@ holds two-counter machines, which are not Brainfuck at all but inputs to
 `Core.Compiler`, kept here because what they demonstrate is the compiled
 program's behaviour. Both share the `LeanBF.Examples` namespace.
 
+`Brainfuck/Cat` is the `,[.,]` program, and the first example whose behaviour
+depends on its input rather than on constants fixed in the program. It is
+therefore stated as a theorem quantified over every input: `catRuns` gives the
+exact final state, with output `input.takeWhile (· != 0)` and the unread
+remainder `(input.dropWhile (· != 0)).tail`. Two design choices become
+observable in it. A `0` byte exits the loop, so `cat` copies the input's
+zero-free prefix and is a faithful echo only on inputs containing no zero; and
+`,` writes `0` at end of input, which is what supplies the byte that stops the
+loop once the list runs out, so `cat_halts` needs no side condition — unlike
+the scan idioms, which diverge without a zero. The proof factors through
+`runsTo_catLoop`, an invariant over the current cell and remaining input, with
+`runsTo_catLoop_zero` as its exit case. Concrete `decide` results illustrate
+the echo, the early stop, and the two-step run on empty input.
+
 `Brainfuck/HelloWorld` is the classic
 `++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.`
 `+++++++..+++.` `>>.<-.<.` `+++.` `------.` `--------.` `>>+.>++.` program,

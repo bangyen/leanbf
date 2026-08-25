@@ -5,6 +5,7 @@ Authors: Bangyen Pham
 -/
 
 import Tests.Arith.Multiply
+import Tests.Arith.Subtract
 
 /-!
 # Arithmetic Test Aggregator

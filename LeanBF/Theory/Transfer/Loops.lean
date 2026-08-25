@@ -41,6 +41,7 @@ therefore answers both the quotient and whether the divisor divided at all.
 ## Theorems
 
 * `reaches_trans`: Reachability is transitive.
+* `clear_reaches`: The clear loop empties a register.
 * `drain_reaches`: The drain loop empties one register into another.
 * `bumped_regs_self`: The bumped register holds its raised value.
 * `bumped_regs_other`: Other registers are untouched by a bump.
@@ -63,6 +64,46 @@ theorem reaches_trans {p : Program} {a b c : State}
   induction h1 with
   | refl s => exact h2
   | step s s' s'' hstep _ ih => exact Reaches.step s s' c hstep (ih h2)
+
+/-- Clearing a register: the loop decrements it until it is zero. -/
+theorem clear_reaches (p : Program) (r base exit : Nat)
+    (h0 : p[base]? = some (Instruction.jzdec r exit base)) :
+    ∀ (n : Nat) (s : State), s.pc = base → s.regs r = n →
+      Reaches p s { pc := exit, regs := fun i => if i = r then 0 else s.regs i } := by
+  intro n
+  induction n with
+  | zero =>
+      intro s hpc ha
+      have hstep : step p s = some { s with pc := exit } := by
+        simp only [step, hpc, h0, ha, if_pos]
+      have hst : ({ pc := exit, regs := s.regs } : State)
+          = { pc := exit, regs := fun i => if i = r then 0 else s.regs i } := by
+        congr 1
+        funext i
+        by_cases hir : i = r
+        · rw [if_pos hir, hir, ha]
+        · rw [if_neg hir]
+      rw [← hst]
+      exact Reaches.step s _ _ hstep (Reaches.refl _)
+  | succ m ih =>
+      intro s hpc ha
+      have hstep : step p s
+          = some { pc := base, regs := fun i => if i = r then m else s.regs i } := by
+        simp only [step, hpc, h0, ha, setReg]
+        rw [if_neg (by omega)]
+        congr 1
+      have hrec := ih { pc := base, regs := fun i => if i = r then m else s.regs i } rfl
+        (by simp only [if_true])
+      have hfin : ({ pc := exit, regs := fun i => if i = r then 0
+            else if i = r then m else s.regs i } : State)
+          = { pc := exit, regs := fun i => if i = r then 0 else s.regs i } := by
+        congr 1
+        funext i
+        by_cases hir : i = r
+        · rw [if_pos hir, if_pos hir]
+        · rw [if_neg hir, if_neg hir, if_neg hir]
+      rw [← hfin]
+      exact Reaches.step s _ _ hstep hrec
 
 /-- After the `jzdec` step: pointer advanced, source decremented. -/
 def decState (a base k : Nat) (s : State) : State :=

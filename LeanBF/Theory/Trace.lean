@@ -45,6 +45,7 @@ have been.
 * `runsTo_of_reaches_runsTo`: Prefixing a halting run with a reachability.
 * `runsTo_terminal`: A halting run ends where the machine has no successor.
 * `runsTo_runFor`: A halting run is an iteration onto a terminal state.
+* `runFor_pos_of_step`: A first step and a path make a positive count.
 * `no_runsTo_of_steps`: A machine that always takes at least one more step
   never halts.
 * `no_runsTo_of_diverges`: The same, when consecutive stages differ.
@@ -180,6 +181,19 @@ theorem runsTo_runFor (p : Program) (s t : State) (h : RunsTo p s t) :
   | step u v _ hstep _ ih =>
       rcases ih with ⟨n, hn, hterm⟩
       exact ⟨n + 1, by simp only [runFor, hstep]; exact hn, hterm⟩
+
+/-- A first step followed by a path is a run of positive length. The
+    fragment lemmas produce a bare `Reaches`, which carries no count, and
+    `runFor_of_reaches` supplies one with no guarantee it is positive.
+    Exhibiting the first step separately is what makes it so, and every
+    block begins with an instruction that executes unconditionally. -/
+theorem runFor_pos_of_step (p : Program) (s s₁ s' : State)
+    (hstep : step p s = some s₁) (hr : Reaches p s₁ s') :
+    ∃ c, 1 ≤ c ∧ runFor p c s = some s' := by
+  rcases runFor_of_reaches p _ _ hr with ⟨d, hd⟩
+  refine ⟨d + 1, by omega, ?_⟩
+  rw [show d + 1 = 1 + d by omega, runFor_add p 1 d s s₁ (by simp only [runFor, hstep])]
+  exact hd
 
 /-- A machine that always has at least one more step to take never halts.
 

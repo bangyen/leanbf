@@ -198,7 +198,7 @@ theorem probe_retry (ev : Program) (hi : Nat) (hhi : 14 ≤ hi)
   rcases probe_eval ev hi hhi hev m j with
     ⟨s1, hr1, hpc1, hres, hm, hk, hout, hblk, hz, hFrHi⟩
   rcases searchTail_retry (universal ev) 4 1 2 3 5 0 (51 + ev.length)
-    (by omega) (by omega) (by omega) (by omega) (by omega)
+    (by omega) (by omega) (by omega) (by omega)
     (universal_embeddedAt_tail ev) s1 hpc1 (by rw [hres, hzero]) hblk with
     ⟨s2, hr2, hpc2, harg2, hk2, hFr2⟩
   -- The next state is the same one, with the bound raised.

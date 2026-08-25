@@ -46,12 +46,12 @@ example : searchTail 2 3 4 5 7 1 3 = [Instruction.jzdec 4 4 3,
 
 /-- A failed bound clears up, raises the bound, and returns to the head. -/
 example (p : Program) (out k arg res blk head base : Nat)
-    (hka : k ≠ arg) (hkb : k ≠ blk) (harb : arg ≠ blk) (hrb : res ≠ blk) (hra : res ≠ arg)
+    (hka : k ≠ arg) (hkb : k ≠ blk) (harb : arg ≠ blk) (hra : res ≠ arg)
     (hemb : EmbeddedAt p base (searchTail out k arg res blk head base))
     (s : State) (hpc : s.pc = base) (hres : s.regs res = 0) (hblk : s.regs blk = 0) :
     ∃ s', Reaches p s s' ∧ s'.pc = head ∧ s'.regs arg = 0 ∧
       s'.regs k = s.regs k + 1 ∧ ∀ q, q ≠ arg → q ≠ k → s'.regs q = s.regs q :=
-  searchTail_retry p out k arg res blk head base hka hkb harb hrb hra hemb s hpc hres hblk
+  searchTail_retry p out k arg res blk head base hka hkb harb hra hemb s hpc hres hblk
 
 /-- A successful bound halts with the answer, the test's own decrement having
     decoded it. -/

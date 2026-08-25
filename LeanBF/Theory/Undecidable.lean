@@ -4,15 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
 import LeanBF.Theory.Packing
+import LeanBF.Theory.Simulate
 import LeanBF.Theory.Universal
 
 /-!
-# A Universal Two-Counter Machine
+# A Universal Brainfuck Program
 
 Joining the three reductions into one machine.
 
 Each piece was proved on its own terms. `universal_machine` gives a register
-machine whose halting is equivalent to a partial recursive code's;
+machine whose halting is equivalent to a recursive code's;
 `compile_halts_iff` compiles any register machine down to two counters; and
 `runsTo_toMinsky_iff` reads a two-register program as a Minsky machine. This
 module composes them.
@@ -30,13 +31,15 @@ and `n` to the starting counter is an ordinary computable function.
 ## Theorems
 
 * `universal_minsky`: A Minsky machine whose halting decides any code's.
+* `universal_brainfuck`: A Brainfuck program whose halting decides any
+  code's.
 -/
 
 namespace LeanBF
 
 namespace Register
 
-/-- A single Minsky program whose halting decides every partial recursive
+/-- A single Minsky program whose halting decides every recursive
     code's halting.
 
     The program is fixed; only the starting counter varies, and it varies as
@@ -69,5 +72,24 @@ theorem universal_minsky : ∃ (M : LeanBF.Minsky.Program), ∀ (c n : Nat),
   exact hU c n
 
 end Register
+
+/-- A single Brainfuck program whose halting decides every recursive
+    code's halting.
+
+    This is the whole argument, end to end. A code becomes a register machine
+    by `universal_machine`, that machine becomes two counters by
+    `compile_halts_iff`, the two counters become a Minsky machine by
+    `runsTo_toMinsky_iff`, and the Minsky machine becomes Brainfuck by
+    `compiled_halts_iff`. The program is fixed; only the starting tape
+    varies, and it varies computably in the code and the input.
+
+    A decider for Brainfuck halting would therefore decide
+    `Nat.Partrec.Code` halting, which `ComputablePred.halting_problem`
+    forbids. -/
+theorem universal_brainfuck : ∃ (B : Program), ∀ (c n : Nat),
+    halts B (simState { pc := 0, c1 := 2 ^ Nat.pair c n, c2 := 0 }) ↔
+      (Nat.Partrec.Code.eval (Denumerable.ofNat Nat.Partrec.Code c) n).Dom := by
+  rcases Register.universal_minsky with ⟨M, hM⟩
+  exact ⟨Compiler.compileProgram M, fun c n => (compiled_halts_iff M _).trans (hM c n)⟩
 
 end LeanBF

@@ -47,6 +47,7 @@ fragment puts it back.
 * `builds_right`: The second half of the unpairing is computable.
 * `builds_pair`: The pairing of two computable functions is computable.
 * `precBodyPre_effect`: The body's prelude assembles the step's argument.
+* `precBodyPost_effect`: The body's postlude counts up and returns.
 -/
 
 namespace LeanBF
@@ -316,6 +317,45 @@ theorem precBodyPre_effect (p : Program) (lo base : Nat)
   · intro q hq0 hq1 hq2 hq3 hq4 hqr
     simp only [if_neg hq3, hs3, if_neg hq1]
     rw [hF2 q hq0 hq3 hq4 (by omega), hF1 q hq2 hq1 hq3 (by omega)]
+
+/-- The postlude: clear the argument the step function consumed, count the
+    iteration, and return to the loop head. The return tests a register the
+    invariant keeps empty, which is how a machine without a plain jump makes
+    an unconditional one. -/
+theorem precBodyPost_effect (p : Program) (lo base head : Nat)
+    (hemb : EmbeddedAt p base (precBodyPost lo base head)) :
+    ∀ (s : State), s.pc = base → s.regs (lo + 6) = 0 →
+      ∃ s', Reaches p s s' ∧ s'.pc = head ∧ s'.regs (lo + 4) = 0 ∧
+        s'.regs (lo + 2) = s.regs (lo + 2) + 1 ∧
+        ∀ q, q ≠ lo + 4 → q ≠ lo + 2 → s'.regs q = s.regs q := by
+  intro s hpc h60
+  have hg := embeddedAt_get p base _ hemb
+  -- Clear the argument.
+  have hclr := clear_reaches p (lo + 4) base (base + 1)
+    (by simpa only [Nat.add_zero] using hg 0 _ rfl) (s.regs (lo + 4)) s hpc rfl
+  set s1 : State := { pc := base + 1, regs := fun i => if i = lo + 4 then 0 else s.regs i }
+    with hs1
+  -- Count the iteration.
+  have hstep : step p s1 = some { setReg s1 (lo + 2) (s1.regs (lo + 2) + 1) with
+      pc := base + 2 } := by
+    simp only [step, hs1, hg 1 _ rfl, setReg]
+  set s2 : State := { setReg s1 (lo + 2) (s1.regs (lo + 2) + 1) with pc := base + 2 } with hs2
+  -- Return to the head by testing a register the invariant keeps empty.
+  have hzero6 : s2.regs (lo + 6) = 0 := by
+    simp only [hs2, setReg, if_neg (by omega : lo + 6 ≠ lo + 2), hs1,
+      if_neg (by omega : lo + 6 ≠ lo + 4)]
+    exact h60
+  have hjump : step p s2 = some { s2 with pc := head } := by
+    rw [step, hs2]
+    simp only [hg 2 _ rfl]
+    rw [show (setReg s1 (lo + 2) (s1.regs (lo + 2) + 1)).regs (lo + 6) = 0 from hzero6]
+    simp only [if_pos]
+  refine ⟨{ s2 with pc := head }, reaches_trans hclr (Reaches.step _ _ _ hstep
+    (Reaches.step _ _ _ hjump (Reaches.refl _))), rfl, ?_, ?_, ?_⟩
+  · simp only [hs2, setReg, if_neg (by omega : lo + 4 ≠ lo + 2), hs1, if_true]
+  · simp only [hs2, setReg, if_true, hs1, if_neg (by omega : lo + 2 ≠ lo + 4)]
+  · intro q hq4 hq2
+    simp only [hs2, setReg, if_neg hq2, hs1, if_neg hq4]
 
 end Register
 

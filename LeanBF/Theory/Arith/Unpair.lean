@@ -23,6 +23,7 @@ rather than copy, since nothing after them reads `s` or `d` again.
 
 ## Main definitions
 
+* `unpairRestFrag`: The stages that follow the square-root search.
 * `unpairFrag`: The unpairing function as a concrete instruction list.
 
 ## Theorems
@@ -34,109 +35,79 @@ namespace LeanBF
 
 namespace Register
 
-/-- The unpairing function, laid out from `base`. Slots `0` to `39` are the
-    square-root search, `40` to `50` square its answer back, `51` to `63`
-    recover the remainder and clear the square, and `64` onward compare the
-    remainder against the root and assemble the two answers.
+/-- The stages after the square root: squaring the root back,
+    recovering the remainder, and the comparison whose arms assemble the two
+    answers. Laid out from its own base, which is forty slots past the
+    fragment's. -/
+def unpairRestFrag (nR o1 o2 lo base exit : Nat) : Program :=
+  [.jzdec lo (base + 3) (base + 1),
+   .inc (lo + 11) (base + 2),
+   .inc (lo + 12) base,
+   .jzdec (lo + 12) (base + 5) (base + 4),
+   .inc lo (base + 3),
+   .jzdec (lo + 11) (base + 11) (base + 6),
+   .jzdec lo (base + 9) (base + 7),
+   .inc (lo + 10) (base + 8),
+   .inc (lo + 12) (base + 6),
+   .jzdec (lo + 12) (base + 5) (base + 10),
+   .inc lo (base + 9),
+   .jzdec nR (base + 14) (base + 12),
+   .inc (lo + 1) (base + 13),
+   .inc (lo + 12) (base + 11),
+   .jzdec (lo + 12) (base + 16) (base + 15),
+   .inc nR (base + 14),
+   .jzdec (lo + 10) (base + 19) (base + 17),
+   .inc (lo + 14) (base + 18),
+   .inc (lo + 12) (base + 16),
+   .jzdec (lo + 12) (base + 21) (base + 20),
+   .inc (lo + 10) (base + 19),
+   .jzdec (lo + 14) (base + 23) (base + 22),
+   .jzdec (lo + 1) (base + 21) (base + 21),
+   .jzdec (lo + 10) (base + 24) (base + 23),
+   .jzdec lo (base + 27) (base + 25),
+   .inc (lo + 13) (base + 26),
+   .inc (lo + 15) (base + 24),
+   .jzdec (lo + 15) (base + 29) (base + 28),
+   .inc lo (base + 27),
+   .jzdec (lo + 1) (base + 32) (base + 30),
+   .inc (lo + 14) (base + 31),
+   .inc (lo + 15) (base + 29),
+   .jzdec (lo + 15) (base + 34) (base + 33),
+   .inc (lo + 1) (base + 32),
+   .jzdec (lo + 14) (base + 36) (base + 35),
+   .jzdec (lo + 13) (base + 34) (base + 34),
+   .jzdec (lo + 13) (base + 42) (base + 37),
+   .jzdec (lo + 13) (base + 38) (base + 37),
+   .jzdec (lo + 1) (base + 40) (base + 39),
+   .inc o1 (base + 38),
+   .jzdec lo exit (base + 41),
+   .inc o2 (base + 40),
+   .jzdec lo (base + 45) (base + 43),
+   .inc (lo + 14) (base + 44),
+   .inc (lo + 15) (base + 42),
+   .jzdec (lo + 15) (base + 47) (base + 46),
+   .inc lo (base + 45),
+   .jzdec (lo + 14) (base + 49) (base + 48),
+   .jzdec (lo + 1) (base + 47) (base + 47),
+   .jzdec lo (base + 51) (base + 50),
+   .inc o1 (base + 49),
+   .jzdec (lo + 1) exit (base + 52),
+   .inc o2 (base + 51)]
+
+/-- The unpairing function. Slots `0` to `39` are the square-root search,
+    `40` to `50` square its answer back, `51` to `63` recover the remainder
+    and clear the square, and `64` onward compare the remainder against the
+    root and assemble the two answers.
 
     The named registers are the input and the two outputs; `lo` holds the
     root and `lo + 1` the remainder, with the search's own working block at
-    `lo + 2` through `lo + 9` and the rest of the working registers above
-    it. -/
+    `lo + 2` through `lo + 9` and the rest above it.
+
+    Stating this as a concatenation rather than one flat list is what lets
+    the search be cited as a lemma instead of re-proved slot by slot. -/
 def unpairFrag (nR o1 o2 lo base exit : Nat) : Program :=
-  [.jzdec nR (base + 3) (base + 1),
-   .inc (lo + 9) (base + 2),
-   .inc (lo + 2) base,
-   .jzdec (lo + 2) (base + 5) (base + 4),
-   .inc nR (base + 3),
-   .jzdec (lo + 9) (base + 40) (base + 6),
-   .jzdec lo (base + 9) (base + 7),
-   .inc (lo + 2) (base + 8),
-   .inc (lo + 7) (base + 6),
-   .jzdec (lo + 7) (base + 11) (base + 10),
-   .inc lo (base + 9),
-   .inc (lo + 2) (base + 12),
-   .jzdec (lo + 2) (base + 15) (base + 13),
-   .inc (lo + 4) (base + 14),
-   .inc (lo + 7) (base + 12),
-   .jzdec (lo + 7) (base + 17) (base + 16),
-   .inc (lo + 2) (base + 15),
-   .jzdec (lo + 4) (base + 23) (base + 18),
-   .jzdec (lo + 2) (base + 21) (base + 19),
-   .inc (lo + 3) (base + 20),
-   .inc (lo + 7) (base + 18),
-   .jzdec (lo + 7) (base + 17) (base + 22),
-   .inc (lo + 2) (base + 21),
-   .jzdec (lo + 3) (base + 26) (base + 24),
-   .inc (lo + 5) (base + 25),
-   .inc (lo + 8) (base + 23),
-   .jzdec (lo + 8) (base + 28) (base + 27),
-   .inc (lo + 3) (base + 26),
-   .jzdec nR (base + 31) (base + 29),
-   .inc (lo + 6) (base + 30),
-   .inc (lo + 8) (base + 28),
-   .jzdec (lo + 8) (base + 33) (base + 32),
-   .inc nR (base + 31),
-   .jzdec (lo + 6) (base + 35) (base + 34),
-   .jzdec (lo + 5) (base + 33) (base + 33),
-   .jzdec (lo + 5) (base + 37) (base + 36),
-   .jzdec (lo + 5) (base + 38) (base + 36),
-   .inc lo (base + 38),
-   .jzdec (lo + 2) (base + 39) (base + 38),
-   .jzdec (lo + 3) (base + 5) (base + 39),
-   .jzdec lo (base + 43) (base + 41),
-   .inc (lo + 11) (base + 42),
-   .inc (lo + 12) (base + 40),
-   .jzdec (lo + 12) (base + 45) (base + 44),
-   .inc lo (base + 43),
-   .jzdec (lo + 11) (base + 51) (base + 46),
-   .jzdec lo (base + 49) (base + 47),
-   .inc (lo + 10) (base + 48),
-   .inc (lo + 12) (base + 46),
-   .jzdec (lo + 12) (base + 45) (base + 50),
-   .inc lo (base + 49),
-   .jzdec nR (base + 54) (base + 52),
-   .inc (lo + 1) (base + 53),
-   .inc (lo + 12) (base + 51),
-   .jzdec (lo + 12) (base + 56) (base + 55),
-   .inc nR (base + 54),
-   .jzdec (lo + 10) (base + 59) (base + 57),
-   .inc (lo + 14) (base + 58),
-   .inc (lo + 12) (base + 56),
-   .jzdec (lo + 12) (base + 61) (base + 60),
-   .inc (lo + 10) (base + 59),
-   .jzdec (lo + 14) (base + 63) (base + 62),
-   .jzdec (lo + 1) (base + 61) (base + 61),
-   .jzdec (lo + 10) (base + 64) (base + 63),
-   .jzdec lo (base + 67) (base + 65),
-   .inc (lo + 13) (base + 66),
-   .inc (lo + 15) (base + 64),
-   .jzdec (lo + 15) (base + 69) (base + 68),
-   .inc lo (base + 67),
-   .jzdec (lo + 1) (base + 72) (base + 70),
-   .inc (lo + 14) (base + 71),
-   .inc (lo + 15) (base + 69),
-   .jzdec (lo + 15) (base + 74) (base + 73),
-   .inc (lo + 1) (base + 72),
-   .jzdec (lo + 14) (base + 76) (base + 75),
-   .jzdec (lo + 13) (base + 74) (base + 74),
-   .jzdec (lo + 13) (base + 82) (base + 77),
-   .jzdec (lo + 13) (base + 78) (base + 77),
-   .jzdec (lo + 1) (base + 80) (base + 79),
-   .inc o1 (base + 78),
-   .jzdec lo exit (base + 81),
-   .inc o2 (base + 80),
-   .jzdec lo (base + 85) (base + 83),
-   .inc (lo + 14) (base + 84),
-   .inc (lo + 15) (base + 82),
-   .jzdec (lo + 15) (base + 87) (base + 86),
-   .inc lo (base + 85),
-   .jzdec (lo + 14) (base + 89) (base + 88),
-   .jzdec (lo + 1) (base + 87) (base + 87),
-   .jzdec lo (base + 91) (base + 90),
-   .inc o1 (base + 89),
-   .jzdec (lo + 1) exit (base + 92),
-   .inc o2 (base + 91)]
+  sqrtFrag nR lo (lo + 2) base (base + 40) ++
+    unpairRestFrag nR o1 o2 lo (base + 40) exit
 
 theorem unpairFrag_length (nR o1 o2 lo base exit : Nat) :
     (unpairFrag nR o1 o2 lo base exit).length = 93 := rfl

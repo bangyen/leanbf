@@ -127,6 +127,16 @@ project convention that `Core` files contain only definitions.
   (`runsTo_deterministic`, by induction on the run). The output corollaries
   (`runsTo_output_deterministic`, `runsTo_output_function`) say a program is
   a function from its input stream to its output stream.
+- `Theory/Displacement.lean`: syntactic pointer bounds. `disp` returns a
+  program's `(net, lo, hi)` pointer offsets, or `none` for a loop whose body
+  has non-zero net displacement, since such a loop moves further on every
+  iteration. Bounds compose across `++` (`disp_append`) and are preserved by
+  `step`; the crux is the loop-unroll case, where `body ++ [loop body] ++
+  rest` keeps the original bounds exactly because the body's net is zero.
+  `runsTo_disp_preserves_above` then concludes that a run never touches a
+  cell above its bound. Unlike `Invariance.ptrBoundedRun`, which executes one
+  concrete run, this bounds every run of a program without reference to a
+  starting state.
 - `Theory/Equivalence.lean`: observational equivalence. `ProgEquiv A B` holds
   when `A` and `B` reach the same final states from every starting state;
   because the reachable final state is unique (`runsTo_deterministic`), this

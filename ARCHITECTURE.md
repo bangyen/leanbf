@@ -214,17 +214,21 @@ project convention that `Core` files contain only definitions.
   the literal instruction lists rather than on compiler output. Everything
   else in this layer reasons about loops `Core.Compiler` emitted, laid out
   over scratch cells the compiler chose; the idioms take the pointer's own
-  two cells as their only parameters. `runsTo_moveLoop` is the result for
+  cells as their only parameters. `runsTo_moveLoop` is the result for
   `[->+<]`: from `a` at the pointer and `b` beside it, the loop ends with `0`
   and `b + a`, the pointer back on the drained cell so the fragment composes
-  with what follows. Unbounded `Nat` cells mean no overflow side condition.
-  The proof is the same shape as `runsTo_clearHere` — induction on the source
-  cell, the loop-free body (`loop_free_moveLoopBody`) discharged as one
-  `runSeq` step (`runSeq_moveLoopBody`), `RunsTo_append` chaining the
-  iteration onto the recursive call. `parse_moveLoop` ties the instruction
-  list back to the six characters of source by `rfl`. `[-]` needs nothing
-  new here: `runsTo_clearHere` already proves it, since the compiler emits
-  the same three characters as `Compiler.clearHere` for its scratch cells;
+  with what follows. `runsTo_dupLoop` is the same for `[->+>+<<]`, draining
+  into both neighbours to leave `0`, `b + a` and `c + a`. Unbounded `Nat`
+  cells mean no overflow side condition. Both proofs have the shape of
+  `runsTo_clearHere` — induction on the source cell, the loop-free body
+  (`loop_free_moveLoopBody`, `loop_free_dupLoopBody`) discharged as one
+  `runSeq` step (`runSeq_moveLoopBody`, `runSeq_dupLoopBody`), and
+  `RunsTo_append` chaining the iteration onto the recursive call; the
+  duplicate loop differs only in carrying a second neighbour through the
+  induction. Each idiom is tied back to its source characters by `rfl`
+  (`parse_moveLoop`, `parse_dupLoop`). `[-]` needs nothing new here:
+  `runsTo_clearHere` already proves it, since the compiler emits the same
+  three characters as `Compiler.clearHere` for its scratch cells;
   `parse_clearHere` gives it the same tie to source text.
 - `Theory/IfZeroElse/` (aggregator `Theory/IfZeroElse.lean`): the
   `Compiler.ifZeroElse` conditional itself. `LoopRuns` records the `RunsTo`

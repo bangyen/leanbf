@@ -225,8 +225,20 @@ project convention that `Core` files contain only definitions.
   `runSeq` step (`runSeq_moveLoopBody`, `runSeq_dupLoopBody`), and
   `RunsTo_append` chaining the iteration onto the recursive call; the
   duplicate loop differs only in carrying a second neighbour through the
-  induction. Each idiom is tied back to its source characters by `rfl`
-  (`parse_moveLoop`, `parse_dupLoop`). `[-]` needs nothing new here:
+  induction. The scans are the exception: `[>]` walks right until it meets a
+  zero, so it does not terminate on every tape, and `runsTo_scanLoop` takes
+  the distance `k` to a zero as a parameter together with the hypothesis that
+  no cell before it is zero. That minimality is load-bearing rather than
+  decoration — the loop stops at the first zero it meets, so without it the
+  pointer need not reach `k` at all. The induction is on `k` rather than on a
+  cell's value, and because the pointer is an `Int` offset by a `Nat`, the
+  casts need `push_cast` where the draining loops needed nothing.
+  `runsTo_scanLeftLoop` mirrors it for `[<]`, the one idiom the repository
+  already writes: `Examples.helloWorld` uses `[<]` to return to the start of
+  its working cells. Divergence when no zero exists is not proven here.
+  Each idiom is tied back to its source characters by `rfl`
+  (`parse_moveLoop`, `parse_dupLoop`, `parse_scanLoop`,
+  `parse_scanLeftLoop`). `[-]` needs nothing new here:
   `runsTo_clearHere` already proves it, since the compiler emits the same
   three characters as `Compiler.clearHere` for its scratch cells;
   `parse_clearHere` gives it the same tie to source text.

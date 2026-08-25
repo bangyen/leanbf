@@ -8,6 +8,7 @@ import LeanBF.Theory.Completeness
 import LeanBF.Theory.Determinism
 import LeanBF.Theory.Displacement
 import LeanBF.Theory.Equivalence
+import LeanBF.Theory.Godel
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Invariance
 import LeanBF.Theory.Loop

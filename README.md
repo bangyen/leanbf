@@ -79,6 +79,15 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   and `[` — is pinned down, together with I/O round-trips (read/write echo,
   reads consume the input prefix) and a divergence theorem (`[+ ]` never
   halts from a non-zero cell).
+- **Program equivalence** (`Theory.Equivalence`): `ProgEquiv` — two programs
+  reach the same final states from every starting state — is an equivalence
+  relation and a congruence for `++` in each argument
+  (`progEquiv_append_left`/`progEquiv_append_right`), proven from
+  `runsTo_append_factor`: every run of `A ++ C` factors through a state at
+  which `A` has halted. The first instances are the cancellations `> <`,
+  `< >`, and `+ -`. Their mirror image `- +` is *not* one
+  (`decVal_incVal_ne_id`): cell values are natural numbers, so decrementing a
+  zero cell truncates and the increment cannot recover it.
 - **Determinism** (`Theory.Determinism`): the interpreter is deterministic —
   `step` is a total function, so a configuration has at most one successor
   (`step_deterministic`), the state after `n` steps is unique
@@ -120,7 +129,7 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
-| **Program equivalence** | Medium | There is no notion of two programs being observationally equivalent (same halting behavior and output from any state). Defining it would give the vocabulary for optimization-style facts — `+-` and `><` cancel, `[-]` is `clearHere`, dead code after an unconditional halt is removable — none of which are currently statable, only their single-cell versions in `Theory.State`. |
+| **Equivalence under `loop`** | Medium | `ProgEquiv` is a congruence for `++` (`Theory.Equivalence`), but not yet for `loop`: replacing a loop body by an equivalent one should preserve equivalence. The body runs an unbounded number of times, so this needs an induction on the run that the current slice does not set up. It is the missing piece for rewriting inside nested loops, and for `[-]` being equivalent to `clearHere`. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
 | **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |
 | **2CM universality bridge** | High | Compile mathlib's `Nat.Partrec.Code` (or `Turing.TM`) into a two-counter Minsky program, the missing input to the undecidability capstone. This is the classical Minsky construction — Gödel-encoding the tape into counter exponents — and is realistically larger than everything currently in the repo. |

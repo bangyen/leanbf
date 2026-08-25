@@ -193,7 +193,7 @@ project convention that `Core` files contain only definitions.
   For whole compiled runs the module also provides `ptrBoundedRun`, an
   executable check that the pointer stays below a bound at every step, and
   `run_preserves_tape_above_of_ptrBounded`, which converts a successful check
-  into cell preservation. `Examples.CountDown` discharges the check by
+  into cell preservation. `Examples.Minsky.CountDown` discharges the check by
   `decide` and concludes that the compiled run never touches a cell above the
   window. The same argument does not currently scale to `quadruple`: at 35451
   steps against `countDown`'s 4245, kernel reduction exceeds the heartbeat
@@ -423,7 +423,13 @@ The chain runs `Nat.Partrec.Code` → register machine → two counters → Mins
 
 ## Example Programs
 
-`LeanBF/Examples` holds example programs. `HelloWorld` is the classic
+`LeanBF/Examples` holds example programs, split by what they are written in.
+`Examples/Brainfuck` holds programs written in Brainfuck; `Examples/Minsky`
+holds two-counter machines, which are not Brainfuck at all but inputs to
+`Core.Compiler`, kept here because what they demonstrate is the compiled
+program's behaviour. Both share the `LeanBF.Examples` namespace.
+
+`Brainfuck/HelloWorld` is the classic
 `++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.`
 `+++++++..+++.` `>>.<-.<.` `+++.` `------.` `--------.` `>>+.>++.` program,
 and it is verified with the kernel `decide` tactic: after 1000 steps the
@@ -467,7 +473,9 @@ being about the compiler rather than about that construction.
   undecidability half, in `Trace`, `Embed`, `Transfer`, `Arith`, `Godel`,
   `Universal`, `Packing` and `Undecidable`, and `Idioms`, which states the
   hand-written Brainfuck loops directly.
-- `LeanBF/Examples`: Example programs.
+- `LeanBF/Examples`: Example programs, split into `Brainfuck` (programs
+  written in Brainfuck) and `Minsky` (two-counter machines that exercise the
+  compiler). Both keep the `LeanBF.Examples` namespace.
 - `Tests`: Executable `example` statements that re-assert the definitions.
 - `scripts`: Repository guard checks (naming, imports, copyright, formatting).
 

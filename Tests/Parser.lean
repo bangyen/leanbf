@@ -5,7 +5,7 @@ Authors: Bangyen Pham
 -/
 import LeanBF.Core.Parser
 import LeanBF.Core.Semantics
-import LeanBF.Examples.HelloWorld
+import LeanBF.Examples.Brainfuck.HelloWorld
 
 /-!
 # Parser Tests

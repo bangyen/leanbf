@@ -35,8 +35,9 @@ verified theorems, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 The implementation is organized into `Core` (definitions), `Theory`
 (verified theorems — the dispatch simulation, the completeness proof, and
-the run-level tape lemmas), `Examples` (example programs), and `Tests`
-(kernel re-assertions of the definitions).
+the run-level tape lemmas), `Examples` (example programs, split into the
+Brainfuck programs and the Minsky machines that exercise the compiler), and
+`Tests` (kernel re-assertions of the definitions).
 
 ## Results
 
@@ -106,7 +107,8 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   ends the program. `parse_helloWorldSource` checks the hand-written
   `Hello World!` transcription against the source it documents, so the two
   can no longer drift apart.
-- **Verified example programs** (`LeanBF.Examples`): the classic
+- **Verified example programs** (`LeanBF.Examples`, split into `Brainfuck`
+  and `Minsky` by what each is written in): the classic
   `Hello World!` program, machine-checked with `decide` to print exactly
   `Hello World!` and a newline and to halt, plus two concrete Minsky machines
   (`countDown`, `quadruple`) whose compiled Brainfuck programs are verified
@@ -173,7 +175,7 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   to `b` without leaving `[0, W]` — which is what composes across a chain,
   since relative offsets accumulate.
 - **Compiled-run cell preservation** (`Theory.Invariance` +
-  `Examples.CountDown`): `ptrBoundedRun` checks by `decide` that a concrete
+  `Examples.Minsky.CountDown`): `ptrBoundedRun` checks by `decide` that a concrete
   run keeps the pointer inside a window, and
   `run_preserves_tape_above_of_ptrBounded` turns that check into the
   preservation fact. Applied to `countDown`, this proves the compiled run
@@ -220,7 +222,7 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | :--- | :--- | :--- |
 | **Verified Brainfuck idioms** | Done | `Theory.Idioms` states the idioms on the literal instruction lists a programmer writes, rather than on compiler output, and covers all four the row named. `[-]` needed no new work: `runsTo_clearHere` already proved it, since the compiler emits the same three characters as `Compiler.clearHere` for its scratch cells. `runsTo_moveLoop` (`[->+<]`) drains a cell into its right neighbour and `runsTo_dupLoop` (`[->+>+<<]`) into both; the duplicate followed the move loop's pattern exactly, as predicted, differing only in carrying a second neighbour through the induction. The scan `[>]` was the exception the others predicted: it does not terminate on every tape, so `runsTo_scanLoop` takes the distance `k` to a zero as a parameter plus the hypothesis that no cell before it is zero — without that minimality the statement is false, since the loop stops at the first zero it meets. Its mirror `runsTo_scanLeftLoop` covers `[<]`, which `Examples.helloWorld` actually uses. Divergence in the absence of a zero is not proven. Each idiom is tied to its source text by a `parse` theorem. |
 | **More programs verified end to end** | Low | `HelloWorld` is checked by `decide` over a thousand steps, which already required raising `maxRecDepth`. Whether that approach reaches other small classics — cat, echo, a two-cell adder — is unknown, and finding out on one program is the way to learn it. A negative result would be worth recording too. |
-| **`Examples` is misnamed** | Low | Four of its five modules are Minsky machines rather than Brainfuck programs. Splitting the directory would stop it misrepresenting itself. |
+| **`Examples` is misnamed** | Done | The directory now splits by what each module is written in: `Examples/Brainfuck` holds Brainfuck programs (`HelloWorld`), `Examples/Minsky` the two-counter machines (`Addition`, `CountDown`, `Quadruple`, `Tripler`) that are inputs to the compiler rather than Brainfuck at all. Both keep the `LeanBF.Examples` namespace, so the split moved files and imports without renaming a single theorem. |
 | **Multiplication needs a Gödel encoding** | Done | Resolved by the universality work. The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly; a general `c2 := c1 × c2` needs three quantities live at once, so it needs an encoding. Both halves now exist: `mulVar_effect` (`Theory.Arith.Multiply`) multiplies two registers, and `Theory.Godel` packs a whole register file into one counter as a product of prime powers, which `Theory.Packing` uses to compile any register machine down to two. |
 | **2CM universality bridge** | Done | Built on the `counter-machine-bridge` branch. The register-machine transfer loops (`Theory.Transfer`), the arithmetic fragments built on them (`Theory.Arith`), the induction `Nat.Primrec f → RegComputable f` (`Theory.Universal.Primrec`), the universal register machine (`Theory.Universal.Machine`), the pack down to two counters (`Theory.Packing`, the register file encoded as a product of prime powers), and the bridge to `Core.Minsky`. `universal_minsky` is the result: one Minsky program whose halting on `(2 ^ Nat.pair c n, 0)` is equivalent to code `c` halting on input `n`. Mathlib has no counter-machine model, so none of this could be adapted from it. |
 | **Halting problem undecidability** | Done | `universal_brainfuck` (`Theory.Undecidable`): one fixed Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n` exactly when code `c` halts on input `n`. The program does not depend on the code or the input, and the starting tape is a computable function of both, so a decider for Brainfuck halting would decide `Nat.Partrec.Code` halting — which `ComputablePred.halting_problem` forbids. The chain is `Nat.Partrec.Code` → register machine → two counters → Minsky → Brainfuck, each link proved in both directions. |

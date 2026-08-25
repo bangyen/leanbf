@@ -8,7 +8,8 @@ import LeanBF.Examples
 /-!
 # Example Program Tests
 
-Kernel re-assertions of the verified example programs.
+Kernel re-assertions of the verified example programs, including `cat`'s
+input-quantified theorems alongside the concrete `decide` results.
 -/
 
 namespace LeanBF.Tests
@@ -19,6 +20,22 @@ open LeanBF.Examples
 example : (run 1000 helloWorld helloState).map (fun s => s.output) =
     some helloWorldOutput :=
   hello_world_output
+
+example : parse catSource = cat := parse_catSource
+
+example (input : List Nat) : RunsTo (cat, catState input) (catFinal input) :=
+  catRuns input
+
+example (input : List Nat) : halts cat (catState input) :=
+  cat_halts input
+
+example (input : List Nat) :
+    ∃ n, RunsExactly n cat (catState input) (catFinal input) :=
+  cat_executes input
+
+example : (run 30 cat (catState [72, 105])).map (fun s => s.output)
+    = some [105, 72] := by
+  decide
 
 example : halts helloWorld helloState :=
   hello_world_halts

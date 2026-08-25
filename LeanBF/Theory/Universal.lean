@@ -6,6 +6,7 @@ Authors: Bangyen Pham
 
 import LeanBF.Theory.Universal.Builder
 import LeanBF.Theory.Universal.Convention
+import LeanBF.Theory.Universal.Primrec
 
 /-!
 # Universal Machine Aggregator

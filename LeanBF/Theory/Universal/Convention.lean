@@ -53,7 +53,6 @@ kept here as the statement that isolates why the region has to be split.
 ## Theorems
 
 * `dom_iff_exists_evaln`: A code halts exactly when some step bound suffices.
-* `clear_reaches`: The clear loop empties a register.
 * `computes_seq`: Chaining through a midpoint inside the scratch region.
 -/
 
@@ -73,46 +72,6 @@ theorem dom_iff_exists_evaln (c : Nat.Partrec.Code) (n : Nat) :
     exact Part.dom_iff_mem.mpr ⟨x, Nat.Partrec.Code.evaln_complete.mpr ⟨k, hx⟩⟩
 
 namespace Register
-
-/-- Clearing a register: the loop decrements it until it is zero. -/
-theorem clear_reaches (p : Program) (r base exit : Nat)
-    (h0 : p[base]? = some (Instruction.jzdec r exit base)) :
-    ∀ (n : Nat) (s : State), s.pc = base → s.regs r = n →
-      Reaches p s { pc := exit, regs := fun i => if i = r then 0 else s.regs i } := by
-  intro n
-  induction n with
-  | zero =>
-      intro s hpc ha
-      have hstep : step p s = some { s with pc := exit } := by
-        simp only [step, hpc, h0, ha, if_pos]
-      have hst : ({ pc := exit, regs := s.regs } : State)
-          = { pc := exit, regs := fun i => if i = r then 0 else s.regs i } := by
-        congr 1
-        funext i
-        by_cases hir : i = r
-        · rw [if_pos hir, hir, ha]
-        · rw [if_neg hir]
-      rw [← hst]
-      exact Reaches.step s _ _ hstep (Reaches.refl _)
-  | succ m ih =>
-      intro s hpc ha
-      have hstep : step p s
-          = some { pc := base, regs := fun i => if i = r then m else s.regs i } := by
-        simp only [step, hpc, h0, ha, setReg]
-        rw [if_neg (by omega)]
-        congr 1
-      have hrec := ih { pc := base, regs := fun i => if i = r then m else s.regs i } rfl
-        (by simp only [if_true])
-      have hfin : ({ pc := exit, regs := fun i => if i = r then 0
-            else if i = r then m else s.regs i } : State)
-          = { pc := exit, regs := fun i => if i = r then 0 else s.regs i } := by
-        congr 1
-        funext i
-        by_cases hir : i = r
-        · rw [if_pos hir, if_pos hir]
-        · rw [if_neg hir, if_neg hir, if_neg hir]
-      rw [← hfin]
-      exact Reaches.step s _ _ hstep hrec
 
 /-- A fragment computes `f` using a scratch region `[lo, hi)`: started at
     `base` with the input in `inR`, the output register clear, and the

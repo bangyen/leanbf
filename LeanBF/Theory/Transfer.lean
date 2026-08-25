@@ -82,6 +82,7 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
   remainder.
 * `copy_reaches`: The copy loop duplicates a register into two others.
 * `iterate_reaches`: A counted loop runs a body once per unit of a counter.
+* `copyBack_reaches`: A register is copied without being destroyed.
 -/
 
 namespace LeanBF
@@ -596,6 +597,28 @@ theorem iterate_reaches (p : Program) (c base exit : Nat) (F : State → State)
         simp only [s1, if_true]
       rcases ih (F s1) hpc2 hc2 with ⟨s', hrest, hexit, hzero⟩
       exact ⟨s', Reaches.step s s1 s' hstep (reaches_trans hbodyRun hrest), hexit, hzero⟩
+
+/-- Copying a register without destroying it: duplicate into the target and
+    a scratch, then drain the scratch back. Draining is destructive, so this
+    is the only way a register is read more than once. -/
+theorem copyBack_reaches (p : Program) (a t sc base mid exit : Nat)
+    (hat : a ≠ t) (hasc : a ≠ sc) (htsc : t ≠ sc)
+    (h0 : p[base]? = some (Instruction.jzdec a mid (base + 1)))
+    (hi1 : p[base + 1]? = some (Instruction.inc t (base + 2)))
+    (hi2 : p[base + 2]? = some (Instruction.inc sc base))
+    (hd0 : p[mid]? = some (Instruction.jzdec sc exit (mid + 1)))
+    (hd1 : p[mid + 1]? = some (Instruction.inc a mid)) :
+    ∀ (n : Nat) (s : State), s.pc = base → s.regs a = n → s.regs sc = 0 →
+      Reaches p s (drained sc a exit n (copied a t sc mid n s)) := by
+  have hsca : sc ≠ a := fun hc => hasc hc.symm
+  have hsct : sc ≠ t := fun hc => htsc hc.symm
+  intro n s hpc ha hsc
+  have hcopy := copy_reaches p a t sc base mid hat hasc htsc h0 hi1 hi2 n s hpc ha
+  have hpc2 : (copied a t sc mid n s).pc = mid := by simp only [copied]
+  have hreg2 : (copied a t sc mid n s).regs sc = n := by
+    simp only [copied, if_neg hsca, if_neg hsct, if_true, hsc, Nat.zero_add]
+  exact reaches_trans hcopy
+    (drain_reaches p sc a mid exit hsca hd0 hd1 n _ hpc2 hreg2)
 
 end Register
 

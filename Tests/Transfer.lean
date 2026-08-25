@@ -17,6 +17,7 @@ the transitivity of reachability.
 * `tripleProg`: A scaled transfer loop moving three units per unit drained.
 * `divProg`: A division loop with three jzdec slots.
 * `iterProg`: A counted loop whose body adds two to a register.
+* `copyBackProg`: A non-destructive copy fragment.
 -/
 
 namespace LeanBF.Tests
@@ -113,5 +114,30 @@ example (p : Program) (c base exit : Nat) (F : State → State)
     (n : Nat) (s : State) (hpc : s.pc = base) (hc : s.regs c = n) :
     ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs c = 0 :=
   iterate_reaches p c base exit F h0 hbody hbodyPc hbodyC n s hpc hc
+
+/-- A non-destructive copy: duplicate through a scratch, then drain it back. -/
+def copyBackProg : Program :=
+  [.jzdec 0 3 1, .inc 1 2, .inc 2 0, .jzdec 2 5 4, .inc 0 3, .halt]
+
+/-- The copy loop occupies the first three slots. -/
+example : copyBackProg[0]? = some (Instruction.jzdec 0 3 (0 + 1)) := rfl
+
+/-- The drain back occupies the next two. -/
+example : copyBackProg[3]? = some (Instruction.jzdec 2 5 (3 + 1)) := rfl
+
+/-- After a copy back the source is intact, the target holds a duplicate, and
+    the scratch is clear. -/
+example (a t sc exit n : Nat) (s : State) (hat : a ≠ t) (hasc : a ≠ sc) (htsc : t ≠ sc)
+    (ht0 : s.regs t = 0) :
+    (drained sc a exit n (copied a t sc exit n s)).regs a = n ∧
+    (drained sc a exit n (copied a t sc exit n s)).regs t = n ∧
+    (drained sc a exit n (copied a t sc exit n s)).regs sc = 0 := by
+  have hsca : sc ≠ a := fun hc => hasc hc.symm
+  have hta : t ≠ a := fun hc => hat hc.symm
+  refine ⟨?_, ?_, ?_⟩
+  · simp only [drained, if_neg hasc, if_true, copied, if_true, Nat.zero_add]
+  · simp only [drained, if_neg hta, if_neg hat, if_true, copied, if_true, ht0,
+      Nat.zero_add, if_neg htsc]
+  · simp only [drained, if_true]
 
 end LeanBF.Tests

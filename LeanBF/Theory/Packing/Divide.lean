@@ -53,6 +53,8 @@ weaken that lemma, the table absorbs the difference in one slot each.
 * `jzdecHead_get_drain1`: The drain's increment.
 * `jzdecBlock_common`: The path both branches share.
 * `jzdecBlock_dvd`: A register that was non-zero is decremented.
+* `embeddedAt_jzdecArm`: A restore arm sits where the layout says.
+* `jzdecBlock_ndvd`: A register that was zero is handed back untouched.
 -/
 
 namespace LeanBF
@@ -314,6 +316,78 @@ theorem jzdecBlock_dvd (prog : Program) (p base ifZero ifNonZero : Nat) (hp : 0 
       · simp only [drained, hs2def, dividedAt, if_neg hq0, if_neg hq1]
   rw [← hfinal]
   exact runFor_pos_of_step prog s s₁ _ hstep (reaches_trans hreach hdr)
+
+/-- The restore arm for a remainder is embedded where the layout says.
+    Every arm is `2 * p` long, so arm `i` starts at `i * (2 * p)` past the
+    arms' base — which is the whole point of the padding, the alternative
+    being a running total over the arms before it. -/
+theorem embeddedAt_jzdecArm (prog : Program) (p base ifZero ifNonZero i : Nat)
+    (hi : i < p - 1)
+    (hemb : EmbeddedAt prog base (jzdecBlock p base ifZero ifNonZero)) :
+    EmbeddedAt prog (base + 2 + 2 * p + 2 + i * (2 * p))
+      (restoreArm p (i + 1) (base + 2 + 2 * p + 2 + i * (2 * p)) ifZero) := by
+  have hconst : ∀ k, k < p - 1 →
+      (paddedArm p (k + 1) (base + 2 + 2 * p + 2 + k * (2 * p)) ifZero).length = 2 * p :=
+    fun k hk => paddedArm_length p (k + 1) _ _ (by omega)
+  -- The arms sit past the head, and the head's length is where they start.
+  have harms : EmbeddedAt prog (base + (2 + 2 * p + 2)) (jzdecArms p base ifZero) := by
+    have h := embeddedAt_append_right prog base (jzdecHead p base ifNonZero)
+      (jzdecArms p base ifZero) (by rw [← jzdecBlock]; exact hemb)
+    rwa [jzdecHead_length] at h
+  have hone := embeddedAt_flatMap_uniform prog (base + (2 + 2 * p + 2)) _ (p - 1) (2 * p)
+    hconst (by rw [← jzdecArms]; exact harms) i hi
+  exact embeddedAt_paddedArm prog p (i + 1) _ ifZero
+    (by rwa [show base + (2 + 2 * p + 2) + i * (2 * p)
+      = base + 2 + 2 * p + 2 + i * (2 * p) by omega] at hone)
+
+/-- The register was zero: its prime does not divide the packed value, so the
+    remainder is non-zero, the table sends the run to that remainder's arm,
+    and the arm rebuilds the file exactly as it was before leaving for
+    `ifZero`. A zero register must be handed back untouched, and the divide
+    destroyed it — this is where it comes back. -/
+theorem jzdecBlock_ndvd (prog : Program) (p base ifZero ifNonZero : Nat) (hp : 0 < p)
+    (hemb : EmbeddedAt prog base (jzdecBlock p base ifZero ifNonZero)) :
+    ∀ (s : State), s.pc = base → s.regs 1 = 0 → ¬ p ∣ s.regs 0 →
+      ∃ c, 1 ≤ c ∧ runFor prog c s = some
+        { pc := ifZero, regs := fun i => if i = 0 then s.regs 0
+          else if i = 1 then 0 else s.regs i } := by
+  intro s hpc hs1 hndvd
+  set r : Nat := s.regs 0 % p with hrdef
+  have hr0 : 0 < r := Nat.pos_of_ne_zero (fun hc =>
+    hndvd (Nat.dvd_iff_mod_eq_zero.mpr hc))
+  have hrp : r < p := Nat.mod_lt _ hp
+  rcases jzdecBlock_common prog p base ifZero ifNonZero hp hemb s hpc hs1 with
+    ⟨s₁, hstep, hreach⟩
+  -- A non-zero remainder selects the arm for it.
+  have hdest : jzdecDest p base r = base + 2 + 2 * p + 2 + (r - 1) * (2 * p) := by
+    simp only [jzdecDest, if_neg (by omega : ¬ r = 0)]
+  rw [← hrdef, hdest] at hreach
+  -- That arm is embedded where the layout puts it.
+  have hembArm := embeddedAt_jzdecArm prog p base ifZero ifNonZero (r - 1) (by omega) hemb
+  rw [show r - 1 + 1 = r by omega] at hembArm
+  set armBase : Nat := base + 2 + 2 * p + 2 + (r - 1) * (2 * p) with harmdef
+  set s2 : State := dividedAt p armBase (s.regs 0) s with hs2def
+  -- The arm multiplies the quotient back up and adds the remainder.
+  have harm := restoreArm_reaches prog p r armBase ifZero hp hr0 hembArm s2 rfl
+    (by simp only [hs2def, dividedAt, if_pos trivial])
+  -- What it leaves is exactly the file the divide consumed.
+  have hfinal : restored r ifZero p s2
+      = { pc := ifZero, regs := fun i => if i = 0 then s.regs 0
+          else if i = 1 then 0 else s.regs i } := by
+    refine State.ext rfl (funext fun q => ?_)
+    by_cases hq0 : q = 0
+    · subst hq0
+      simp only [restored, hs2def, dividedAt, if_pos trivial,
+        if_neg (by omega : ¬ (1 : Nat) = 0)]
+      rw [hrdef]
+      exact Nat.div_add_mod (s.regs 0) p
+    · by_cases hq1 : q = 1
+      · subst hq1
+        simp only [restored, hs2def, dividedAt, if_pos trivial,
+          if_neg (by omega : ¬ (1 : Nat) = 0)]
+      · simp only [restored, hs2def, dividedAt, if_neg hq0, if_neg hq1]
+  rw [← hfinal]
+  exact runFor_pos_of_step prog s s₁ _ hstep (reaches_trans hreach harm)
 
 end Register
 

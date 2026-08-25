@@ -59,4 +59,10 @@ example :
         s'.ptr = 0 ∧ s'.tape 0 = 0 ∧ s'.tape 1 = 0 ∧ s'.tape 2 = 0 ∧ s'.tape 3 = 8 :=
   quadruple_executes
 
+/-- The compiled `countDown` run never touches a cell above the window. -/
+example : ∃ s', run 4300 (Compiler.compileProgram Examples.countDown)
+    (simState Examples.countDownStart) = some s' ∧
+      ∀ i : Int, 17 ≤ i → s'.tape i = (simState Examples.countDownStart).tape i :=
+  Examples.countDown_preserves_above_window
+
 end LeanBF.Tests

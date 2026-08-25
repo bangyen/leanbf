@@ -164,6 +164,14 @@ project convention that `Core` files contain only definitions.
   demonstration at the compiler's footprint, `movePtr_incVal_preserves_above`
   shows the window sweep `movePtr 0 16 ++ [+ ]` preserves every cell above
   the window, and `+ -` preserves all cells at or above the pointer.
+  For whole compiled runs the module also provides `ptrBoundedRun`, an
+  executable check that the pointer stays below a bound at every step, and
+  `run_preserves_tape_above_of_ptrBounded`, which converts a successful check
+  into cell preservation. `Examples.CountDown` discharges the check by
+  `decide` and concludes that the compiled run never touches a cell above the
+  window. The same argument does not currently scale to `quadruple`: at 35451
+  steps against `countDown`'s 4245, kernel reduction exceeds the heartbeat
+  limit.
 - `Theory/BodyLoop/` (aggregator `Theory/BodyLoop.lean`): the `ifZeroElse`
   then/else body loop. The loop
   `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` runs an arbitrary

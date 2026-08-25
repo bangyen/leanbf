@@ -55,4 +55,31 @@ example (s t : State) (h : RunsTo (Compiler.movePtr 0 5 ++ [.inc_val], s) t)
   simp only [hs]
   omega
 
+/-- The general window bound: every compiled program stays in cells 0 to 16. -/
+example (m : Minsky.Program) : Frame (Compiler.compileProgram m) 0 0 16 :=
+  frame_compileProgram m
+
+/-- Every compiled run preserves every cell above the window, for any Minsky
+    program and any starting state with the pointer at 0. -/
+example (m : Minsky.Program) (s t : State) (hs : s.ptr = 0)
+    (h : RunsTo (Compiler.compileProgram m, s) t) :
+    ∀ i : Int, 16 < i → t.tape i = s.tape i :=
+  compiled_preserves_above_window m s t hs h
+
+/-- Instantiated at the canonical simulating state, with no execution. -/
+example (m : Minsky.Program) (ms : Minsky.State) (t : State)
+    (h : RunsTo (Compiler.compileProgram m, simState ms) t) :
+    ∀ i : Int, 16 < i → t.tape i = (simState ms).tape i :=
+  compiled_preserves_above_window m (simState ms) t rfl h
+
+/-- Frames chain through a shared middle cell. -/
+example (A B : Program) (a b c W : Int) (hA : Frame A a b W) (hB : Frame B b c W) :
+    Frame (A ++ B) a c W :=
+  frame_append A B a b c W hA hB
+
+/-- A balanced loop keeps its body's frame. -/
+example (body : Program) (a W : Int) (h : Frame body a a W)
+    (ha : 0 ≤ a) (haW : a ≤ W) : Frame [.loop body] a a W :=
+  frame_loop body a W h ha haW
+
 end LeanBF.Tests

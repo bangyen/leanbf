@@ -110,6 +110,13 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   whose results convert into `RunsTo` chains, and the first instance — the
   compiled empty Minsky program halts from any simulating state
   (`compile_empty_simulates`).
+- **The window bound for every compiled program**
+  (`Theory.Displacement.Compiler`): `frame_compileProgram` shows that the
+  compiled form of *any* Minsky program keeps the pointer in cells `0` to
+  `16`, so `compiled_preserves_above_window` concludes that no compiled run
+  ever touches a cell above the window. This is proven from the compiler's
+  structure rather than by executing a program, so it costs nothing per
+  example and does not grow with the run length.
 - **Syntactic pointer bounds** (`Theory.Displacement`): `disp` reads a
   program and returns the net, lowest, and highest pointer offsets it can
   reach, composing across concatenation (`disp_append`) and surviving loop
@@ -117,7 +124,9 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   balanced. A program whose bounds are known provably never touches a cell
   above them (`runsTo_disp_preserves_above`), with no execution involved.
   Unbalanced loops return `none`, since they move the pointer further on
-  every iteration.
+  every iteration. `Frame p a b W` names absolute cells — `p` runs from `a`
+  to `b` without leaving `[0, W]` — which is what composes across a chain,
+  since relative offsets accumulate.
 - **Compiled-run cell preservation** (`Theory.Invariance` +
   `Examples.CountDown`): `ptrBoundedRun` checks by `decide` that a concrete
   run keeps the pointer inside a window, and
@@ -156,8 +165,6 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **Multiplication needs a Gödel encoding** | Low | The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly. A general `c2 := c1 × c2` needs three quantities live at once — counter, multiplicand, accumulator — so it requires encoding two values in one register (`c1 = 2^a · 3^b`). That is the same construction the 2CM universality bridge needs, and is not a small example task. |
-| **Cell preservation for `quadruple`** | Low | `countDown`'s compiled run is proven to stay inside the window (`countDown_preserves_above_window`, via `run_preserves_tape_above_of_ptrBounded`). The same statement for `quadruple` is compute-bound rather than open: its run is 35451 steps against `countDown`'s 4245, and kernel `decide` exceeds the heartbeat limit. It needs either a cheaper decision procedure or `native_decide`, which would add the `ofReduceBool` axiom to a development that is otherwise `propext`-clean. |
-| **Compiled-program displacement ladder** | Medium | `Theory.Displacement` bounds any program's pointer range syntactically and concludes cell preservation from it (`runsTo_disp_preserves_above`), with the base lemmas proven for `movePtr`. What remains is the ladder computing `disp` for the compiler's own combinators — `clearHere`, `setHere`, `ifZeroElse`, `compileInstr`, `window`, and the flattened dispatch body — which would give the window bound for *every* compiled Minsky program at once, replacing the per-example `decide` checks and subsuming the `quadruple` row. |
 | **2CM universality bridge** | High | Compile mathlib's `Nat.Partrec.Code` (or `Turing.TM`) into a two-counter Minsky program, the missing input to the undecidability capstone. This is the classical Minsky construction — Gödel-encoding the tape into counter exponents — and is realistically larger than everything currently in the repo. |
 | **Halting problem undecidability** | High | The capstone: Brainfuck halting is undecidable. Both simulation directions are in place, so a Brainfuck decider would yield a 2CM decider; what is missing is the classical fact that *2CM* halting is undecidable. Mathlib has the halting problem for partial recursive codes (`ComputablePred.halting_problem`) but no counter-machine model, so that theorem cannot be applied directly — the gap is a universality bridge compiling `Partrec` codes (or mathlib's Turing machines) down to two counters. |
 

@@ -134,7 +134,15 @@ project convention that `Core` files contain only definitions.
   `step`; the crux is the loop-unroll case, where `body ++ [loop body] ++
   rest` keeps the original bounds exactly because the body's net is zero.
   `runsTo_disp_preserves_above` then concludes that a run never touches a
-  cell above its bound. Unlike `Invariance.ptrBoundedRun`, which executes one
+  cell above its bound. `Frame` (in `Displacement/Frame.lean`) names absolute
+  cells rather than relative offsets — `Frame p a b W` says `p` runs from
+  cell `a` to cell `b` without leaving `[0, W]` — which is what makes long
+  chains compose, since relative bounds accumulate across appends.
+  `Displacement/Compiler.lean` frames each compiler combinator in turn and
+  concludes `compiled_preserves_above_window`: every compiled Minsky program
+  keeps the pointer within cells 0 to 16, so no compiled run touches anything
+  above the window. This supersedes the per-example `decide` check, which did
+  not scale past `countDown`. Unlike `Invariance.ptrBoundedRun`, which executes one
   concrete run, this bounds every run of a program without reference to a
   starting state.
 - `Theory/Equivalence.lean`: observational equivalence. `ProgEquiv A B` holds

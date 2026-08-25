@@ -6,6 +6,7 @@ Authors: Bangyen Pham
 import LeanBF.Theory.Packing
 import LeanBF.Theory.Simulate
 import LeanBF.Theory.Universal
+import Mathlib.Computability.Halting
 
 /-!
 # A Universal Brainfuck Program
@@ -33,6 +34,8 @@ and `n` to the starting counter is an ordinary computable function.
 * `universal_minsky`: A Minsky machine whose halting decides any code's.
 * `universal_brainfuck`: A Brainfuck program whose halting decides any
   code's.
+* `halting_problem_nat`: The halting problem, over code numbers.
+* `brainfuck_halting_undecidable`: Brainfuck halting is undecidable.
 -/
 
 namespace LeanBF
@@ -91,5 +94,49 @@ theorem universal_brainfuck : ∃ (B : Program), ∀ (c n : Nat),
       (Nat.Partrec.Code.eval (Denumerable.ofNat Nat.Partrec.Code c) n).Dom := by
   rcases Register.universal_minsky with ⟨M, hM⟩
   exact ⟨Compiler.compileProgram M, fun c n => (compiled_halts_iff M _).trans (hM c n)⟩
+
+/-- The halting problem for recursive codes, restated over their code
+    numbers. `ComputablePred.halting_problem` speaks of codes themselves,
+    while a reduction that has to build a machine input speaks of numbers;
+    the two are interchangeable, `Denumerable` making the transport
+    computable. -/
+theorem halting_problem_nat (n : Nat) :
+    ¬ ComputablePred (fun c : Nat =>
+      ((Denumerable.ofNat Nat.Partrec.Code c).eval n).Dom) := by
+  intro h
+  refine ComputablePred.halting_problem n ?_
+  rcases h with ⟨inst, hcomp⟩
+  refine ⟨fun c => (Denumerable.ofNat_encode c) ▸ inst (Encodable.encode c), ?_⟩
+  have hc := hcomp.comp (Computable.encode (α := Nat.Partrec.Code))
+  refine hc.of_eq (fun c => ?_)
+  congr 1
+  simp only [Denumerable.ofNat_encode]
+
+/-- Brainfuck halting is undecidable.
+
+    Stated as: no computable predicate decides, of a number `m`, whether the
+    universal program halts on the tape `2 ^ m` encodes. That is the form the
+    reduction actually delivers — the program is fixed, so what varies is the
+    input, and a decision procedure for Brainfuck halting in any reasonable
+    formulation would give one for this.
+
+    The proof is the reduction read backwards. Deciding this predicate at
+    `Nat.pair c n` decides whether code `c` halts on `n`, and pairing is
+    computable, so `halting_problem_nat` is contradicted. -/
+theorem brainfuck_halting_undecidable :
+    ∃ B : Program, ¬ ComputablePred (fun m : Nat =>
+      halts B (simState { pc := 0, c1 := 2 ^ m, c2 := 0 })) := by
+  rcases universal_brainfuck with ⟨B, hB⟩
+  refine ⟨B, fun h => ?_⟩
+  -- Deciding the tape predicate at `pair c 0` decides code `c` on input `0`.
+  refine halting_problem_nat 0 ?_
+  rcases h with ⟨inst, hcomp⟩
+  refine ⟨fun c => decidable_of_iff _ (hB c 0), ?_⟩
+  have hpair : Computable (fun c : Nat => Nat.pair c 0) :=
+    (Primrec₂.natPair.comp Primrec.id (Primrec.const 0)).to_comp
+  have hc := hcomp.comp hpair
+  refine hc.of_eq (fun c => ?_)
+  congr 1
+  exact propext (hB c 0)
 
 end LeanBF

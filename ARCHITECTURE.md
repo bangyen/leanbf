@@ -123,6 +123,17 @@ project convention that `Core` files contain only definitions.
   (`runsTo_deterministic`, by induction on the run). The output corollaries
   (`runsTo_output_deterministic`, `runsTo_output_function`) say a program is
   a function from its input stream to its output stream.
+- `Theory/Equivalence.lean`: observational equivalence. `ProgEquiv A B` holds
+  when `A` and `B` reach the same final states from every starting state;
+  because the reachable final state is unique (`runsTo_deterministic`), this
+  says they halt on the same inputs and agree when they do. It is an
+  equivalence relation and a congruence for `++`, which rests on
+  `runsTo_append_factor` — the converse of `RunsTo_append`, splitting a run of
+  `A ++ C` at the point where `A` halts. The instances are the pointer and
+  value cancellations; `decVal_incVal_ne_id` records that `- +` is not among
+  them, since `Nat` decrement truncates at zero. Congruence under `loop` is
+  left open: a body runs an unbounded number of times and needs an induction
+  this module does not set up.
 - `Theory/Loop/` (aggregator `Theory/Loop.lean`): loop-correctness machinery.
   `Basics` has `stepOne`/`runSeq` (execute a single instruction or a whole
   loop-free program) and the `LoopFree` predicate; `RunSeq` has the run-level

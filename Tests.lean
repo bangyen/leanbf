@@ -8,6 +8,7 @@ import Tests.Compiler
 import Tests.Completeness
 import Tests.Converse
 import Tests.Determinism
+import Tests.Equivalence
 import Tests.Examples
 import Tests.IfZeroElse
 import Tests.Invariance

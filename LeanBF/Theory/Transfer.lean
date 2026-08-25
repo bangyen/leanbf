@@ -83,6 +83,7 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
 * `copy_reaches`: The copy loop duplicates a register into two others.
 * `iterate_reaches`: A counted loop runs a body once per unit of a counter.
 * `copyBack_reaches`: A register is copied without being destroyed.
+* `copyBack_effect`: The copy stated by its effect on each register.
 -/
 
 namespace LeanBF
@@ -619,6 +620,34 @@ theorem copyBack_reaches (p : Program) (a t sc base mid exit : Nat)
     simp only [copied, if_neg hsca, if_neg hsct, if_true, hsc, Nat.zero_add]
   exact reaches_trans hcopy
     (drain_reaches p sc a mid exit hsca hd0 hd1 n _ hpc2 hreg2)
+
+/-- Copy-back stated by its effect rather than by nested state terms: the
+    source keeps its value, the target gains it, the scratch stays clear, and
+    nothing else moves. -/
+theorem copyBack_effect (p : Program) (a t sc base mid exit : Nat)
+    (hat : a ≠ t) (hasc : a ≠ sc) (htsc : t ≠ sc)
+    (h0 : p[base]? = some (Instruction.jzdec a mid (base + 1)))
+    (hi1 : p[base + 1]? = some (Instruction.inc t (base + 2)))
+    (hi2 : p[base + 2]? = some (Instruction.inc sc base))
+    (hd0 : p[mid]? = some (Instruction.jzdec sc exit (mid + 1)))
+    (hd1 : p[mid + 1]? = some (Instruction.inc a mid)) :
+    ∀ (s : State), s.pc = base → s.regs sc = 0 →
+      ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs a = s.regs a ∧
+        s'.regs t = s.regs t + s.regs a ∧ s'.regs sc = 0 ∧
+        (∀ r, r ≠ a → r ≠ t → r ≠ sc → s'.regs r = s.regs r) := by
+  have hsca : sc ≠ a := fun hc => hasc hc.symm
+  have hsct : sc ≠ t := fun hc => htsc hc.symm
+  have hta : t ≠ a := fun hc => hat hc.symm
+  intro s hpc hsc
+  refine ⟨drained sc a exit (s.regs a) (copied a t sc mid (s.regs a) s), ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact copyBack_reaches p a t sc base mid exit hat hasc htsc h0 hi1 hi2 hd0 hd1
+      (s.regs a) s hpc rfl hsc
+  · simp only [drained]
+  · simp only [drained, if_neg hasc, if_true, copied, if_true, Nat.zero_add]
+  · simp only [drained, if_neg hta, if_neg hat, if_true, copied, if_true, if_neg htsc]
+  · simp only [drained, if_true]
+  · intro r hra hrt hrsc
+    simp only [drained, copied, if_neg hra, if_neg hrt, if_neg hrsc]
 
 end Register
 

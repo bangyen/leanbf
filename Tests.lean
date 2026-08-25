@@ -16,6 +16,7 @@ import Tests.IfZeroElse
 import Tests.Invariance
 import Tests.Loop
 import Tests.Minsky
+import Tests.Packed
 import Tests.Parser
 import Tests.Register
 import Tests.Semantics

@@ -47,6 +47,8 @@ layer.
   incremented.
 * `pack_div_pos`: A packed value stays positive when a register is
   decremented.
+* `regPrime_zero`: The first register's prime is two.
+* `regPrime_one`: The second register's prime is three.
 * `regPrime_prime`: Every register's prime is prime.
 * `regPrime_inj`: Distinct registers get distinct primes.
 * `unpack_mul_inc`: Multiplying by a register's prime increments it.
@@ -126,6 +128,14 @@ theorem pack_div_pos (p v : Nat) [hp : Fact p.Prime] (hv : 0 < v) (hd : p ∣ v)
     `r`-th prime. Noncomputable because `Nat.nth` is, which costs nothing
     here — the encoding is a specification, not something the machine runs. -/
 noncomputable def regPrime (r : Nat) : Nat := Nat.nth Nat.Prime r
+
+/-- The first two registers' primes, named. The packing layer's initial
+    state holds its whole input in register zero, so the map that builds it
+    is `2 ^ n` — a concrete function, which is what a later reduction has to
+    exhibit as computable. -/
+theorem regPrime_zero : regPrime 0 = 2 := by rw [regPrime, Nat.nth_prime_zero_eq_two]
+
+theorem regPrime_one : regPrime 1 = 3 := by rw [regPrime, Nat.nth_prime_one_eq_three]
 
 /-- Every register's prime is prime. -/
 theorem regPrime_prime (r : Nat) : (regPrime r).Prime := Nat.prime_nth_prime r

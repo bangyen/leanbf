@@ -43,6 +43,8 @@ instead of the least.
 * `reaches_supportedBelow`: Reachability preserves bounded support.
 * `packRange_pos`: A packed register file is positive.
 * `unpack_packRange`: Reading a register back out of the packed value.
+* `packRange_setReg_succ`: Incrementing a register multiplies by its prime.
+* `packRange_setReg_pred`: A non-empty register factors its prime out.
 -/
 
 namespace LeanBF
@@ -158,6 +160,44 @@ theorem unpack_packRange (regs : Nat → Nat) (R r : Nat) (hr : r < R) :
     exact hqr (regPrime_inj q r ((Nat.prime_dvd_prime_iff_eq
       (regPrime_prime r) (regPrime_prime q)).mp this).symm)
   rw [hrest, Nat.add_zero]
+
+/-- Incrementing a register multiplies the packed value by its prime. This
+    is a fact about the product, not about prime valuations: `setReg` changes
+    exactly one factor, so splitting the product at that register settles
+    it. -/
+theorem packRange_setReg_succ (regs : Nat → Nat) (R r : Nat) (hr : r < R) (v : Nat) :
+    packRange (fun i => if i = r then v + 1 else regs i) R
+      = regPrime r * packRange (fun i => if i = r then v else regs i) R := by
+  classical
+  have hmem : r ∈ Finset.range R := Finset.mem_range.mpr hr
+  rw [packRange, packRange, ← Finset.prod_erase_mul _ _ hmem,
+    ← Finset.prod_erase_mul _ _ hmem]
+  -- The other factors are untouched, the update naming only `r`.
+  have hrest : ((Finset.range R).erase r).prod
+      (fun q => regPrime q ^ (if q = r then v + 1 else regs q))
+      = ((Finset.range R).erase r).prod
+        (fun q => regPrime q ^ (if q = r then v else regs q)) := by
+    refine Finset.prod_congr rfl (fun q hq => ?_)
+    rw [if_neg (Finset.mem_erase.mp hq).1, if_neg (Finset.mem_erase.mp hq).1]
+  rw [hrest, if_pos rfl, if_pos rfl, pow_succ]
+  ring
+
+/-- The same, read the other way: a register holding a successor factors its
+    prime out of the packed value. -/
+theorem packRange_setReg_pred (regs : Nat → Nat) (R r : Nat) (hr : r < R)
+    (hpos : 0 < regs r) :
+    packRange regs R = regPrime r * packRange (fun i => if i = r then regs r - 1 else regs i) R
+      := by
+  have hkey := packRange_setReg_succ regs R r hr (regs r - 1)
+  -- Both sides name the same register file, the update being the identity.
+  have hleft : (fun i => if i = r then (regs r - 1) + 1 else regs i) = regs := by
+    funext i
+    by_cases hi : i = r
+    · rw [if_pos hi, hi]
+      omega
+    · rw [if_neg hi]
+  rw [hleft] at hkey
+  exact hkey
 
 end Register
 

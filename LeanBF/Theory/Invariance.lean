@@ -16,6 +16,10 @@ configuration invariant for `RunsTo`, and the fact that a run preserves every
 tape cell above a bound on the pointer. These lift the cell-preservation
 facts from individual instructions and windows to whole runs.
 
+## Main definitions
+
+* `ptrBoundedRun`: Whether a run keeps the pointer below a bound.
+
 ## Theorems
 
 * `RunsTo_inv`: A configuration invariant preserved by every step holds at
@@ -30,6 +34,8 @@ facts from individual instructions and windows to whole runs.
   followed by dropping `k + 1`.
 * `movePtr_incVal_preserves_above`: Running the compiler's window sweep
   (`movePtr 0 16 ++ [+ ]`) preserves every cell above the window.
+* `run_preserves_tape_above_of_ptrBounded`: A run whose pointer stays below
+  the bound preserves every cell at or above it.
 -/
 
 namespace LeanBF
@@ -294,5 +300,48 @@ theorem movePtr_incVal_preserves_above (s : State) (hptr : s.ptr = 0) :
   have hpres := RunsTo_preserves_tape_above (runSeq prog s) (17 : Int) hruns P hPinit hPstep hPptr
   intro i hi
   exact hpres i (by omega)
+
+/-- Whether the pointer stays below `n` at every step of a run, checked with
+    an explicit fuel bound. This is decidable on concrete programs, so it
+    discharges the hypothesis of `run_preserves_tape_above_of_ptrBounded` by
+    `decide`. -/
+def ptrBoundedRun : Nat → Program → State → Int → Bool
+  | 0, _, s, n => decide (s.ptr < n)
+  | fuel + 1, prog, s, n =>
+    if s.ptr < n then
+      match step prog s with
+      | none => true
+      | some (p', s') => ptrBoundedRun fuel p' s' n
+    else false
+
+/-- A run whose pointer stays below `n` throughout preserves every cell at or
+    above `n`. Where `RunsTo_preserves_tape_above` takes a configuration
+    invariant, this takes the executable check, which `decide` can settle for
+    a concrete program. -/
+theorem run_preserves_tape_above_of_ptrBounded :
+    ∀ (fuel : Nat) (prog : Program) (s t : State) (n : Int),
+    ptrBoundedRun fuel prog s n = true → run fuel prog s = some t →
+    ∀ i : Int, n ≤ i → t.tape i = s.tape i := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro prog s t n _ hrun i _
+      simp only [run, Option.some_inj] at hrun
+      rw [← hrun]
+  | succ k ih =>
+      intro prog s t n hb hrun i hi
+      simp only [ptrBoundedRun] at hb
+      by_cases hptr : s.ptr < n
+      · rw [if_pos hptr] at hb
+        rcases hstep : step prog s with _ | ⟨p', s'⟩
+        · simp only [run, hstep, Option.some_inj] at hrun
+          rw [← hrun]
+        · rw [hstep] at hb
+          have hrun' : run k p' s' = some t := by
+            simpa only [run, hstep] using hrun
+          rw [ih p' s' t n hb hrun' i hi]
+          exact step_preserves_tape_above n prog s p' s' hstep hptr i hi
+      · rw [if_neg hptr] at hb
+        exact absurd hb (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 end LeanBF

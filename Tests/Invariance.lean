@@ -42,4 +42,16 @@ example (s : State) (hptr : s.ptr = 0) :
     ∀ i : Int, 16 < i → (runSeq (Compiler.movePtr 0 16 ++ [.inc_val]) s).tape i = s.tape i :=
   movePtr_incVal_preserves_above s hptr
 
+/-- A pointer-bounded run preserves cells at or above the bound. -/
+example (fuel : Nat) (prog : Program) (s t : State) (n : Int)
+    (hb : ptrBoundedRun fuel prog s n = true) (hrun : run fuel prog s = some t) :
+    ∀ i : Int, n ≤ i → t.tape i = s.tape i :=
+  run_preserves_tape_above_of_ptrBounded fuel prog s t n hb hrun
+
+/-- The check is executable: `> <` keeps the pointer below 2. -/
+example : ptrBoundedRun 5 [.inc_ptr, .dec_ptr] State.mkEmpty 2 = true := by decide
+
+/-- And it fails when the pointer escapes: `> >` reaches 2. -/
+example : ptrBoundedRun 5 [.inc_ptr, .inc_ptr] State.mkEmpty 2 = false := by decide
+
 end LeanBF.Tests

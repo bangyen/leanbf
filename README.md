@@ -107,6 +107,14 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   whose results convert into `RunsTo` chains, and the first instance — the
   compiled empty Minsky program halts from any simulating state
   (`compile_empty_simulates`).
+- **Compiled-run cell preservation** (`Theory.Invariance` +
+  `Examples.CountDown`): `ptrBoundedRun` checks by `decide` that a concrete
+  run keeps the pointer inside a window, and
+  `run_preserves_tape_above_of_ptrBounded` turns that check into the
+  preservation fact. Applied to `countDown`, this proves the compiled run
+  never touches a tape cell above the window
+  (`countDown_preserves_above_window`) — the whole 4245-step run, not just
+  its final state.
 - **Run-level tape invariance** (`Theory.Invariance`): `RunsTo_inv` (a
   general configuration invariant), `step_preserves_tape_above` (a single
   step only modifies the current cell), and `RunsTo_preserves_tape_above`
@@ -137,7 +145,8 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
-| **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
+| **Cell preservation for `quadruple`** | Low | `countDown`'s compiled run is proven to stay inside the window (`countDown_preserves_above_window`, via `run_preserves_tape_above_of_ptrBounded`). The same statement for `quadruple` is compute-bound rather than open: its run is 35451 steps against `countDown`'s 4245, and kernel `decide` exceeds the heartbeat limit. It needs either a cheaper decision procedure or `native_decide`, which would add the `ofReduceBool` axiom to a development that is otherwise `propext`-clean. |
+| **General window invariant** | Medium | Prove that *every* compiled Minsky program keeps the pointer inside the window, rather than checking it per example. This needs a per-position invariant threaded through the compiled body — `runsTo_compileBody` constrains only the endpoint states, not the intermediate ones — so it means re-instrumenting the `Theory.Simulate` stack with a pointer-bound side condition. |
 | **2CM universality bridge** | High | Compile mathlib's `Nat.Partrec.Code` (or `Turing.TM`) into a two-counter Minsky program, the missing input to the undecidability capstone. This is the classical Minsky construction — Gödel-encoding the tape into counter exponents — and is realistically larger than everything currently in the repo. |
 | **Halting problem undecidability** | High | The capstone: Brainfuck halting is undecidable. Both simulation directions are in place, so a Brainfuck decider would yield a 2CM decider; what is missing is the classical fact that *2CM* halting is undecidable. Mathlib has the halting problem for partial recursive codes (`ComputablePred.halting_problem`) but no counter-machine model, so that theorem cannot be applied directly — the gap is a universality bridge compiling `Partrec` codes (or mathlib's Turing machines) down to two counters. |
 

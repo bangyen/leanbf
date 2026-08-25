@@ -3,6 +3,7 @@ Copyright (c) 2026 Bangyen Pham. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
+import LeanBF.Theory.Invariance
 import LeanBF.Theory.Simulate
 import LeanBF.Theory.Simulation
 
@@ -30,6 +31,10 @@ final counter values on the tape.
 * `countDown_halts`: The compiled program halts from the canonical state.
 * `countDown_executes`: The interpreter's `run` completes the compiled
   program in exactly n steps with `c2 = 2` on the tape.
+* `countDown_ptrBounded`: The pointer stays inside the window for the whole
+  run.
+* `countDown_preserves_above_window`: The run never touches a cell above the
+  window.
 -/
 
 namespace LeanBF.Examples
@@ -120,5 +125,27 @@ theorem countDown_executes :
   rcases run_of_RunsTo (Compiler.compileProgram countDown, simState countDownStart) s' hrun
     with ⟨n, hex, hsteps⟩
   exact ⟨n, s', hex, hsteps, hpost.1, hpost.2.1, hpost.2.2.1, hpost.2.2.2.1, hpost.2.2.2.2⟩
+
+/--
+The compiled program's pointer never leaves the 17-cell window during the
+run: it stays below `17` at every one of the 4245 steps to halting.
+-/
+theorem countDown_ptrBounded :
+    ptrBoundedRun 4300 (Compiler.compileProgram countDown)
+      (simState countDownStart) 17 = true := by
+  decide
+
+/--
+The compiled run never touches a tape cell above the window. Every cell at or
+above 17 holds the same value after the run as before it, which for the
+canonical starting state means it is still `0`.
+-/
+theorem countDown_preserves_above_window :
+    ∃ s', run 4300 (Compiler.compileProgram countDown) (simState countDownStart) = some s' ∧
+      ∀ i : Int, 17 ≤ i → s'.tape i = (simState countDownStart).tape i := by
+  rcases hrun : run 4300 (Compiler.compileProgram countDown) (simState countDownStart) with _ | s'
+  · exact absurd hrun (by decide)
+  · exact ⟨s', rfl, run_preserves_tape_above_of_ptrBounded 4300 _ _ s' 17
+      countDown_ptrBounded hrun⟩
 
 end LeanBF.Examples

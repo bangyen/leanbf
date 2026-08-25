@@ -48,6 +48,7 @@ fragment puts it back.
 * `builds_pair`: The pairing of two computable functions is computable.
 * `precBodyPre_effect`: The body's prelude assembles the step's argument.
 * `precBodyPost_effect`: The body's postlude counts up and returns.
+* `precBody_effect`: One iteration advances the recursion by one step.
 -/
 
 namespace LeanBF
@@ -356,6 +357,53 @@ theorem precBodyPost_effect (p : Program) (lo base head : Nat)
   · simp only [hs2, setReg, if_true, hs1, if_neg (by omega : lo + 2 ≠ lo + 4)]
   · intro q hq4 hq2
     simp only [hs2, setReg, if_neg hq2, hs1, if_neg hq4]
+
+/-- One iteration of the primitive recursion. The step function's fragment
+    is taken as a hypothesis rather than a builder, because the assembly above
+    places it once at a fixed address and applies it afresh on every pass. -/
+theorem precBody_effect (p : Program) (lo hd hi gl : Nat) (g : Nat → Nat)
+    (hhi : lo + 22 ≤ hi)
+    (hembPre : EmbeddedAt p (hd + 1) (precBodyPre lo (hd + 1)))
+    (hg : Computes p (hd + 105) (hd + 105 + gl) (lo + 4) (lo + 1) (lo + 6) hi g)
+    (hembPost : EmbeddedAt p (hd + 105 + gl) (precBodyPost lo (hd + 105 + gl) hd)) :
+    ∀ (s : State), s.pc = hd + 1 → s.regs (lo + 3) = 0 → s.regs (lo + 4) = 0 →
+      (∀ r, lo + 6 ≤ r → r < hi → s.regs r = 0) →
+      ∃ s', Reaches p s s' ∧ s'.pc = hd ∧
+        s'.regs lo = s.regs lo ∧ s'.regs (lo + 2) = s.regs (lo + 2) + 1 ∧
+        s'.regs (lo + 1) = g (Nat.pair (s.regs lo)
+          (Nat.pair (s.regs (lo + 2)) (s.regs (lo + 1)))) ∧
+        s'.regs (lo + 3) = 0 ∧ s'.regs (lo + 4) = 0 ∧
+        (∀ r, lo + 6 ≤ r → r < hi → s'.regs r = 0) ∧
+        ∀ q, q < lo ∨ lo + 5 = q ∨ hi ≤ q → s'.regs q = s.regs q := by
+  intro s hpc h30 h40 hz
+  -- Assemble the argument for the step function.
+  rcases precBodyPre_effect p lo (hd + 1) hembPre s hpc h30 h40
+    (fun j hj => hz (lo + 6 + j) (by omega) (by omega)) with
+    ⟨s1, hr1, hpc1, hZ1, hY1, hA1, hU1, hT1, hB1, hF1⟩
+  -- Apply the step function to it.
+  rcases hg s1 (by omega) hA1
+    (fun r hr1' hr2' => by
+      by_cases hlow : r < lo + 14
+      · have := hB1 (r - (lo + 6)) (by omega)
+        rwa [show lo + 6 + (r - (lo + 6)) = r by omega] at this
+      · rw [hF1 r (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)]
+        exact hz r hr1' hr2') with
+    ⟨s2, hr2, hpc2, hV2, hI2, hZ2, hF2⟩
+  -- Count the iteration and return to the head.
+  rcases precBodyPost_effect p lo (hd + 105 + gl) hd hembPost s2 hpc2
+    (hZ2 (lo + 6) (by omega) (by omega)) with ⟨s3, hr3, hpc3, hT3, hY3, hF3⟩
+  refine ⟨s3, reaches_trans hr1 (reaches_trans hr2 hr3), hpc3, ?_, ?_, ?_, ?_, hT3, ?_, ?_⟩
+  · rw [hF3 lo (by omega) (by omega), hF2 lo (by omega) (by omega), hZ1]
+  · rw [hY3, hF2 (lo + 2) (by omega) (by omega), hY1]
+  · -- The step function's answer, on the argument the prelude built.
+    rw [hF3 (lo + 1) (by omega) (by omega), hV2, hT1]
+  · rw [hF3 (lo + 3) (by omega) (by omega), hF2 (lo + 3) (by omega) (by omega), hU1]
+  · intro r hr1' hr2'
+    rw [hF3 r (by omega) (by omega)]
+    exact hZ2 r hr1' hr2'
+  · intro q hq
+    rw [hF3 q (by omega) (by omega), hF2 q (by omega) (by omega),
+      hF1 q (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)]
 
 end Register
 

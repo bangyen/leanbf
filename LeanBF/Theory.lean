@@ -12,6 +12,7 @@ import LeanBF.Theory.Godel
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Invariance
 import LeanBF.Theory.Loop
+import LeanBF.Theory.Packed
 import LeanBF.Theory.Semantics
 import LeanBF.Theory.Simulate
 import LeanBF.Theory.Simulation

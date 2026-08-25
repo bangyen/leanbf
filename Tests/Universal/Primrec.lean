@@ -28,6 +28,16 @@ example : Nat.Primrec (fun n => n.unpair.1) := Nat.Primrec.left
 
 example : Nat.Primrec (fun n => n.unpair.2) := Nat.Primrec.right
 
+/-- The `pair` constructor's function is built. -/
+example (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) :
+    Builds (fun n => Nat.pair (f n) (g n)) :=
+  builds_pair f g hf hg
+
+/-- In the shape the inductive uses. -/
+example (f g : Nat → Nat) (hf : Nat.Primrec f) (hg : Nat.Primrec g) :
+    Nat.Primrec (fun n => Nat.pair (f n) (g n)) :=
+  Nat.Primrec.pair hf hg
+
 /-- The cases already discharged in `Theory.Universal.Builder`. -/
 example : Builds (fun _ => 0) := builds_zero
 

@@ -23,6 +23,7 @@ import Tests.Register
 import Tests.Semantics
 import Tests.Simulate
 import Tests.State
+import Tests.Trace
 import Tests.Transfer
 import Tests.Universal
 

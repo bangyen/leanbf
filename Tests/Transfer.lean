@@ -14,6 +14,7 @@ the transitivity of reachability.
 ## Main definitions
 
 * `drainProg`: A two-instruction drain loop followed by `halt`.
+* `tripleProg`: A scaled transfer loop moving three units per unit drained.
 -/
 
 namespace LeanBF.Tests
@@ -43,5 +44,28 @@ example : (drained 0 1 2 3 { pc := 0, regs := fun i => if i = 0 then 3 else 0 })
 example (p : Program) (a b c : State) (h1 : Reaches p a b) (h2 : Reaches p b c) :
     Reaches p a c :=
   reaches_trans h1 h2
+
+/-- A scaled transfer loop: three increments per unit drained. -/
+def tripleProg : Program :=
+  [.jzdec 0 4 1, .inc 1 2, .inc 1 3, .inc 1 0, .halt]
+
+/-- The chain instructions sit where `kdrain_reaches` requires. -/
+example : tripleProg[1]? = some (Instruction.inc 1 (if 0 + 1 = 3 then 0 else 0 + 2 + 0)) := rfl
+
+example : tripleProg[3]? = some (Instruction.inc 1 (if 2 + 1 = 3 then 0 else 0 + 2 + 2)) := rfl
+
+/-- Draining four units at three per unit yields twelve. -/
+example : (scaled 0 1 4 3 4 { pc := 0, regs := fun i => if i = 0 then 4 else 0 }).regs 1 = 12 := rfl
+
+/-- The source is emptied. -/
+example : (scaled 0 1 4 3 4 { pc := 0, regs := fun i => if i = 0 then 4 else 0 }).regs 0 = 0 := rfl
+
+/-- Walking an increment chain raises the target by the chain's length. -/
+example (p : Program) (t base k : Nat)
+    (hchain : ∀ j, j < k → p[base + 1 + j]? =
+      some (Instruction.inc t (if j + 1 = k then base else base + 2 + j)))
+    (d j : Nat) (hjk : j + d = k) (hd : 0 < d) (s : State) (hpc : s.pc = base + 1 + j) :
+    Reaches p s (bumped t d base s) :=
+  inc_chain p t base k hchain d j hjk hd s hpc
 
 end LeanBF.Tests

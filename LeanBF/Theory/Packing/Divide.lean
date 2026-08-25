@@ -36,6 +36,7 @@ weaken that lemma, the table absorbs the difference in one slot each.
 
 * `jzdecHead`: The block's pieces before the restore arms.
 * `jzdecArms`: The restore arms, laid end to end.
+* `dividedAt`: The state the divide leaves at a handler's door.
 * `jzdecBlock`: The block that tests and decrements a packed register.
 
 ## Theorems
@@ -50,6 +51,8 @@ weaken that lemma, the table absorbs the difference in one slot each.
 * `jzdecHead_get_table`: The jump table.
 * `jzdecHead_get_drain0`: The drain's test.
 * `jzdecHead_get_drain1`: The drain's increment.
+* `jzdecBlock_common`: The path both branches share.
+* `jzdecBlock_dvd`: A register that was non-zero is decremented.
 -/
 
 namespace LeanBF
@@ -179,6 +182,138 @@ theorem jzdecHead_get_drain1 (p base ifNonZero : Nat) :
     List.getElem?_append_right (by rw [hlen2]; omega), hlen2,
     show p + 1 - p = 1 by omega]
   rfl
+
+/-- The state the divide leaves at a handler's door: the packed counter
+    emptied, the quotient held in the scratch. -/
+def dividedAt (p pc v : Nat) (s : State) : State :=
+  { pc := pc, regs := fun i => if i = 0 then 0 else if i = 1 then v / p else s.regs i }
+
+/-- The path both branches share: fall through the entry no-op, divide the
+    packed value by `p`, and take the jump table's slot for the remainder.
+    The table entry is an unconditional jump, the divide having emptied the
+    counter it tests. -/
+theorem jzdecBlock_common (prog : Program) (p base ifZero ifNonZero : Nat) (hp : 0 < p)
+    (hemb : EmbeddedAt prog base (jzdecBlock p base ifZero ifNonZero)) :
+    ∀ (s : State), s.pc = base → s.regs 1 = 0 →
+      ∃ s₁, step prog s = some s₁ ∧
+        Reaches prog s₁
+          (dividedAt p (jzdecDest p base (s.regs 0 % p)) (s.regs 0) s) := by
+  intro s hpc hs1
+  have hg : ∀ j, j < 2 + 2 * p + 2 → ∀ i, (jzdecHead p base ifNonZero)[j]? = some i →
+      prog[base + j]? = some i := by
+    intro j hj i hi
+    exact embeddedAt_get prog base _ hemb j i (by
+      rw [jzdecBlock_get_head p base ifZero ifNonZero j hj]
+      exact hi)
+  -- The entry no-op falls through, the scratch counter being empty.
+  have hentry : prog[base]? = some (Instruction.jzdec 1 (base + 1) (base + 1)) := by
+    simpa only [Nat.add_zero] using hg 0 (by omega) _ (jzdecHead_get_entry p base ifNonZero)
+  have hstep : step prog s = some { s with pc := base + 1 } := by
+    simp only [step, hpc, hentry, hs1, if_pos]
+  refine ⟨_, hstep, ?_⟩
+  -- The divide loop's chain and its increment.
+  have hchain : ∀ j, j < p → prog[base + 1 + j]? =
+      some (Instruction.jzdec 0 (base + 2 + p + j) (base + 1 + j + 1)) := by
+    intro j hj
+    have h := hg (1 + j) (by omega) _ (jzdecHead_get_div p base ifNonZero j hj)
+    rwa [← Nat.add_assoc] at h
+  have hinc : prog[base + 1 + p]? = some (Instruction.inc 1 (base + 1)) := by
+    have h := hg (1 + p) (by omega) _ (jzdecHead_get_divInc p base ifNonZero)
+    rwa [← Nat.add_assoc] at h
+  -- The divide consumes the packed value, exiting on its remainder.
+  have hdiv := div_reaches prog 0 1 (base + 1) (base + 2 + p) p (by omega)
+    (by
+      intro j hj
+      rw [hchain j hj])
+    hinc (s.regs 0 / p) (s.regs 0 % p) (Nat.mod_lt _ hp)
+    { s with pc := base + 1 } rfl (by
+      change s.regs 0 = p * (s.regs 0 / p) + s.regs 0 % p
+      exact (Nat.div_add_mod (s.regs 0) p).symm)
+  set r : Nat := s.regs 0 % p with hrdef
+  set s2 : State := divided 0 1 (base + 2 + p) (s.regs 0 / p) r { s with pc := base + 1 }
+    with hs2def
+  -- The table slot for that remainder is an unconditional jump.
+  have htab : prog[base + 2 + p + r]? =
+      some (Instruction.jzdec 0 (jzdecDest p base r) (jzdecDest p base r)) := by
+    have hrp : r < p := by rw [hrdef]; exact Nat.mod_lt _ hp
+    have h := hg (2 + p + r) (by omega) _
+      (jzdecHead_get_table p base ifNonZero r hrp)
+    rwa [← Nat.add_assoc, ← Nat.add_assoc] at h
+  have hzero : s2.regs 0 = 0 := by
+    simp only [hs2def, divided, if_pos trivial]
+  have hjump : step prog s2 = some { s2 with pc := jzdecDest p base r } := by
+    have hpc2 : s2.pc = base + 2 + p + r := by simp only [hs2def, divided]
+    rw [step, hpc2, htab]
+    simp only [hzero, if_pos]
+  refine reaches_trans hdiv (Reaches.step _ _ _ hjump ?_)
+  -- The state after the jump is the divide's result at the handler's address.
+  have hfin : ({ s2 with pc := jzdecDest p base r } : State)
+      = dividedAt p (jzdecDest p base r) (s.regs 0) s := by
+    refine State.ext rfl (funext fun q => ?_)
+    simp only [hs2def, divided, dividedAt]
+    by_cases hq0 : q = 0
+    · rw [if_pos hq0, if_pos hq0]
+    · rw [if_neg hq0, if_neg hq0]
+      by_cases hq1 : q = 1
+      · rw [if_pos hq1, if_pos hq1, hs1]
+        omega
+      · rw [if_neg hq1, if_neg hq1]
+  rw [hfin]
+  exact Reaches.refl _
+
+/-- The register was non-zero: its prime divides the packed value, the
+    quotient is the decremented file, and the drain pours it back before
+    leaving for `ifNonZero`. -/
+theorem jzdecBlock_dvd (prog : Program) (p base ifZero ifNonZero : Nat) (hp : 0 < p)
+    (hemb : EmbeddedAt prog base (jzdecBlock p base ifZero ifNonZero)) :
+    ∀ (s : State), s.pc = base → s.regs 1 = 0 → p ∣ s.regs 0 →
+      ∃ c, 1 ≤ c ∧ runFor prog c s = some
+        { pc := ifNonZero, regs := fun i => if i = 0 then s.regs 0 / p
+          else if i = 1 then 0 else s.regs i } := by
+  intro s hpc hs1 hdvd
+  have hg : ∀ j, j < 2 + 2 * p + 2 → ∀ i, (jzdecHead p base ifNonZero)[j]? = some i →
+      prog[base + j]? = some i := by
+    intro j hj i hi
+    exact embeddedAt_get prog base _ hemb j i (by
+      rw [jzdecBlock_get_head p base ifZero ifNonZero j hj]
+      exact hi)
+  -- The remainder is zero, so the table sends the run to the drain.
+  have hrem : s.regs 0 % p = 0 := Nat.dvd_iff_mod_eq_zero.mp hdvd
+  rcases jzdecBlock_common prog p base ifZero ifNonZero hp hemb s hpc hs1 with
+    ⟨s₁, hstep, hreach⟩
+  rw [hrem] at hreach
+  have hdest : jzdecDest p base 0 = base + 2 + 2 * p := by
+    simp only [jzdecDest, if_pos trivial]
+  rw [hdest] at hreach
+  -- The drain pours the quotient back into the packed counter.
+  have hd0 : prog[base + 2 + 2 * p]? =
+      some (Instruction.jzdec 1 ifNonZero (base + 2 + 2 * p + 1)) := by
+    have h := hg (2 + 2 * p) (by omega) _ (jzdecHead_get_drain0 p base ifNonZero)
+    rwa [← Nat.add_assoc] at h
+  have hd1 : prog[base + 2 + 2 * p + 1]? =
+      some (Instruction.inc 0 (base + 2 + 2 * p)) := by
+    have h := hg (2 + 2 * p + 1) (by omega) _ (jzdecHead_get_drain1 p base ifNonZero)
+    rwa [← Nat.add_assoc, ← Nat.add_assoc] at h
+  set s2 : State := dividedAt p (base + 2 + 2 * p) (s.regs 0) s with hs2def
+  have hdr := drain_reaches prog 1 0 (base + 2 + 2 * p) ifNonZero (by omega) hd0 hd1
+    (s2.regs 1) s2 rfl rfl
+  -- What the drain leaves: the quotient in the packed counter, scratch clear.
+  have hfinal : drained 1 0 ifNonZero (s2.regs 1) s2
+      = { pc := ifNonZero, regs := fun i => if i = 0 then s.regs 0 / p
+          else if i = 1 then 0 else s.regs i } := by
+    refine State.ext rfl (funext fun q => ?_)
+    by_cases hq1 : q = 1
+    · subst hq1
+      simp only [drained, hs2def, dividedAt, if_pos trivial,
+        if_neg (by omega : ¬ (1 : Nat) = 0)]
+    · by_cases hq0 : q = 0
+      · subst hq0
+        simp only [drained, hs2def, dividedAt, if_pos trivial,
+          if_neg (by omega : ¬ (1 : Nat) = 0), if_neg (by omega : ¬ (0 : Nat) = 1),
+          Nat.zero_add]
+      · simp only [drained, hs2def, dividedAt, if_neg hq0, if_neg hq1]
+  rw [← hfinal]
+  exact runFor_pos_of_step prog s s₁ _ hstep (reaches_trans hreach hdr)
 
 end Register
 

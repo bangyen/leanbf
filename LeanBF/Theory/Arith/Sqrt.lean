@@ -41,12 +41,14 @@ disjointness becomes arithmetic.
 ## Main definitions
 
 * `sqrtBodyFrag`: The search loop as a concrete instruction list.
+* `sqrtFrag`: The search preceded by the prologue that loads its counter.
 
 ## Theorems
 
 * `sqrtStep`: One upward-search step lands on the next `min` of the search.
 * `squareVar_effect`: A register's square is added to another.
 * `sqrtBody_effect`: One search iteration tests the next candidate.
+* `sqrtVar_effect`: The whole search computes the integer square root.
 -/
 
 namespace LeanBF
@@ -325,6 +327,86 @@ theorem sqrtBody_effect (p : Program) (nR r lo base exit : Nat)
       hF3 q (by omega) (by omega) (by omega) (by omega), hs2]
     simp only [setReg, if_neg (by omega : q ≠ lo)]
     rw [hF1 q hqr (by omega) (by omega)]
+
+/-- The search with its prologue: copy the input into the counter, then run
+    the loop. The counter is what bounds the search, and it has to be a copy
+    because the input must survive for the comparison inside the body. -/
+def sqrtFrag (nR r lo base exit : Nat) : Program :=
+  [.jzdec nR (base + 3) (base + 1), .inc (lo + 7) (base + 2), .inc lo base,
+   .jzdec lo (base + 5) (base + 4), .inc nR (base + 3)] ++
+  sqrtBodyFrag nR r lo (base + 5) exit
+
+/-- The whole search: the candidate ends holding the integer square root of
+    the input, the input survives, and every working register is clear.
+
+    The invariant reads `min (Nat.sqrt n0) (n0 - m)` rather than the answer
+    outright because the loop runs a fixed number of times. At the end
+    `m = 0` and the `min` collapses, since a number's square root never
+    exceeds the number. -/
+theorem sqrtVar_effect (p : Program) (nR r lo base exit : Nat)
+    (hnr : nR ≠ r) (hn : nR < lo) (hr : r < lo)
+    (hemb : EmbeddedAt p base (sqrtFrag nR r lo base exit)) :
+    ∀ (s : State), s.pc = base → s.regs r = 0 → (∀ j, j < 8 → s.regs (lo + j) = 0) →
+      ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs nR = s.regs nR ∧
+        s'.regs r = Nat.sqrt (s.regs nR) ∧
+        (∀ j, j < 8 → s'.regs (lo + j) = 0) ∧
+        ∀ q, q ≠ nR → q ≠ r → (q < lo ∨ lo + 8 ≤ q) → s'.regs q = s.regs q := by
+  intro s hpc hr0 hz
+  have hpro := embeddedAt_append_left p base _ _ hemb
+  have hbody := embeddedAt_append_right p base _ _ hemb
+  have hg := embeddedAt_get p base _ hpro
+  -- Load the counter, keeping the input.
+  rcases copyBack_effect p nR (lo + 7) lo base (base + 3) (base + 5)
+    (by omega) (by omega) (by omega)
+    (by simpa only [Nat.add_zero] using hg 0 _ rfl) (hg 1 _ rfl) (hg 2 _ rfl)
+    (hg 3 _ rfl) (by simpa only [Nat.add_assoc] using hg 4 _ rfl)
+    s hpc (by simpa only [Nat.add_zero] using hz 0 (by omega)) with
+    ⟨s1, hr1, hpc1, hN1, hC1, hL1, hF1⟩
+  have hbody' : EmbeddedAt p (base + 5) (sqrtBodyFrag nR r lo (base + 5) exit) := by
+    simpa only [List.length_cons, List.length_nil] using hbody
+  have hgb := embeddedAt_get p (base + 5) _ hbody'
+  -- Every working register below the counter is still clear after the copy.
+  have hz1 : ∀ j, j < 7 → s1.regs (lo + j) = 0 := by
+    intro j hj
+    by_cases hj0 : j = 0
+    · rw [hj0, Nat.add_zero]
+      exact hL1
+    · rw [hF1 (lo + j) (by omega) (by omega) (by omega)]
+      exact hz j (by omega)
+  -- Run the loop, carrying the frame alongside the invariant.
+  rcases iterate_inv p (lo + 7) (base + 5) exit
+    (fun m f => m ≤ s.regs nR ∧ f nR = s.regs nR ∧
+      f r = min (Nat.sqrt (s.regs nR)) (s.regs nR - m) ∧
+      (∀ j, j < 7 → f (lo + j) = 0) ∧
+      ∀ q, q ≠ nR → q ≠ r → (q < lo ∨ lo + 8 ≤ q) → f q = s1.regs q)
+    (fun m f g hfg hI => ⟨hI.1, by rw [← hfg nR (by omega)]; exact hI.2.1,
+      by rw [← hfg r (by omega)]; exact hI.2.2.1,
+      fun j hj => by rw [← hfg (lo + j) (by omega)]; exact hI.2.2.2.1 j hj,
+      fun q hqn hqr hqo => by rw [← hfg q (by omega)]; exact hI.2.2.2.2 q hqn hqr hqo⟩)
+    (by simpa only [Nat.add_zero] using hgb 0 _ rfl)
+    (fun m s2 hpc2 hc2 hI2 => by
+      rcases sqrtBody_effect p nR r lo (base + 5) exit hnr hn hr hbody' (s.regs nR)
+        m s2 (by omega) hc2 hI2.2.1 hI2.2.2.1 hI2.2.2.2.1 hI2.1 with
+        ⟨s3, hr3, hpc3, hc3, hN3, hR3, hZ3, hF3⟩
+      exact ⟨s3, hr3, hpc3, hc3, by omega, hN3, hR3, hZ3,
+        fun q hqn hqr hqo => by rw [hF3 q hqn hqr hqo]; exact hI2.2.2.2.2 q hqn hqr hqo⟩)
+    (s.regs nR) s1 hpc1
+    (by rw [hC1, hz 7 (by omega), Nat.zero_add])
+    ⟨le_refl _, hN1, by rw [hF1 r (by omega) (by omega) (by omega), hr0]; omega,
+      hz1, fun q _ _ _ => rfl⟩ with
+    ⟨s4, hr4, hpc4, hc4, hI4⟩
+  refine ⟨s4, reaches_trans hr1 hr4, hpc4, hI4.2.1, ?_, ?_, ?_⟩
+  · -- The search never had to look past the input itself.
+    rw [hI4.2.2.1, Nat.sub_zero]
+    have := Nat.sqrt_le_self (s.regs nR)
+    omega
+  · intro j hj
+    by_cases hj7 : j = 7
+    · rw [hj7]
+      exact hc4
+    · exact hI4.2.2.2.1 j (by omega)
+  · intro q hqn hqr hqo
+    rw [hI4.2.2.2.2 q hqn hqr hqo, hF1 q hqn (by omega) (by omega)]
 
 end Register
 

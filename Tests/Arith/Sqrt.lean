@@ -76,7 +76,28 @@ example : EmbeddedAt sqrtProg 0 (sqrtBodyFrag 0 1 2 0 100) := by
   intro j hj
   simp only [sqrtProg, Nat.zero_add]
 
-/-- One iteration of the search, as the loop above it will use it. -/
+/-- The prologue that loads the counter sits ahead of the loop head. -/
+example : (sqrtFrag 0 1 2 0 100)[0]? = some (Instruction.jzdec 0 3 1) := rfl
+
+example : (sqrtFrag 0 1 2 0 100)[5]? = some (Instruction.jzdec 9 100 6) := rfl
+
+/-- The whole search: prologue plus loop. -/
+example : (sqrtFrag 0 1 2 0 100).length = 40 := rfl
+
+/-- The search computes the integer square root, preserving its input and
+    leaving every working register clear. -/
+example (p : Program) (nR r lo base exit : Nat)
+    (hnr : nR ≠ r) (hn : nR < lo) (hr : r < lo)
+    (hemb : EmbeddedAt p base (sqrtFrag nR r lo base exit))
+    (s : State) (hpc : s.pc = base) (hr0 : s.regs r = 0)
+    (hz : ∀ j, j < 8 → s.regs (lo + j) = 0) :
+    ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs nR = s.regs nR ∧
+      s'.regs r = Nat.sqrt (s.regs nR) ∧
+      (∀ j, j < 8 → s'.regs (lo + j) = 0) ∧
+      ∀ q, q ≠ nR → q ≠ r → (q < lo ∨ lo + 8 ≤ q) → s'.regs q = s.regs q :=
+  sqrtVar_effect p nR r lo base exit hnr hn hr hemb s hpc hr0 hz
+
+/-- One iteration of the search, as the loop above it uses it. -/
 example (p : Program) (nR r lo base exit : Nat)
     (hnr : nR ≠ r) (hn : nR < lo) (hr : r < lo)
     (hemb : EmbeddedAt p base (sqrtBodyFrag nR r lo base exit))

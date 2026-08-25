@@ -19,12 +19,27 @@ one reads exactly what the first one did. Their two results are held in the
 two registers just below the scratch the sub-builders see, so neither
 disturbs the other's, and the pairing fragment reads both.
 
+`prec` is the only case whose sub-builder runs more than once. `Computes` is
+a statement about every state, and the builder is parametric in its base, so
+the step function's fragment is placed once at a fixed address inside the
+loop body and applied afresh on each pass. Nothing needs to be relocated; the
+invariant's job is only to re-establish that fragment's entry conditions,
+which is what the body's clears are for. Leaving out the clear of the
+accumulator, in particular, hands the step function an output register that
+is not empty.
+
 `left` and `right` share one fragment. `Nat.unpair` produces both halves at
 once, and the builder interface names only one output, so the unwanted half
 is sent to the bottom of the caller's scratch region and cleared afterwards.
 That is the same move `builds_comp` makes with its midpoint: a register the
 caller has already guaranteed is clear can carry a value, as long as the
 fragment puts it back.
+
+## Main definitions
+
+* `precBodyPre`: The body's instructions before the step function's fragment.
+* `precBodyPost`: The body's instructions after it.
+* `precPost`: The instructions after the loop.
 
 ## Theorems
 
@@ -208,6 +223,33 @@ theorem builds_pair (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) :
     · rw [hqi, hFr3 inR (by omega) (by omega) (by omega) (by omega), hI2, hI1]
     · rw [hFr3 q (by omega) (by omega) hqo (by omega),
         hFr2 q (by omega) (by omega), hFr1 q (by omega) (by omega)]
+
+/-- The body's prelude: assemble `pair z (pair y acc)` in `lo + 4`, clearing
+    the accumulator and the inner pair on the way so the step function's
+    fragment starts from the conditions it requires. Laid out from `base`,
+    with the two pairings at `base` and `base + 51`. -/
+def precBodyPre (lo base : Nat) : Program :=
+  pairFrag (lo + 2) (lo + 1) (lo + 3) (lo + 6) base (base + 51) ++
+  pairFrag lo (lo + 3) (lo + 4) (lo + 6) (base + 51) (base + 102) ++
+  [Instruction.jzdec (lo + 1) (base + 103) (base + 102),
+   Instruction.jzdec (lo + 3) (base + 104) (base + 103)]
+
+/-- The body's postlude: clear the assembled argument, count the iteration,
+    and return to the loop head. The return is a test of a register the
+    invariant keeps empty, since the instruction set has no plain jump. -/
+def precBodyPost (lo base head : Nat) : Program :=
+  [Instruction.jzdec (lo + 4) (base + 1) base,
+   Instruction.inc (lo + 2) (base + 2),
+   Instruction.jzdec (lo + 6) head head]
+
+/-- After the loop: move the accumulator to the output, then empty the two
+    registers still holding values. The iteration counter ends at the number
+    of iterations, not at zero, so it needs clearing too. -/
+def precPost (outR lo base exit : Nat) : Program :=
+  [Instruction.jzdec (lo + 1) (base + 2) (base + 1),
+   Instruction.inc outR base,
+   Instruction.jzdec lo (base + 3) (base + 2),
+   Instruction.jzdec (lo + 2) exit (base + 3)]
 
 end Register
 

@@ -22,6 +22,15 @@ stopped, and that is an induction on the length of the halting trace.
 returning `none` if the machine stops early, and `reaches_iff_runFor` says it
 agrees with `Reaches`.
 
+Three statements say a machine never halts, and each is the convenient form
+for a different caller. `no_runsTo_of_steps_rel` is the general one: stages
+picked out by a relation, because a simulation cannot name them by a function
+of the step number — how far the simulating machine travels per source step
+depends on the source instruction. `no_runsTo_of_steps` specializes it to
+stages that *are* such a function, and `no_runsTo_of_diverges` further to the
+case where consecutive stages visibly differ, which supplies the positive
+step count for free. Each is proved from the one above it.
+
 The step relation is a function, so a state has one successor and a trace has
 no branch points. `runsTo_of_reaches` is where that gets used: if a machine
 halts, and some fragment is known to walk from the start to an intermediate
@@ -43,10 +52,8 @@ have been.
   the way.
 * `runsTo_of_reaches_halt`: Reaching a terminal state is a halting run.
 * `runsTo_of_reaches_runsTo`: Prefixing a halting run with a reachability.
-* `runsTo_terminal`: A halting run ends where the machine has no successor.
 * `runsTo_runFor`: A halting run is an iteration onto a terminal state.
 * `runFor_pos_of_step`: A first step and a path make a positive count.
-* `runFor_pos_of_reaches`: A path out of a state that can step is positive.
 * `step_eq_none_iff`: A machine stops exactly at a halt or out of bounds.
 * `no_runsTo_of_steps_rel`: The same, for stages named by a relation.
 * `no_runsTo_of_steps`: A machine that always takes at least one more step
@@ -157,19 +164,6 @@ theorem runsTo_of_reaches_runsTo (p : Program) (s a t : State)
   | refl _ => exact ht
   | step u v _ hstep _ ih => exact RunsTo.step u v _ hstep (ih ht)
 
-/-- A halting run ends where the machine has no successor. The `RunsTo`
-    constructors phrase termination as a condition on the program slot; this
-    restates it as `step` returning nothing, which is the form the counting
-    argument compares against. -/
-theorem runsTo_terminal (p : Program) (s t : State) (h : RunsTo p s t) :
-    step p t = none := by
-  induction h with
-  | halt u hterm =>
-      rcases hterm with hh | hn
-      · rw [step, hh]
-      · rw [step, hn]
-  | step _ _ _ _ _ ih => exact ih
-
 /-- A halting run is an iteration of some exact length landing on a state
     with no successor. This is the numeric form of halting the counting
     argument needs: a bound on how long the machine can still be running. -/
@@ -228,22 +222,6 @@ theorem runFor_pos_of_step (p : Program) (s s₁ s' : State)
   refine ⟨d + 1, by omega, ?_⟩
   rw [show d + 1 = 1 + d by omega, runFor_add p 1 d s s₁ (by simp only [runFor, hstep])]
   exact hd
-
-/-- A path that moves the program counter takes at least one step. The
-    fragment lemmas hand back a bare `Reaches` whose target is a computed
-    term, which resists case analysis; comparing the two counters settles the
-    length without any, and a block always exits somewhere other than the
-    address it was entered at. -/
-theorem runFor_pos_of_reaches (p : Program) (s s' : State)
-    (hpc : s.pc ≠ s'.pc) (hr : Reaches p s s') :
-    ∃ c, 1 ≤ c ∧ runFor p c s = some s' := by
-  rcases runFor_of_reaches p _ _ hr with ⟨d, hd⟩
-  refine ⟨d, ?_, hd⟩
-  rcases Nat.eq_zero_or_pos d with rfl | hpos
-  · -- A zero-length path ends where it began, counter included.
-    simp only [runFor, Option.some.injEq] at hd
-    exact absurd (congrArg State.pc hd) hpc
-  · exact hpos
 
 /-- A machine that always has at least one more step to take never halts,
     with the stages picked out by a relation rather than a function.

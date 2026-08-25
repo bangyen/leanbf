@@ -33,6 +33,14 @@ prime divided the packed value at all.
 `kdrain_reaches` scales the drain: each unit drained adds `k` to the target,
 so that fragment multiplies by a constant.
 
+`iterate_reaches` runs an arbitrary body once per unit of a counter register.
+The body is a parameter — a state transformer with the fact that it reaches
+its result and returns to the loop head — so the lemma applies to any
+fragment, not a fixed one. This is what lifts the constant-multiplier loops
+to variable arithmetic: multiplying two registers is adding one of them a
+number of times given by the other, and primitive recursion is the same shape
+with a different body.
+
 `copy_reaches` sends each drained unit to two targets at once. Draining is
 destructive, so this is how a register is read without being lost: copy it
 into a spare and a scratch, then drain the scratch back. It is the primitive
@@ -73,6 +81,7 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
 * `div_reaches`: The division loop divides by `k`, branching on the
   remainder.
 * `copy_reaches`: The copy loop duplicates a register into two others.
+* `iterate_reaches`: A counted loop runs a body once per unit of a counter.
 -/
 
 namespace LeanBF
@@ -553,6 +562,40 @@ theorem copy_reaches (p : Program) (a t1 t2 base exit : Nat)
                 simp only [if_neg hit2, if_neg hit1, if_neg hia]
       rw [← hfin]
       exact Reaches.step s _ _ hs1 (Reaches.step _ _ _ hs2 (Reaches.step _ _ _ hs3 hrec))
+
+/-- Iterating a body: the counter register drives how many times the body
+    runs. The body is given abstractly as a state transformer `F` together
+    with the fact that it reaches `F s` from `base + 1`, returning to `base`.
+    The counter must not be touched by the body. -/
+theorem iterate_reaches (p : Program) (c base exit : Nat) (F : State → State)
+    (h0 : p[base]? = some (Instruction.jzdec c exit (base + 1)))
+    (hbody : ∀ (s : State), s.pc = base + 1 → Reaches p s (F s))
+    (hbodyPc : ∀ (s : State), (F s).pc = base)
+    (hbodyC : ∀ (s : State), (F s).regs c = s.regs c) :
+    ∀ (n : Nat) (s : State), s.pc = base → s.regs c = n →
+      ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs c = 0 := by
+  intro n
+  induction n with
+  | zero =>
+      intro s hpc hc
+      refine ⟨{ s with pc := exit }, ?_, rfl, hc⟩
+      exact Reaches.step s _ _ (by simp only [step, hpc, h0, hc, if_pos]) (Reaches.refl _)
+  | succ m ih =>
+      intro s hpc hc
+      -- Decrement the counter and enter the body.
+      have hstep : step p s
+          = some { pc := base + 1, regs := fun i => if i = c then m else s.regs i } := by
+        simp only [step, hpc, h0, hc, setReg]
+        rw [if_neg (by omega)]
+        congr 1
+      set s1 : State := { pc := base + 1, regs := fun i => if i = c then m else s.regs i }
+      have hbodyRun := hbody s1 rfl
+      have hpc2 : (F s1).pc = base := hbodyPc s1
+      have hc2 : (F s1).regs c = m := by
+        rw [hbodyC s1]
+        simp only [s1, if_true]
+      rcases ih (F s1) hpc2 hc2 with ⟨s', hrest, hexit, hzero⟩
+      exact ⟨s', Reaches.step s s1 s' hstep (reaches_trans hbodyRun hrest), hexit, hzero⟩
 
 end Register
 

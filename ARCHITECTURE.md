@@ -413,9 +413,13 @@ The chain runs `Nat.Partrec.Code` → register machine → two counters → Mins
 
 ### The capstone
 
-- `Theory/Undecidable.lean`: `universal_brainfuck`, one fixed Brainfuck
-  program that halts on the tape encoding `2 ^ Nat.pair c n` exactly when
-  code `c` halts on input `n`, and `brainfuck_halting_undecidable`, which
+- `Theory/Undecidable.lean`: `universal_minsky` first — one two-counter
+  Minsky program whose halting on `(2 ^ Nat.pair c n, 0)` is equivalent to
+  code `c` halting on input `n`, which is the two-counter universality result
+  in its own right. Compiling it gives `universal_brainfuck`, one fixed
+  Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n`
+  exactly when code `c` halts on input `n`, and
+  `brainfuck_halting_undecidable`, which
   draws the conclusion: no computable predicate decides whether that program
   halts on a given input. The program does not depend on the code or the
   input, and the starting tape is a computable function of both, so a decider

@@ -28,12 +28,22 @@ machine: a register machine cannot multiply or divide directly, so each of
 these has to be realized as a loop over a second counter, which is the next
 layer.
 
+## Main definitions
+
+* `unpack`: A register's value, read out of a packed natural number.
+
 ## Theorems
 
 * `padicValNat_mul_self`: Multiplying by `p` raises the exponent by one.
 * `padicValNat_div_self`: Dividing by `p` lowers the exponent by one.
 * `padicValNat_eq_zero_iff_not_dvd`: The exponent is zero exactly when `p`
   does not divide the value.
+* `unpack_mul_other`: Incrementing one register leaves the others alone.
+* `unpack_div_other`: Decrementing one register leaves the others alone.
+* `pack_mul_pos`: A packed value stays positive when a register is
+  incremented.
+* `pack_div_pos`: A packed value stays positive when a register is
+  decremented.
 -/
 
 namespace LeanBF
@@ -66,5 +76,41 @@ theorem padicValNat_eq_zero_iff_not_dvd (p n : Nat) [Fact p.Prime] (hn : n ≠ 0
     omega
   · intro h
     exact padicValNat.eq_zero_of_not_dvd h
+
+/-- Register `r`'s value, read out of a packed natural number. -/
+def unpack (pr : Nat → Nat) (v r : Nat) : Nat := padicValNat (pr r) v
+
+/-- Multiplying by one prime leaves the other registers alone. -/
+theorem unpack_mul_other (p q v : Nat) [Fact p.Prime] [hq : Fact q.Prime]
+    (hpq : p ≠ q) (hv : v ≠ 0) : padicValNat q (p * v) = padicValNat q v := by
+  rw [padicValNat.mul (Fact.out (p := p.Prime)).ne_zero hv]
+  rw [padicValNat.eq_zero_of_not_dvd]
+  · omega
+  · intro hd
+    exact hpq ((Nat.prime_dvd_prime_iff_eq hq.out (Fact.out (p := p.Prime))).mp hd).symm
+
+/-- Dividing by one prime leaves the other registers alone. -/
+theorem unpack_div_other (p q v : Nat) [hp : Fact p.Prime] [hq : Fact q.Prime]
+    (hpq : p ≠ q) (hv : v ≠ 0) (hd : p ∣ v) :
+    padicValNat q (v / p) = padicValNat q v := by
+  obtain ⟨k, rfl⟩ := hd
+  have hk : k ≠ 0 := by
+    rintro rfl
+    exact hv (Nat.mul_zero p)
+  rw [Nat.mul_div_cancel_left k hp.out.pos]
+  rw [padicValNat.mul hp.out.ne_zero hk]
+  have hnd : ¬ (q ∣ p) := by
+    intro hdd
+    exact hpq ((Nat.prime_dvd_prime_iff_eq hq.out hp.out).mp hdd).symm
+  rw [padicValNat.eq_zero_of_not_dvd hnd, Nat.zero_add]
+
+/-- A packed value stays positive when multiplied by a prime. -/
+theorem pack_mul_pos (p v : Nat) [hp : Fact p.Prime] (hv : 0 < v) : 0 < p * v :=
+  Nat.mul_pos hp.out.pos hv
+
+/-- A packed value stays positive when divided by a prime that divides it. -/
+theorem pack_div_pos (p v : Nat) [hp : Fact p.Prime] (hv : 0 < v) (hd : p ∣ v) :
+    0 < v / p :=
+  Nat.div_pos (Nat.le_of_dvd hv hd) hp.out.pos
 
 end LeanBF

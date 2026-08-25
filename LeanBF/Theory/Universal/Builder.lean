@@ -55,6 +55,7 @@ varying, `hi ≤ inR` would not survive the widening.
 
 ## Theorems
 
+* `embeddedAt_get`: Reading one slot of an embedded fragment.
 * `embeddedAt_append_left`: The first half of an embedded concatenation.
 * `embeddedAt_append_right`: The second half of an embedded concatenation.
 * `computes_mono_hi`: Widening the scratch region preserves computation.
@@ -62,6 +63,7 @@ varying, `hi ≤ inR` would not survive the widening.
   clearing it.
 * `builds_comp`: Builders compose, giving the `comp` case.
 * `builds_zero`: The empty builder computes the constant zero.
+* `builds_succ`: A six-slot fragment computes the successor.
 -/
 
 namespace LeanBF
@@ -73,6 +75,18 @@ namespace Register
     fragments side by side. -/
 def EmbeddedAt (p : Program) (base : Nat) (frag : Program) : Prop :=
   ∀ j, j < frag.length → p[base + j]? = frag[j]?
+
+/-- Reading one slot of an embedded fragment. The `EmbeddedAt` hypothesis
+    speaks in offsets from the base, while the fragment lemmas want absolute
+    addresses, so this is the bridge every concrete builder crosses. -/
+theorem embeddedAt_get (p : Program) (base : Nat) (frag : Program) (h : EmbeddedAt p base frag)
+    (j : Nat) (i : Instruction) (hj : frag[j]? = some i) : p[base + j]? = some i := by
+  have hlt : j < frag.length := by
+    by_contra hc
+    rw [List.getElem?_eq_none_iff.mpr (Nat.le_of_not_lt hc)] at hj
+    exact absurd hj (by simp only [reduceCtorEq, not_false_eq_true])
+  rw [h j hlt]
+  exact hj
 
 theorem embeddedAt_append_left (p : Program) (base : Nat) (A B : Program)
     (h : EmbeddedAt p base (A ++ B)) : EmbeddedAt p base A := by
@@ -203,6 +217,49 @@ theorem builds_comp (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) :
     (computes_mono_hi p base _ inR lo (lo + 1) hiG _ g (by omega) (by omega) hembG) ?_
   exact computes_mono_hi p (base + fragG.length) _ lo outR (lo + 1) hiF _ f
     (by omega) (by omega) hembF
+
+/-- The successor: copy the input across without destroying it, then raise
+    the output once. The copy needs one scratch register to pour back from,
+    which is `lo`, the bottom of the region the contract already guarantees
+    is clear. -/
+theorem builds_succ : Builds Nat.succ := by
+  intro inR outR lo hio hin hout base
+  refine ⟨lo + 1, [Instruction.jzdec inR (base + 3) (base + 1),
+    Instruction.inc outR (base + 2), Instruction.inc lo base,
+    Instruction.jzdec lo (base + 5) (base + 4), Instruction.inc inR (base + 3),
+    Instruction.inc outR (base + 6)], by omega, fun p hemb s hpc hout0 hzero => ?_⟩
+  have hg := embeddedAt_get p base _ hemb
+  -- The copy-back fragment occupies the first five slots.
+  rcases copyBack_effect p inR outR lo base (base + 3) (base + 5)
+    (by omega) (by omega) (by omega)
+    (by simpa only [Nat.add_zero] using hg 0 _ rfl)
+    (hg 1 _ rfl) (hg 2 _ rfl)
+    (by simpa only using hg 3 _ rfl)
+    (by simpa only [Nat.add_assoc] using hg 4 _ rfl)
+    s hpc (hzero lo (le_refl _) (by omega)) with
+    ⟨s1, hr1, hpc1, hA1, hT1, hS1, hF1⟩
+  -- One more increment turns the copy into the successor.
+  have hstep : step p s1
+      = some { pc := base + 6, regs := fun i => if i = outR then s1.regs outR + 1
+        else s1.regs i } := by
+    simp only [step, hpc1, hg 5 _ rfl, setReg]
+  refine ⟨_, reaches_trans hr1 (Reaches.step _ _ _ hstep (Reaches.refl _)), ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [List.length_cons, List.length_nil]
+  · simp only [if_pos, hT1, hout0, Nat.zero_add]
+  · simp only []
+    rw [if_neg (by omega : inR ≠ outR), hA1]
+  · intro r hlor hrhi
+    simp only []
+    rw [if_neg (by omega : r ≠ outR)]
+    have hrlo : r = lo := by omega
+    rw [hrlo]
+    exact hS1
+  · intro r hro hrlohi
+    simp only []
+    rw [if_neg hro]
+    by_cases hri : r = inR
+    · rw [hri, hA1]
+    · exact hF1 r hri hro (by omega)
 
 /-- The empty fragment computes the constant zero: the calling convention
     already demands the output register start clear. -/

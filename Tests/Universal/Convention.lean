@@ -32,7 +32,9 @@ example : Primrec fun a : (Nat × Nat.Partrec.Code) × Nat =>
     Nat.Partrec.Code.evaln a.1.1 a.1.2 a.2 :=
   Nat.Partrec.Code.primrec_evaln
 
-/-- Fragments compose, which is the `comp` case of the induction ahead. -/
+/-- Chaining through a midpoint taken from the shared scratch region. The
+    `comp` case uses `computes_seq_clear` instead, which keeps the midpoint
+    out of the region the sub-fragments see. -/
 example (p : Register.Program) (base mid exit inR midR outR lo hi : Nat) (f g : Nat → Nat)
     (hmlo : lo ≤ midR) (hmhi : midR < hi) (hmo : midR ≠ outR) (hmi : midR ≠ inR)
     (hilo : inR < lo ∨ hi ≤ inR) (holo : outR < lo ∨ hi ≤ outR) (hio : inR ≠ outR)

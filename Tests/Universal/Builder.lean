@@ -37,6 +37,14 @@ example (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) : Builds (fun n => f
 /-- The constant zero needs no instructions at all. -/
 example : Builds (fun _ => 0) := builds_zero
 
+/-- The successor is built by a concrete six-instruction fragment. -/
+example : Builds Nat.succ := builds_succ
+
+/-- Reading one slot of an embedded fragment gives an absolute address. -/
+example (p : Program) (base : Nat) (frag : Program) (h : EmbeddedAt p base frag)
+    (j : Nat) (i : Instruction) (hj : frag[j]? = some i) : p[base + j]? = some i :=
+  embeddedAt_get p base frag h j i hj
+
 /-- Widening the scratch region preserves what a fragment computes. -/
 example (p : Program) (base exit inR outR lo hi hi' : Nat) (f : Nat → Nat)
     (hle : hi ≤ hi') (hout : outR < lo) (hc : Computes p base exit inR outR lo hi f) :

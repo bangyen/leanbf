@@ -45,6 +45,7 @@ instead of the least.
 * `unpack_packRange`: Reading a register back out of the packed value.
 * `packRange_setReg_succ`: Incrementing a register multiplies by its prime.
 * `packRange_setReg_pred`: A non-empty register factors its prime out.
+* `packRange_init`: One number in register zero packs to a power of two.
 -/
 
 namespace LeanBF
@@ -198,6 +199,21 @@ theorem packRange_setReg_pred (regs : Nat → Nat) (R r : Nat) (hr : r < R)
     · rw [if_neg hi]
   rw [hleft] at hkey
   exact hkey
+
+/-- A register file holding one number in register zero packs to a power of
+    two. This is the map a reduction has to exhibit, and it is concrete: no
+    prime enumeration survives into it, `regPrime 0` being two. -/
+theorem packRange_init (m R : Nat) (hR : 0 < R) :
+    packRange (fun i => if i = 0 then m else 0) R = 2 ^ m := by
+  classical
+  have hmem : (0 : Nat) ∈ Finset.range R := Finset.mem_range.mpr hR
+  rw [packRange, ← Finset.prod_erase_mul _ _ hmem, if_pos rfl, regPrime_zero]
+  -- Every other register is empty, so contributes a factor of one.
+  have hrest : ((Finset.range R).erase 0).prod
+      (fun q => regPrime q ^ (if q = 0 then m else 0)) = 1 := by
+    refine Finset.prod_eq_one (fun q hq => ?_)
+    rw [if_neg (Finset.mem_erase.mp hq).1, pow_zero]
+  rw [hrest, Nat.one_mul]
 
 end Register
 

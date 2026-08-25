@@ -47,6 +47,8 @@ have been.
 * `runsTo_runFor`: A halting run is an iteration onto a terminal state.
 * `runFor_pos_of_step`: A first step and a path make a positive count.
 * `runFor_pos_of_reaches`: A path out of a state that can step is positive.
+* `step_eq_none_iff`: A machine stops exactly at a halt or out of bounds.
+* `no_runsTo_of_steps_rel`: The same, for stages named by a relation.
 * `no_runsTo_of_steps`: A machine that always takes at least one more step
   never halts.
 * `no_runsTo_of_diverges`: The same, when consecutive stages differ.
@@ -183,6 +185,37 @@ theorem runsTo_runFor (p : Program) (s t : State) (h : RunsTo p s t) :
       rcases ih with ⟨n, hn, hterm⟩
       exact ⟨n + 1, by simp only [runFor, hstep]; exact hn, hterm⟩
 
+/-- A machine stops exactly where its counter names a halt or nothing. The
+    `RunsTo` constructors already phrase termination that way; this is the
+    same fact as a statement about `step`, which is the form a simulation
+    compares its two sides in. -/
+theorem step_eq_none_iff (p : Program) (s : State) :
+    step p s = none ↔ (p : List Instruction)[s.pc]? = some Instruction.halt ∨
+      (p : List Instruction)[s.pc]? = none := by
+  constructor
+  · intro h
+    rcases hget : (p : List Instruction)[s.pc]? with _ | instr
+    · exact Or.inr rfl
+    · cases instr with
+      | inc r next => rw [step, hget] at h; exact absurd h (by simp only [reduceCtorEq,
+          not_false_eq_true])
+      | jzdec r z nz =>
+          exfalso
+          by_cases hz : s.regs r = 0
+          · have hne : step p s = some { s with pc := z } := by
+              simp only [step, hget, hz, if_pos]
+            rw [hne] at h
+            exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+          · have hne : step p s = some { setReg s r (s.regs r - 1) with pc := nz } := by
+              simp only [step, hget, hz, if_false]
+            rw [hne] at h
+            exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      | halt => exact Or.inl rfl
+  · intro h
+    rcases h with hh | hn
+    · rw [step, hh]
+    · rw [step, hn]
+
 /-- A first step followed by a path is a run of positive length. The
     fragment lemmas produce a bare `Reaches`, which carries no count, and
     `runFor_of_reaches` supplies one with no guarantee it is positive.
@@ -212,6 +245,39 @@ theorem runFor_pos_of_reaches (p : Program) (s s' : State)
     exact absurd (congrArg State.pc hd) hpc
   · exact hpos
 
+/-- A machine that always has at least one more step to take never halts,
+    with the stages picked out by a relation rather than a function.
+
+    A simulation cannot name its stages by a function of the step number: how
+    far the simulating machine travels per source step depends on the source
+    instruction, so the address is not a closed form and building one means
+    choosing from an existential at every stage. A relation says only that
+    *some* state satisfies the invariant, which is what the simulation
+    already proves. -/
+theorem no_runsTo_of_steps_rel (p : Program) (P : Nat → State → Prop) (s₀ : State)
+    (h0 : P 0 s₀)
+    (hstep : ∀ j t, P j t → ∃ c t', 1 ≤ c ∧ runFor p c t = some t' ∧ P (j + 1) t')
+    (u : State) : ¬ RunsTo p s₀ u := by
+  intro hrun
+  rcases runsTo_runFor p _ u hrun with ⟨n, hn, hterm⟩
+  -- Each stage costs at least one step, so stage `j` is `j` or more out.
+  have hcount : ∀ j, ∃ c t, j ≤ c ∧ runFor p c s₀ = some t ∧ P j t := by
+    intro j
+    induction j with
+    | zero => exact ⟨0, s₀, le_refl _, rfl, h0⟩
+    | succ i ih =>
+        rcases ih with ⟨c, t, hci, hc, hP⟩
+        rcases hstep i t hP with ⟨d, t', hd1, hd, hP'⟩
+        exact ⟨c + d, t', by omega, by rw [runFor_add p c d _ _ hc]; exact hd, hP'⟩
+  rcases hcount (n + 1) with ⟨c, t, hcn, hc, _⟩
+  -- The run is over after `n` steps, but the stages are still going at `c`.
+  rw [show c = n + (c - n) by omega, runFor_add p n _ _ _ hn] at hc
+  cases hcd : c - n with
+  | zero => omega
+  | succ e =>
+      rw [hcd] at hc
+      simp only [runFor, hterm, reduceCtorEq] at hc
+
 /-- A machine that always has at least one more step to take never halts.
 
     `inv` enumerates states the machine passes through, each reached from the
@@ -229,25 +295,9 @@ theorem runFor_pos_of_reaches (p : Program) (s s' : State)
 theorem no_runsTo_of_steps (p : Program) (inv : Nat → State)
     (hstep : ∀ j, ∃ c, 1 ≤ c ∧ runFor p c (inv j) = some (inv (j + 1)))
     (t : State) : ¬ RunsTo p (inv 0) t := by
-  intro hrun
-  rcases runsTo_runFor p _ t hrun with ⟨n, hn, hterm⟩
-  -- Each stage costs at least one step, so `inv j` is `j` or more steps out.
-  have hcount : ∀ j, ∃ c, j ≤ c ∧ runFor p c (inv 0) = some (inv j) := by
-    intro j
-    induction j with
-    | zero => exact ⟨0, le_refl _, rfl⟩
-    | succ i ih =>
-        rcases ih with ⟨c, hci, hc⟩
-        rcases hstep i with ⟨d, hd1, hd⟩
-        exact ⟨c + d, by omega, by rw [runFor_add p c d _ _ hc]; exact hd⟩
-  rcases hcount (n + 1) with ⟨c, hcn, hc⟩
-  -- The run is over after `n` steps, but the sequence is still going at `c`.
-  rw [show c = n + (c - n) by omega, runFor_add p n _ _ _ hn] at hc
-  cases hcd : c - n with
-  | zero => omega
-  | succ e =>
-      rw [hcd] at hc
-      simp only [runFor, hterm, reduceCtorEq] at hc
+  refine no_runsTo_of_steps_rel p (fun j u => u = inv j) (inv 0) rfl (fun j u hu => ?_) t
+  rcases hstep j with ⟨c, hc1, hc⟩
+  exact ⟨c, inv (j + 1), hc1, by rw [hu]; exact hc, rfl⟩
 
 /-- A machine with somewhere further to go at every stage never halts, when
     consecutive stages are known to differ. The difference supplies the

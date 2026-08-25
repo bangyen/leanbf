@@ -17,9 +17,6 @@ measure strictly decreases and the induction is well-founded.
 
 ## Theorems
 
-* `runsExactly_step`: Peeling one step off an exact run shortens it by one.
-* `runsExactly_append_suffix`: A run over `B ++ C` restricted to the `C`
-  phase is no longer than the whole.
 * `runsExactly_append_suffix_lt`: Peeling a first step makes the suffix
   strictly shorter.
 * `minsky_step_isSome`: A non-terminal program counter steps.
@@ -32,42 +29,6 @@ measure strictly decreases and the induction is well-founded.
 
 namespace LeanBF
 
-theorem runsExactly_step (n : Nat) (prog : Program) (s t : State)
-    (h : RunsExactly n prog s t) (prog' : Program) (s' : State)
-    (hstep : step prog s = some (prog', s')) :
-    ∃ m, RunsExactly m prog' s' t ∧ m + 1 = n := by
-  cases n with
-  | zero =>
-      exfalso
-      have := h.2
-      simp only [stepsToHalt, hstep] at this
-      exact Nat.succ_ne_zero 0 this
-  | succ k =>
-      refine ⟨k, ⟨?_, ?_⟩, rfl⟩
-      · have := h.1
-        simpa only [run, hstep] using this
-      · have := h.2
-        simp only [stepsToHalt, hstep, Nat.add_right_cancel_iff] at this
-        exact this
-
--- Crux (a): if RunsTo (B, s) s1 and the whole run (B ++ C, s) is exact of
--- length n, then the suffix (C, s1) is exact of some m ≤ n, and if the
--- B-phase took at least one step then m < n.
--- Strategy: induct on the RunsTo (B,s) s1 derivation, peeling with
--- runsExactly_step and step_append.
-theorem runsExactly_append_suffix (cfg : Program × State) (s1 : State)
-    (hB : RunsTo cfg s1) : ∀ (C : Program) (n : Nat) (t : State),
-    RunsExactly n (cfg.1 ++ C) cfg.2 t → ∃ m, RunsExactly m C s1 t ∧ m ≤ n := by
-  induction hB with
-  | halt s0 => intro C n t h; exact ⟨n, by simpa only [List.nil_append] using h, Nat.le_refl n⟩
-  | step p s0 s2 p' s_fin hstep hrest ih =>
-      intro C n t h
-      have happ : step (p ++ C) s0 = some (p' ++ C, s2) := step_append p C s0 s2 p' hstep
-      rcases runsExactly_step n (p ++ C) s0 t h (p' ++ C) s2 happ with ⟨k, hk, hkn⟩
-      rcases ih C k t hk with ⟨m, hm, hmk⟩
-      exact ⟨m, hm, by omega⟩
-
--- Strict version: a first step costs one, so the suffix is strictly shorter.
 theorem runsExactly_append_suffix_lt (p : Program) (s0 s2 s1 : State) (p' : Program)
     (hstep : step p s0 = some (p', s2)) (hB : RunsTo (p', s2) s1)
     (C : Program) (n : Nat) (t : State)

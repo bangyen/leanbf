@@ -81,10 +81,12 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   halts from a non-zero cell).
 - **Program equivalence** (`Theory.Equivalence`): `ProgEquiv` — two programs
   reach the same final states from every starting state — is an equivalence
-  relation and a congruence for `++` in each argument
-  (`progEquiv_append_left`/`progEquiv_append_right`), proven from
+  relation and a congruence for both `++`
+  (`progEquiv_append_left`/`progEquiv_append_right`, proven from
   `runsTo_append_factor`: every run of `A ++ C` factors through a state at
-  which `A` has halted. The first instances are the cancellations `> <`,
+  which `A` has halted) and `loop` (`progEquiv_loop`, by strong induction on
+  the halting run's length — each iteration costs at least the loop-entry
+  step). Together these let a rewrite apply at any depth of nesting. The first instances are the cancellations `> <`,
   `< >`, and `+ -`. Their mirror image `- +` is *not* one
   (`decVal_incVal_ne_id`): cell values are natural numbers, so decrementing a
   zero cell truncates and the increment cannot recover it.
@@ -129,7 +131,6 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
-| **Equivalence under `loop`** | Medium | `ProgEquiv` is a congruence for `++` (`Theory.Equivalence`), but not yet for `loop`: replacing a loop body by an equivalent one should preserve equivalence. The body runs an unbounded number of times, so this needs an induction on the run that the current slice does not set up. It is the missing piece for rewriting inside nested loops, and for `[-]` being equivalent to `clearHere`. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
 | **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |
 | **2CM universality bridge** | High | Compile mathlib's `Nat.Partrec.Code` (or `Turing.TM`) into a two-counter Minsky program, the missing input to the undecidability capstone. This is the classical Minsky construction — Gödel-encoding the tape into counter exponents — and is realistically larger than everything currently in the repo. |

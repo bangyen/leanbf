@@ -131,9 +131,14 @@ project convention that `Core` files contain only definitions.
   `runsTo_append_factor` — the converse of `RunsTo_append`, splitting a run of
   `A ++ C` at the point where `A` halts. The instances are the pointer and
   value cancellations; `decVal_incVal_ne_id` records that `- +` is not among
-  them, since `Nat` decrement truncates at zero. Congruence under `loop` is
-  left open: a body runs an unbounded number of times and needs an induction
-  this module does not set up.
+  them, since `Nat` decrement truncates at zero. It is also a congruence for
+  `loop` (`progEquiv_loop`): a body runs an unbounded number of times, so the
+  proof is a strong induction on the length of the halting run, which
+  strictly decreases because each iteration costs at least the loop-entry
+  step. The counting lemmas this needs (`runsExactly_step`,
+  `runsExactly_append_suffix`) live in `Theory/BodyLoop/Basics.lean` beside
+  `RunsExactly` itself, since they are generic run arithmetic rather than
+  anything compiler-specific.
 - `Theory/Loop/` (aggregator `Theory/Loop.lean`): loop-correctness machinery.
   `Basics` has `stepOne`/`runSeq` (execute a single instruction or a whole
   loop-free program) and the `LoopFree` predicate; `RunSeq` has the run-level

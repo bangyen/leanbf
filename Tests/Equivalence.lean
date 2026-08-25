@@ -48,4 +48,22 @@ example (A C : Program) (s t : State) (h : RunsTo (A ++ C, s) t) :
 example (s t : State) (h : RunsTo (([] : Program), s) t) : t = s :=
   runsTo_nil_eq h
 
+/-- Equivalent bodies give equivalent loops. -/
+example : ProgEquiv [.loop [.inc_ptr, .dec_ptr]] [.loop []] :=
+  progEquiv_loop progEquiv_incPtr_decPtr
+
+/-- Congruence composes, so a rewrite applies inside nested loops. -/
+example : ProgEquiv [.loop [.loop [.inc_val, .dec_val]]] [.loop [.loop []]] :=
+  progEquiv_loop (progEquiv_loop progEquiv_incVal_decVal)
+
+/-- Loop congruence combines with the append rules. -/
+example : ProgEquiv ([.write] ++ [.loop [.inc_val, .dec_val]])
+    ([.write] ++ [.loop []]) :=
+  progEquiv_append_right [.write] (progEquiv_loop progEquiv_incVal_decVal)
+
+/-- An exact run witnesses a `RunsTo` chain. -/
+example (prog : Program) (s t : State) (n : Nat) (h : RunsExactly n prog s t) :
+    RunsTo (prog, s) t :=
+  runsTo_of_runsExactly n prog s t h
+
 end LeanBF.Tests

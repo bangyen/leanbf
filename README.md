@@ -11,12 +11,22 @@ LeanBF formalizes the [Brainfuck](https://en.wikipedia.org/wiki/Brainfuck)
 esolang in the [Lean 4](https://leanprover.github.io/) interactive theorem
 prover. It pins down a precise, total, deterministic formalization — the
 tape, the instruction set, and a small-step operational semantics are all
-pure Lean definitions — and proves Brainfuck's Turing completeness by
-simulating a two-counter Minsky machine (`turingCompleteness`, closed by
-`Theory.Simulate`), in both directions: the compiled program halts holding
-the machine's final counters, and a halting compiled run implies the machine
-halts. Every transition of the interpreter is a pure Lean
-function; nothing is executed by an external trusted interpreter.
+pure Lean definitions — and proves two things about it.
+
+Brainfuck is **Turing complete**: it simulates a two-counter Minsky machine
+(`turingCompleteness`, closed by `Theory.Simulate`), in both directions — the
+compiled program halts holding the machine's final counters, and a halting
+compiled run implies the machine halts.
+
+Brainfuck's **halting problem is undecidable**
+(`brainfuck_halting_undecidable`): there is a fixed program whose halting on
+a given input no computable predicate decides. The chain runs
+`Nat.Partrec.Code` → register machine → two counters → Minsky → Brainfuck,
+each link proved both ways, with the register file packed into two counters
+by a Gödel encoding.
+
+Every transition of the interpreter is a pure Lean function; nothing is
+executed by an external trusted interpreter.
 
 ## Architecture
 
@@ -54,6 +64,30 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   therefore established in both directions, and the two halves package into
   the halting equivalence `compiled_halts_iff`: the compiled program halts
   exactly when the source machine does.
+- **Register machines** (`Core.Register`, `Theory.Trace`): a counter machine
+  with arbitrarily many registers, generalizing `Core.Minsky`, together with
+  `runFor` — reachability counted by steps, which `Reaches` and `RunsTo`
+  cannot express, being `Prop`-valued. The three divergence lemmas turn "the
+  machine always has one more step" into "the machine never halts", each in
+  the form a different caller can supply.
+- **Arithmetic fragments** (`Theory.Transfer`, `Theory.Arith`): the loops a
+  counter machine computes with — drain, scaled transfer, and exact division
+  branching on the remainder — and what they build: variable multiplication,
+  truncated subtraction, a comparison answering by exit address, integer
+  square root by bounded search, and `Nat.pair`/`Nat.unpair`.
+- **Every primitive recursive function is register computable**
+  (`Theory.Universal.Primrec`): `primrec_regComputable`, an induction over
+  all seven constructors of `Nat.Primrec`, with `prec` the only case whose
+  sub-builder runs more than once.
+- **A universal register machine** (`Theory.Universal.Machine`):
+  `universal_machine` — one program whose halting is equivalent to a
+  recursive code's, with the unbounded search over the step bound standing in
+  for `rfind'`.
+- **Packing to two counters** (`Theory.Godel`, `Theory.Packing`):
+  `compile_halts_iff` — a register machine halts exactly when its two-counter
+  compilation does, the file encoded as a product of prime powers and each
+  instruction becoming a block that multiplies or divides by one prime. The
+  packed input is `2 ^ m`.
 - **Undecidability** (`Theory.Undecidable`): `universal_brainfuck` — one
   fixed Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n`
   exactly when the recursive code `c` halts on input `n`. Since the program
@@ -208,6 +242,21 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
   halts holding its final counters (`HaltsWith`). The halting state is not
   `Simulates ms_final`: the dispatch loop clears the running flag on halting,
   so cell `0` is `0` where `Simulates` demands `1`.
+- The undecidability theorem is stated of the universal program specifically:
+  no computable predicate decides whether *that* program halts on a given
+  input. It is not phrased as a statement quantifying over all Brainfuck
+  programs and states, which would need a computable encoding of programs
+  and tapes that the project does not define.
+- The compiled two-counter programs are enormous and are never run. A
+  conditional on register `r` compiles to a block quadratic in `r`'s prime —
+  fifty-four slots for the third register — and the register file is a
+  product of prime powers, so a machine holding a few small values already
+  needs a counter beyond any feasible simulation. The construction is a proof
+  device, not an implementation; `compile` is also noncomputable, `regPrime`
+  being defined through `Nat.nth`.
+- `Theory.Packed` is superseded by `Theory.Packing.Blocks` and nothing
+  outside its own tests depends on it. It is kept as the record of where the
+  two-counter construction started.
 
 ## Installation & Building
 

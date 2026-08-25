@@ -19,9 +19,9 @@ side by side and lets each one's specification be instantiated at the same
 program.
 
 The two append lemmas are the whole point. A concatenation embedded at a base
-splits into its halves embedded at that base and just past it, so a
-compound fragment's proof can hand each sub-fragment the hypothesis its own
-lemma asks for.
+splits into its halves embedded at that base and just past it, so a compound
+fragment's proof can hand each sub-fragment exactly the hypothesis that
+sub-fragment's own specification requires.
 
 ## Main definitions
 

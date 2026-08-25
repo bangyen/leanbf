@@ -344,13 +344,6 @@ The chain runs `Nat.Partrec.Code` → register machine → two counters → Mins
 
 ### Packing down to two counters
 
-- `Theory/Packed.lean`: the first sketch of the two-counter story —
-  multiplication and exact division of a packed value, each using one scratch
-  register and leaving it at zero. It is superseded by
-  `Theory/Packing/Blocks.lean`, which does the same work in the form the
-  compiler needs (relocatable, with an entry no-op and a positive step
-  count); nothing outside its own tests depends on it, and it is kept as the
-  statement of where the construction started.
 - `Theory/Godel.lean`: a register file as a single number, register `r`
   holding `padicValNat (p r) n` for distinct primes `p`. Incrementing
   multiplies by `p r`, decrementing divides, and testing for zero asks

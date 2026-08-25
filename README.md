@@ -254,9 +254,6 @@ open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:
   needs a counter beyond any feasible simulation. The construction is a proof
   device, not an implementation; `compile` is also noncomputable, `regPrime`
   being defined through `Nat.nth`.
-- `Theory.Packed` is superseded by `Theory.Packing.Blocks` and nothing
-  outside its own tests depends on it. It is kept as the record of where the
-  two-counter construction started.
 
 ## Installation & Building
 

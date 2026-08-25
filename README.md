@@ -41,198 +41,72 @@ Brainfuck programs and the Minsky machines that exercise the compiler), and
 
 ## Results
 
+The headline results, with the supporting machinery documented in
+[ARCHITECTURE.md](ARCHITECTURE.md) rather than repeated here.
+
 - **Total, deterministic interpreter** (`Core.Semantics`): `step`/`RunsTo`
   define a single-step transition on `Program × State`, with loop unrolling
-  and end-of-input handled inside the pure function.
+  and end-of-input handled inside the pure function. It is total and
+  deterministic (`Theory.Determinism`), so a program's behaviour is a
+  function of its state, not a matter of interpretation.
 - **The Brainfuck state machine** (`Core.State`): an infinite `Int`-indexed
   tape of unbounded `Nat` cells, pointer, input stream, and output stream.
 - **The Minsky machine model** (`Core.Minsky`): a two-counter machine with
   `inc`/`jzdec` instructions and its own `RunsTo` closure.
 - **The compiler** (`Core.Compiler`): a total translation of any Minsky
-  program into a Brainfuck dispatch loop. `ifZeroElse` is a value-preserving
-  conditional, and `compileInstr`/`compileProgram` assemble the loop. The
-  compiled programs are exercised end-to-end in `Tests` with `decide`.
-- **Completeness** (`Theory.Completeness` + `Theory.Simulate`): `Simulates`
-  (a Brainfuck state that simulates a Minsky state), `HaltsWith` (a halted
-  state holding a Minsky state's counters), and the theorem
+  program into a Brainfuck dispatch loop, exercised end-to-end in `Tests`
+  with `decide`.
+- **Turing completeness** (`Theory.Completeness`, `Theory.Simulate`):
   `turingCompleteness` — whenever the Minsky machine runs to `ms_final`, the
-  compiled program halts with `ms_final`'s counters in cells 2 and 3. It is
-  proven by the dispatch simulation in `Theory.Simulate` and closed by
-  `turingCompleteness_proof`. The converse holds too
-  (`Theory.Simulate.Converse`): if the compiled program halts, the source
-  Minsky machine halts (`minsky_halts_of_compiled_halts`), by strong
-  induction on the exact length of the halting Brainfuck run. Simulation is
-  therefore established in both directions, and the two halves package into
-  the halting equivalence `compiled_halts_iff`: the compiled program halts
-  exactly when the source machine does.
-- **Register machines** (`Core.Register`, `Theory.Trace`): a counter machine
-  with arbitrarily many registers, generalizing `Core.Minsky`, together with
-  `runFor` — reachability counted by steps, which `Reaches` and `RunsTo`
-  cannot express, being `Prop`-valued. The three divergence lemmas turn "the
-  machine always has one more step" into "the machine never halts", each in
-  the form a different caller can supply.
-- **Arithmetic fragments** (`Theory.Transfer`, `Theory.Arith`): the loops a
-  counter machine computes with — drain, scaled transfer, and exact division
-  branching on the remainder — and what they build: variable multiplication,
-  truncated subtraction, a comparison answering by exit address, integer
-  square root by bounded search, and `Nat.pair`/`Nat.unpair`.
-- **Every primitive recursive function is register computable**
-  (`Theory.Universal.Primrec`): `primrec_regComputable`, an induction over
-  all seven constructors of `Nat.Primrec`, with `prec` the only case whose
-  sub-builder runs more than once.
-- **A universal register machine** (`Theory.Universal.Machine`):
-  `universal_machine` — one program whose halting is equivalent to a
-  recursive code's, with the unbounded search over the step bound standing in
-  for `rfind'`.
-- **Packing to two counters** (`Theory.Godel`, `Theory.Packing`):
-  `compile_halts_iff` — a register machine halts exactly when its two-counter
-  compilation does, the file encoded as a product of prime powers and each
-  instruction becoming a block that multiplies or divides by one prime. The
-  packed input is `2 ^ m`.
-- **Undecidability** (`Theory.Undecidable`): `universal_brainfuck` — one
-  fixed Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n`
-  exactly when the recursive code `c` halts on input `n`. Since the program
-  is fixed and the starting tape is a computable function of the code and
-  input, a decider for Brainfuck halting would decide `Nat.Partrec.Code`
-  halting; `brainfuck_halting_undecidable` draws that conclusion, showing no
-  computable predicate decides whether the program halts on a given input.
-  The chain runs
-  `Nat.Partrec.Code` → register machine (`Theory.Universal`) → two counters
-  (`Theory.Packing`, via a Gödel encoding of the register file as prime
-  exponents) → Minsky → Brainfuck, each link proved in both directions.
+  compiled program halts with `ms_final`'s counters in cells 2 and 3. The
+  converse holds too: a halting compiled run implies the machine halts, so
+  the simulation is faithful in both directions rather than only sound.
+- **Undecidability of Brainfuck halting** (`Theory.Undecidable`):
+  `universal_brainfuck` is one fixed Brainfuck program that halts on the tape
+  encoding `2 ^ Nat.pair c n` exactly when code `c` halts on input `n`. The
+  program depends on neither the code nor the input and the starting tape is
+  a computable function of both, so a decider for Brainfuck halting would
+  decide `Nat.Partrec.Code` halting, which `ComputablePred.halting_problem`
+  forbids. The chain runs `Nat.Partrec.Code` → register machine
+  (`Theory.Universal`) → two counters (`Theory.Packing`, via a Gödel encoding
+  of the register file as prime exponents) → Minsky → Brainfuck, each link
+  proved in both directions.
 - **Concrete syntax** (`Core.Parser`): a total `parse : String → Program`,
   driven by an explicit fuel argument because a `[` continues on whatever its
-  body left behind, which is not a structural subterm. Non-command characters
-  are comments, an unmatched `[` runs to end of input, and an unmatched `]`
-  ends the program. `parse_helloWorldSource` checks the hand-written
-  `Hello World!` transcription against the source it documents, so the two
-  can no longer drift apart.
+  body left behind, which is not a structural subterm. Every example program
+  is checked against the source it documents by a `parse` theorem, so a
+  transcription and its source cannot drift apart.
+- **Brainfuck idioms** (`Theory.Idioms`): the loops a programmer writes,
+  stated on the literal instruction lists rather than on compiler output.
+  `[-]` clears a cell, `[->+<]` moves one and `[->+>+<<]` duplicates it, and
+  `[>]`/`[<]` scan to the nearest zero. The scans are the interesting case:
+  they do not terminate on every tape, so `runsTo_scanLoop` takes the
+  distance to a zero as a parameter together with the hypothesis that no cell
+  before it is zero — without that minimality the statement is false.
 - **Verified example programs** (`LeanBF.Examples`, split into `Brainfuck`
   and `Minsky` by what each is written in): `cat` (`,[.,]`) is proved for
   *every* input rather than on fixed cases — `catRuns` says its output is
   `input.takeWhile (· != 0)`, so it echoes only inputs with no zero byte and
   otherwise stops early, and `cat_halts` holds unconditionally because `,`
-  writes `0` at end of input. Plus the classic
-  `Hello World!` program, machine-checked with `decide` to print exactly
-  `Hello World!` and a newline and to halt, plus two concrete Minsky machines
-  (`countDown`, `quadruple`) whose compiled Brainfuck programs are verified
-  via `runsTo_compileProgram` to halt with the final counter values on the
-  tape — and, via `run_of_RunsTo`, confirmed to complete under the
-  interpreter's executable `run` in exactly `n` steps. `tripler` adds an odd
-  multiplier (`c2 := 3 * c2`, where `quadruple`'s two phases both double),
-  and `addMachine` computes `c2 := c1 + c2` — a result depending on both
-  counters rather than on a constant built into the program.
-- **Program-level I/O** (`Theory.Semantics`): a whole run consumes a prefix
-  of its input (`runsTo_input_suffix`) and only extends its output
-  (`runsTo_output_extends`) — nothing already written is removed or altered.
-  Both lift from single-step versions by induction on the run. The output
-  stream is stored most recent first, so "extends" is a prepend:
-  `t.output = w ++ s.output`.
-- **Loop-free termination** (`Theory.Loop.RunSeq`): a program with no `[`
-  halts in exactly as many steps as it has instructions
-  (`stepsToHalt_loop_free`), and therefore always halts
-  (`halts_of_loopFree`).
-- **Tape algebra** (`Theory.State`) and **semantics lemmas**
-  (`Theory.Semantics`): the cell operations act only on the addressed cell
-  and round-trip with the current value (`currentVal_incVal_decVal`), and the
-  single-step behavior of every instruction — `>`, `<`, `+`, `-`, `,`, `.`,
-  and `[` — is pinned down, together with I/O round-trips (read/write echo,
-  reads consume the input prefix) and a divergence theorem (`[+ ]` never
-  halts from a non-zero cell).
-- **Program equivalence** (`Theory.Equivalence`): `ProgEquiv` — two programs
-  reach the same final states from every starting state — is an equivalence
-  relation and a congruence for both `++`
-  (`progEquiv_append_left`/`progEquiv_append_right`, proven from
-  `runsTo_append_factor`: every run of `A ++ C` factors through a state at
-  which `A` has halted) and `loop` (`progEquiv_loop`, by strong induction on
-  the halting run's length — each iteration costs at least the loop-entry
-  step). Together these let a rewrite apply at any depth of nesting. The first instances are the cancellations `> <`,
-  `< >`, and `+ -`. Their mirror image `- +` is *not* one
-  (`decVal_incVal_ne_id`): cell values are natural numbers, so decrementing a
-  zero cell truncates and the increment cannot recover it.
-- **Determinism** (`Theory.Determinism`): the interpreter is deterministic —
-  `step` is a total function, so a configuration has at most one successor
-  (`step_deterministic`), the state after `n` steps is unique
-  (`run_deterministic`), and at most one halting state is reachable from a
-  configuration (`runsTo_deterministic`). It follows that a program is a
-  function from its input stream to its output stream
-  (`runsTo_output_deterministic`, `runsTo_output_function`).
-- **Simulation infrastructure** (`Theory.Simulation`): a fuel-capped runner
-  whose results convert into `RunsTo` chains, and the first instance — the
-  compiled empty Minsky program halts from any simulating state
-  (`compile_empty_simulates`).
-- **The window bound for every compiled program**
-  (`Theory.Displacement.Compiler`): `frame_compileProgram` shows that the
-  compiled form of *any* Minsky program keeps the pointer in cells `0` to
-  `16`, so `compiled_preserves_above_window` concludes that no compiled run
-  ever touches a cell above the window. This is proven from the compiler's
-  structure rather than by executing a program, so it costs nothing per
-  example and does not grow with the run length.
-- **Syntactic pointer bounds** (`Theory.Displacement`): `disp` reads a
-  program and returns the net, lowest, and highest pointer offsets it can
-  reach, composing across concatenation (`disp_append`) and surviving loop
-  unrolling — the crux, which works because every loop the compiler emits is
-  balanced. A program whose bounds are known provably never touches a cell
-  above them (`runsTo_disp_preserves_above`), with no execution involved.
-  Unbalanced loops return `none`, since they move the pointer further on
-  every iteration. `Frame p a b W` names absolute cells — `p` runs from `a`
-  to `b` without leaving `[0, W]` — which is what composes across a chain,
-  since relative offsets accumulate.
-- **Compiled-run cell preservation** (`Theory.Invariance` +
-  `Examples.Minsky.CountDown`): `ptrBoundedRun` checks by `decide` that a concrete
-  run keeps the pointer inside a window, and
-  `run_preserves_tape_above_of_ptrBounded` turns that check into the
-  preservation fact. Applied to `countDown`, this proves the compiled run
-  never touches a tape cell above the window
-  (`countDown_preserves_above_window`) — the whole 4245-step run, not just
-  its final state.
-- **Run-level tape invariance** (`Theory.Invariance`): `RunsTo_inv` (a
-  general configuration invariant), `step_preserves_tape_above` (a single
-  step only modifies the current cell), and `RunsTo_preserves_tape_above`
-  (a pointer-bounded run preserves every cell at or above the bound) —
-  applied to the compiler's window sweep (`movePtr 0 16 ++ [+ ]`) to show
-  cells above the window survive the run.
-- **Body-loop machinery** (`Theory.BodyLoop`): the `ifZeroElse` then/else
-  loops — `[movePtr s test ++ body ++ movePtr test s ++ clearHere]` — run an
-  arbitrary body program exactly once when the tested cell is non-zero and not
-  at all when it is zero. This is proven in `run`, `RunsTo`, and
-  `runToCompletion` form (`runsTo_bodyLoop_zero`/`runsTo_bodyLoop_succ`), and
-  the module also hosts the exact-run bridge (`RunsExactly`) and the
-  run-composition lemmas (`runToCompletion_append`) used to chain loop
-  effects.
-- **The `ifZeroElse` conditional** (`Theory/IfZeroElse`): chains the four loop
-  effects into the behavior of `Compiler.ifZeroElse` itself. From a state with
-  the pointer on `test`, the compiled conditional runs `thenBody` exactly once
-  when `test` is `0` and `elseBody` exactly once otherwise, preserving `test`
-  and restoring the scratch cells to `0` (`runsTo_ifZeroElse_zero`/
-  `runsTo_ifZeroElse_succ`, plus `run` and `runToCompletion` forms).
-- **Brainfuck idioms** (`Theory.Idioms`): the loops a programmer writes,
-  stated on the literal instruction lists. `runsTo_moveLoop` proves `[->+<]`
-  drains a cell into its right neighbour (`0` and `b + a`, pointer unmoved),
-  and `runsTo_dupLoop` proves `[->+>+<<]` drains it into both neighbours
-  (`0`, `b + a`, `c + a`). `runsTo_scanLoop` and `runsTo_scanLeftLoop` cover
-  the scans `[>]` and `[<]`: given a zero `k` cells away with none nearer,
-  the pointer stops exactly there. `[-]` is covered by `runsTo_clearHere`,
-  which the compiler layer already needed. Each is tied to its source text
-  by a `parse` theorem.
-- **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
-  compiler definitions are re-asserted on concrete inputs with `rfl` and
-  `decide` — including running compiled Minsky programs (`inc1`, `inc2`,
-  `jzdec1`, `jzdec2`, `halt`) to their halting state.
+  writes `0` at end of input. `HelloWorld` is machine-checked with `decide`
+  to print exactly `Hello World!` and a newline and to halt. The Minsky
+  machines (`countDown`, `quadruple`, `tripler`, `addMachine`) exercise the
+  compiler, their compiled programs verified to halt with the right counters
+  and to complete under the executable `run` in exactly `n` steps.
+- **Kernel re-assertions** (`Tests`): the definitions are re-asserted on
+  concrete inputs with `rfl` and `decide`, including compiled Minsky programs
+  run to their halting state.
 
 ## Roadmap
 
-| Task | Priority | Status |
+Open work only. What the project has already proved is described under
+[Results](#results) and in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+| Task | Priority | Notes |
 | :--- | :--- | :--- |
 | **The scan idioms' divergence** | Medium | `runsTo_scanLoop` covers `[>]` only when a zero exists to the right, and `ARCHITECTURE.md` asserts in prose that the loop diverges otherwise — a claim nothing in the development proves. The machinery is already here: `loop_incVal_never_halts` (`Theory.Semantics`) proves a Brainfuck program never halts, by strong induction showing `stepsToHalt n = n` for every fuel, and the same shape should carry over with the invariant "every cell from the pointer rightward is nonzero", which `incPtr` preserves. The hypothesis is the awkward part: an infinite tape that is nonzero everywhere to the right is a statement about infinitely many cells, so it is worth checking that it states cleanly before assuming the proof does. Closing this would also let the prose stop asserting what it cannot cite. |
 | **Idioms as composable fragments** | Low | The idiom theorems are stated on a program that is exactly the idiom, so `runsTo_moveLoop` says what `[->+<]` does when it is the whole program, not when it sits inside one. The compiler layer solved this already — `Theory.Transfer` states its loops with `Reaches` and hypotheses pinning the slots a fragment occupies, precisely so fragments compose — and `RunsTo_append` is the tool. Restating the idioms that way would make them usable for proving things about real programs assembled from them, which is the point of having them. Whether it is worth the restatement depends on there being a program that wants them. |
 | **More Brainfuck programs** | Low | `cat` established that `decide` is not the constraint and that the interesting statements are input-quantified. The obvious next ones are the two-cell adder `,>,[-<+>]<.` (measured: 26 steps on `3, 4`, so well within reach) and `echo`. Neither is likely to teach anything new about the semantics, which is why this is Low rather than a natural successor to the `cat` work — it would be more examples of a thing already demonstrated, not a new kind of result. |
-| **Verified Brainfuck idioms** | Done | `Theory.Idioms` states the idioms on the literal instruction lists a programmer writes, rather than on compiler output, and covers all four the row named. `[-]` needed no new work: `runsTo_clearHere` already proved it, since the compiler emits the same three characters as `Compiler.clearHere` for its scratch cells. `runsTo_moveLoop` (`[->+<]`) drains a cell into its right neighbour and `runsTo_dupLoop` (`[->+>+<<]`) into both; the duplicate followed the move loop's pattern exactly, as predicted, differing only in carrying a second neighbour through the induction. The scan `[>]` was the exception the others predicted: it does not terminate on every tape, so `runsTo_scanLoop` takes the distance `k` to a zero as a parameter plus the hypothesis that no cell before it is zero — without that minimality the statement is false, since the loop stops at the first zero it meets. Its mirror `runsTo_scanLeftLoop` covers `[<]`, which `Examples.helloWorld` actually uses. Divergence in the absence of a zero is not proven. Each idiom is tied to its source text by a `parse` theorem. |
-| **More programs verified end to end** | Done | `cat` (`,[.,]`) is verified in `Examples/Brainfuck/Cat.lean`, and the row's premise turned out to be wrong: `decide` reaches it comfortably at the default limits, in about two seconds against `HelloWorld`'s thirty. `HelloWorld` was the outlier — a thousand steps over nested `List.replicate` — not the norm, so no negative result was there to record. What the program was worth proving for instead is that it is the first example whose behaviour depends on its input, so it is stated as a theorem quantified over every input rather than by `decide` on fixed ones. `catRuns` gives the exact final state: the output is `input.takeWhile (· != 0)`, the unread remainder is `(input.dropWhile (· != 0)).tail`. That makes two of this formalization's design choices observable — a `0` byte ends the loop, so `cat` copies only the zero-free prefix and is an echo only on inputs without one, and `,` writing `0` at end of input is what makes `cat_halts` hold with no side condition at all. Concrete `decide` cases illustrate each. |
-| **`Examples` is misnamed** | Done | The directory now splits by what each module is written in: `Examples/Brainfuck` holds Brainfuck programs (`HelloWorld`), `Examples/Minsky` the two-counter machines (`Addition`, `CountDown`, `Quadruple`, `Tripler`) that are inputs to the compiler rather than Brainfuck at all. Both keep the `LeanBF.Examples` namespace, so the split moved files and imports without renaming a single theorem. |
-| **Multiplication needs a Gödel encoding** | Done | Resolved by the universality work. The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly; a general `c2 := c1 × c2` needs three quantities live at once, so it needs an encoding. Both halves now exist: `mulVar_effect` (`Theory.Arith.Multiply`) multiplies two registers, and `Theory.Godel` packs a whole register file into one counter as a product of prime powers, which `Theory.Packing` uses to compile any register machine down to two. |
-| **2CM universality bridge** | Done | Built on the `counter-machine-bridge` branch. The register-machine transfer loops (`Theory.Transfer`), the arithmetic fragments built on them (`Theory.Arith`), the induction `Nat.Primrec f → RegComputable f` (`Theory.Universal.Primrec`), the universal register machine (`Theory.Universal.Machine`), the pack down to two counters (`Theory.Packing`, the register file encoded as a product of prime powers), and the bridge to `Core.Minsky`. `universal_minsky` is the result: one Minsky program whose halting on `(2 ^ Nat.pair c n, 0)` is equivalent to code `c` halting on input `n`. Mathlib has no counter-machine model, so none of this could be adapted from it. |
-| **Halting problem undecidability** | Done | `universal_brainfuck` (`Theory.Undecidable`): one fixed Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n` exactly when code `c` halts on input `n`. The program does not depend on the code or the input, and the starting tape is a computable function of both, so a decider for Brainfuck halting would decide `Nat.Partrec.Code` halting — which `ComputablePred.halting_problem` forbids. The chain is `Nat.Partrec.Code` → register machine → two counters → Minsky → Brainfuck, each link proved in both directions. |
 
 ## Scope & Limitations
 

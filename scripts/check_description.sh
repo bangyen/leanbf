@@ -39,7 +39,7 @@ section_names() {
         section_kind == "definitions" && line ~ /^[[:space:]]*##[[:space:]]+.*definitions?([^a-z0-9_]|$)/ { in_section = 1; next }
         section_kind == "theorems" && line ~ /^[[:space:]]*##[[:space:]]+.*theorems?([^a-z0-9_]|$)/ { in_section = 1; next }
         in_section && $0 ~ /^[[:space:]]*##[[:space:]]+/ { exit }
-        in_section && match($0, /`[A-Za-z0-9_]+`/) {
+        in_section && match($0, /`[A-Za-z0-9_'\'']+`/) {
             name = substr($0, RSTART + 1, RLENGTH - 2)
             print name
         }
@@ -61,7 +61,7 @@ file_theorem_names() {
             sub(/^protected[[:space:]]+/, "", line)
             if (line ~ /^(theorem|lemma)[[:space:]]+/) {
                 sub(/^(theorem|lemma)[[:space:]]+/, "", line)
-                split(line, parts, /[^A-Za-z0-9_.]/)
+                split(line, parts, /[^A-Za-z0-9_.'\'']/)
                 name = parts[1]
                 sub(/^.*\./, "", name)
                 if (name != "") print name
@@ -70,7 +70,7 @@ file_theorem_names() {
             }
             if (pending == 1 && line ~ /^(theorem|lemma)[[:space:]]+/) {
                 sub(/^(theorem|lemma)[[:space:]]+/, "", line)
-                split(line, parts, /[^A-Za-z0-9_.]/)
+                split(line, parts, /[^A-Za-z0-9_.'\'']/)
                 name = parts[1]
                 sub(/^.*\./, "", name)
                 if (name != "") print name

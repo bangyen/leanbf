@@ -35,7 +35,6 @@ than one example at a time.
 * `disp_append`: Displacement composes across concatenation.
 * `step_disp`: A step preserves the displacement bound.
 * `runsTo_ptr_le`: A run keeps the pointer within the bound.
-* `runsTo_ptr_le'`: The program-shaped form of `runsTo_ptr_le`.
 * `runsTo_disp_preserves_above`: A run preserves every cell above the bound.
 * `disp_replicate_inc_ptr`: Repeated `>` moves the pointer up.
 * `disp_replicate_dec_ptr`: Repeated `<` moves the pointer down.

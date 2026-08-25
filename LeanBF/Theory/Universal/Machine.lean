@@ -62,6 +62,11 @@ have tried to.
 * `probe_stop`: A bound that works halts with the answer.
 * `probe_reaches`: Chaining retries below the first bound that works.
 * `universal_halts_of_dom`: A code that halts makes the machine halt.
+* `loopState_ne_succ`: Consecutive iterations differ.
+* `universal_dom_of_halts`: The machine halting makes the code halt.
+* `exists_evalFrag`: The evaluator's fragment, placed where U wants it.
+* `universal_halts_iff`: The two directions, packaged.
+* `universal_machine`: A single program whose halting decides any code's.
 -/
 
 namespace LeanBF
@@ -279,6 +284,81 @@ theorem universal_halts_of_dom (ev : Program) (hi : Nat) (hhi : 14 ≤ hi)
   rcases probe_stop ev hi hhi hev (Nat.pair c n) j x hx with ⟨t, hrun, _⟩
   exact ⟨t, runsTo_of_reaches_runsTo _ _ _ _
     (probe_reaches ev hi hhi hev (Nat.pair c n) j hfail) hrun⟩
+
+/-- Consecutive iterations differ, the bound having gone up. This is what
+    stops the divergence argument from being satisfied by a machine that
+    stands still: each pass has to cost at least one step. -/
+theorem loopState_ne_succ (m j : Nat) : loopState m j ≠ loopState m (j + 1) := by
+  intro heq
+  have h := congrArg (fun s => s.regs 1) heq
+  simp only [loopState, if_neg (by omega : (1 : Nat) ≠ 0), if_pos trivial] at h
+  omega
+
+/-- The backward direction: the machine halting makes the code halt.
+
+    Nothing here inspects where the machine stopped. If the code diverges,
+    no bound ever succeeds, so `probe_retry` applies at every pass and the
+    iterations go on forever. The step relation is a function, so that single
+    infinite path is the machine's whole future: there is no other branch it
+    could have taken to a halt, and `no_runsTo_of_diverges` turns the path
+    into the contradiction directly. -/
+theorem universal_dom_of_halts (ev : Program) (hi : Nat) (hhi : 14 ≤ hi)
+    (hev : ∀ (p : Program), EmbeddedAt p 51 ev →
+      Computes p 51 (51 + ev.length) 2 3 6 hi evalnPacked)
+    (c n : Nat) (hrun : ∃ u, RunsTo (universal ev) (loopState (Nat.pair c n) 0) u) :
+    (Code.eval (Denumerable.ofNat Code c) n).Dom := by
+  rcases hrun with ⟨u, hu⟩
+  by_contra hnd
+  -- No bound succeeds, so every pass retries.
+  have hfail : ∀ j, evalnPacked (Nat.pair j (Nat.pair c n)) = 0 := by
+    intro j
+    by_contra hc
+    exact hnd ((evalnPacked_dom_iff c n).mpr ⟨j, hc⟩)
+  exact no_runsTo_of_diverges (universal ev) (loopState (Nat.pair c n))
+    (fun j => probe_retry ev hi hhi hev _ j (hfail j))
+    (fun j => loopState_ne_succ _ j) u hu
+
+/-- The evaluator's fragment, placed where the machine wants it: at address
+    fifty-one, reading `arg` into `res`, over a scratch region starting at
+    six and wide enough for the head's working block.
+
+    `evalnPacked_regComputable` cannot be used directly — `RegComputable`
+    existentially binds its own base and registers, and there is no reason
+    they would be these. `primrec_builds` is the right entry point, being
+    parametric in exactly those choices, and `computes_mono_hi` then widens
+    the region to cover the head's block. -/
+theorem exists_evalFrag : ∃ (ev : Program) (hi : Nat), 14 ≤ hi ∧
+    ∀ (p : Program), EmbeddedAt p 51 ev →
+      Computes p 51 (51 + ev.length) 2 3 6 hi evalnPacked := by
+  rcases primrec_builds evalnPacked_primrec 2 3 6 (by omega) (by omega) (by omega) 51 with
+    ⟨hi, frag, hlo, hc⟩
+  refine ⟨frag, max hi 14, by omega, fun p hemb => ?_⟩
+  exact computes_mono_hi p 51 _ 2 3 6 hi (max hi 14) evalnPacked
+    (by omega) (by omega) (hc p hemb)
+
+/-- The halting equivalence for one assembled machine: it halts from the
+    initial state exactly when the code halts on the input. -/
+theorem universal_halts_iff (ev : Program) (hi : Nat) (hhi : 14 ≤ hi)
+    (hev : ∀ (p : Program), EmbeddedAt p 51 ev →
+      Computes p 51 (51 + ev.length) 2 3 6 hi evalnPacked)
+    (c n : Nat) :
+    (∃ t, RunsTo (universal ev) (loopState (Nat.pair c n) 0) t) ↔
+      (Code.eval (Denumerable.ofNat Code c) n).Dom :=
+  ⟨universal_dom_of_halts ev hi hhi hev c n,
+   universal_halts_of_dom ev hi hhi hev c n⟩
+
+/-- A single register machine whose halting decides every code's halting.
+
+    The program is fixed once and for all; only the initial state varies,
+    and it varies in one register, holding the code number paired with the
+    input. Halting from that state is equivalent to the code halting on the
+    input, so any decision procedure for the machine's halting would decide
+    `Nat.Partrec.Code`'s. -/
+theorem universal_machine : ∃ (U : Program), ∀ (c n : Nat),
+    (∃ t, RunsTo U (loopState (Nat.pair c n) 0) t) ↔
+      (Code.eval (Denumerable.ofNat Code c) n).Dom := by
+  rcases exists_evalFrag with ⟨ev, hi, hhi, hev⟩
+  exact ⟨universal ev, universal_halts_iff ev hi hhi hev⟩
 
 end Register
 

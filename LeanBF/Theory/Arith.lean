@@ -5,6 +5,7 @@ Authors: Bangyen Pham
 -/
 
 import LeanBF.Theory.Arith.Multiply
+import LeanBF.Theory.Arith.Sqrt
 import LeanBF.Theory.Arith.Subtract
 
 /-!

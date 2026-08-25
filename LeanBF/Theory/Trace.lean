@@ -46,6 +46,7 @@ have been.
 * `runsTo_terminal`: A halting run ends where the machine has no successor.
 * `runsTo_runFor`: A halting run is an iteration onto a terminal state.
 * `runFor_pos_of_step`: A first step and a path make a positive count.
+* `runFor_pos_of_reaches`: A path out of a state that can step is positive.
 * `no_runsTo_of_steps`: A machine that always takes at least one more step
   never halts.
 * `no_runsTo_of_diverges`: The same, when consecutive stages differ.
@@ -194,6 +195,22 @@ theorem runFor_pos_of_step (p : Program) (s s₁ s' : State)
   refine ⟨d + 1, by omega, ?_⟩
   rw [show d + 1 = 1 + d by omega, runFor_add p 1 d s s₁ (by simp only [runFor, hstep])]
   exact hd
+
+/-- A path that moves the program counter takes at least one step. The
+    fragment lemmas hand back a bare `Reaches` whose target is a computed
+    term, which resists case analysis; comparing the two counters settles the
+    length without any, and a block always exits somewhere other than the
+    address it was entered at. -/
+theorem runFor_pos_of_reaches (p : Program) (s s' : State)
+    (hpc : s.pc ≠ s'.pc) (hr : Reaches p s s') :
+    ∃ c, 1 ≤ c ∧ runFor p c s = some s' := by
+  rcases runFor_of_reaches p _ _ hr with ⟨d, hd⟩
+  refine ⟨d, ?_, hd⟩
+  rcases Nat.eq_zero_or_pos d with rfl | hpos
+  · -- A zero-length path ends where it began, counter included.
+    simp only [runFor, Option.some.injEq] at hd
+    exact absurd (congrArg State.pc hd) hpc
+  · exact hpos
 
 /-- A machine that always has at least one more step to take never halts.
 

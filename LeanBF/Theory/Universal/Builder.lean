@@ -3,6 +3,7 @@ Copyright (c) 2026 Bangyen Pham. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
+import LeanBF.Theory.Embed
 import LeanBF.Theory.Universal.Convention
 
 /-!
@@ -22,12 +23,10 @@ just list append, and the second one is handed `base + (first).length` so
 the absolute targets it emits are already correct. Nothing is shifted after
 the fact.
 
-`EmbeddedAt` is the embedding relation, deliberately weaker than "`p` equals
-`frag`": it only constrains the slots the fragment occupies, so the same `p`
-can host several fragments at once. `embeddedAt_append_left` and
-`embeddedAt_append_right` split one embedding of a concatenation into the two
-embeddings its halves need, which is what lets both fragment specifications
-be instantiated at the same `p`.
+The embedding relation itself is `EmbeddedAt`, in `Theory.Embed`, along with
+the append lemmas that split one embedding of a concatenation into the two
+its halves need. Nothing there is specific to computing a function, so it
+sits below this layer and the packing layer both.
 
 The scratch region's upper end is existential, because each builder needs a
 different amount of scratch.
@@ -50,14 +49,10 @@ varying, `hi ≤ inR` would not survive the widening.
 
 ## Main definitions
 
-* `EmbeddedAt`: A fragment occupies a program's slots at a base address.
 * `Builds`: A relocatable builder computing a function at any base.
 
 ## Theorems
 
-* `embeddedAt_get`: Reading one slot of an embedded fragment.
-* `embeddedAt_append_left`: The first half of an embedded concatenation.
-* `embeddedAt_append_right`: The second half of an embedded concatenation.
 * `computes_mono_hi`: Widening the scratch region preserves computation.
 * `computes_seq_clear`: Sequencing through a midpoint register, then
   clearing it.
@@ -69,42 +64,6 @@ varying, `hi ≤ inR` would not survive the widening.
 namespace LeanBF
 
 namespace Register
-
-/-- The fragment `frag` occupies the slots `[base, base + frag.length)` of
-    `p`. Only those slots are constrained, so one program can host many
-    fragments side by side. -/
-def EmbeddedAt (p : Program) (base : Nat) (frag : Program) : Prop :=
-  ∀ j, j < frag.length → p[base + j]? = frag[j]?
-
-/-- Reading one slot of an embedded fragment. The `EmbeddedAt` hypothesis
-    speaks in offsets from the base, while the fragment lemmas want absolute
-    addresses, so this is the bridge every concrete builder crosses. -/
-theorem embeddedAt_get (p : Program) (base : Nat) (frag : Program) (h : EmbeddedAt p base frag)
-    (j : Nat) (i : Instruction) (hj : frag[j]? = some i) : p[base + j]? = some i := by
-  have hlt : j < frag.length := by
-    by_contra hc
-    rw [List.getElem?_eq_none_iff.mpr (Nat.le_of_not_lt hc)] at hj
-    exact absurd hj (by simp only [reduceCtorEq, not_false_eq_true])
-  rw [h j hlt]
-  exact hj
-
-theorem embeddedAt_append_left (p : Program) (base : Nat) (A B : Program)
-    (h : EmbeddedAt p base (A ++ B)) : EmbeddedAt p base A := by
-  intro j hj
-  have hlt : j < (A ++ B).length := by
-    rw [List.length_append]
-    omega
-  rw [h j hlt, List.getElem?_append_left hj]
-
-theorem embeddedAt_append_right (p : Program) (base : Nat) (A B : Program)
-    (h : EmbeddedAt p base (A ++ B)) : EmbeddedAt p (base + A.length) B := by
-  intro j hj
-  have hlt : A.length + j < (A ++ B).length := by
-    rw [List.length_append]
-    omega
-  have hidx : base + A.length + j = base + (A.length + j) := by omega
-  rw [hidx, h (A.length + j) hlt,
-    List.getElem?_append_right (by omega), Nat.add_sub_cancel_left]
 
 /-- Widening the scratch region: registers between the old and new upper ends
     lie outside the fragment's scratch, so its frame clause keeps them at the

@@ -37,6 +37,8 @@ counter. Nothing has to special-case it.
 * `compileInstr_length`: A block's length is what the table says.
 * `layout_eq_piecesBefore`: The table agrees with the concatenation's offsets.
 * `embeddedAt_compile`: Each block sits where the table says.
+* `compile_length`: The compiled program's length is the table's end.
+* `layout_of_length_le`: Past the end, the table stops moving.
 -/
 
 namespace LeanBF
@@ -143,6 +145,19 @@ theorem embeddedAt_compile (p : Program) (i : Nat) (hi : i < p.length) :
   rw [compile] at hself
   have h := embeddedAt_flatMap_prefix (compile p) 0 (compileInstr p) p.length hself i hi
   rwa [Nat.zero_add, ← layout_eq_piecesBefore p i (by omega)] at h
+
+/-- The compiled program's length is where the table runs out. A source
+    counter past the end therefore maps past the end of the compiled program,
+    which is how the two machines agree about being out of bounds. -/
+theorem compile_length (p : Program) : (compile p).length = layout p p.length := by
+  rw [compile, List.length_flatMap, ← piecesBefore,
+    layout_eq_piecesBefore p p.length (le_refl _)]
+
+/-- Past the end, the table stops moving. -/
+theorem layout_of_length_le (p : Program) (i : Nat) (hi : p.length ≤ i) :
+    layout p i = layout p p.length := by
+  simp only [layout]
+  rw [List.take_of_length_le hi, List.take_of_length_le (le_refl _)]
 
 end Register
 

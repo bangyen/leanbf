@@ -32,10 +32,18 @@ taking steps, and `no_runsTo_of_steps` turns that into non-halting.
 ## Main definitions
 
 * `Simulates`: A two-counter state stands for a register machine state.
+* `packedInit`: The two-counter machine's initial state.
 
 ## Theorems
 
 * `step_simulates`: One source step is a block of packed steps.
+* `terminal_simulates`: When the source machine stops, so does its image.
+* `runsTo_compile_of_runsTo`: A source machine that halts is compiled to one
+  that halts.
+* `runsTo_of_runsTo_compile`: A compiled machine that halts came from one
+  that halts.
+* `simulates_init`: The initial states correspond.
+* `compile_halts_iff`: The halting equivalence.
 -/
 
 namespace LeanBF
@@ -182,6 +190,126 @@ theorem step_simulates (p : Program) (R : Nat) (hm : MentionsBelow p R)
       -- A halt does not step, so this case is vacuous.
       rw [step, hget] at hstep
       exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
+
+/-- When the source machine stops, so does its image. Two ways to stop, and
+    the compilation matches both: a counter past the end of the program maps
+    past the end of the compiled program, and a `halt` compiles to a literal
+    `halt`. -/
+theorem terminal_simulates (p : Program) (R : Nat) (s t : State)
+    (hsim : Simulates p R s t) (hstop : step p s = none) :
+    step (compile p) t = none := by
+  obtain ⟨hpc, _, _, _⟩ := hsim
+  rw [step_eq_none_iff] at hstop ⊢
+  rcases hstop with hhalt | hnone
+  · -- A halt instruction: its block is one slot holding a halt.
+    have hlt : s.pc < p.length := by
+      by_contra hc
+      rw [List.getElem?_eq_none_iff.mpr (Nat.le_of_not_lt hc)] at hhalt
+      exact absurd hhalt (by simp only [reduceCtorEq, not_false_eq_true])
+    have hcomp : compileInstr p s.pc = [Instruction.halt] := by
+      rw [compileInstr, hhalt]
+    have h := embeddedAt_get (compile p) (layout p s.pc) _
+      (embeddedAt_compile p s.pc hlt) 0 Instruction.halt (by rw [hcomp]; rfl)
+    rw [Nat.add_zero] at h
+    exact Or.inl (by rw [hpc]; exact h)
+  · -- Out of bounds: the table has run out, so the image is out too.
+    have hge : p.length ≤ s.pc := by
+      by_contra hc
+      rw [List.getElem?_eq_getElem (Nat.lt_of_not_le hc)] at hnone
+      exact absurd hnone (by simp only [reduceCtorEq, not_false_eq_true])
+    refine Or.inr (List.getElem?_eq_none_iff.mpr ?_)
+    rw [hpc, compile_length, layout_of_length_le p s.pc hge]
+
+/-- The forward direction: a source machine that halts gives a packed machine
+    that halts. Every source step becomes a block of packed steps, and the
+    last source state is terminal, so its image is too. -/
+theorem runsTo_compile_of_runsTo (p : Program) (R : Nat) (hm : MentionsBelow p R)
+    (s u : State) (hrun : RunsTo p s u) :
+    ∀ t, Simulates p R s t → ∃ t', RunsTo (compile p) t t' ∧ Simulates p R u t' := by
+  induction hrun with
+  | halt v hterm =>
+      intro t hsim
+      refine ⟨t, RunsTo.halt t ?_, hsim⟩
+      rw [← step_eq_none_iff]
+      exact terminal_simulates p R v t hsim ((step_eq_none_iff p v).mpr hterm)
+  | step a b _ hstep _ ih =>
+      intro t hsim
+      rcases step_simulates p R hm a b t hsim hstep with ⟨c, t', _, hrunFor, hsim'⟩
+      rcases ih t' hsim' with ⟨t'', hrun'', hsim''⟩
+      exact ⟨t'', runsTo_of_reaches_runsTo _ _ _ _
+        (reaches_of_runFor _ c t t' hrunFor) hrun'', hsim''⟩
+
+/-- The backward direction: if the packed machine halts, so did the source.
+
+    By contraposition. A source machine that never halts can always step, so
+    the simulation carries forward forever, and every stage costs at least
+    one packed step — the blocks all open with a slot that fires. That is an
+    infinite packed path, and the step relation is a function, so it is the
+    packed machine's whole future.
+
+    The stages are named by a relation rather than a function. How far the
+    packed machine travels per source step depends on the source instruction,
+    so there is no closed form for where stage `j` sits; saying only that
+    some state satisfies the invariant is exactly what the simulation
+    proves. -/
+theorem runsTo_of_runsTo_compile (p : Program) (R : Nat) (hm : MentionsBelow p R)
+    (s t : State) (hsim : Simulates p R s t)
+    (t' : State) (hrun : RunsTo (compile p) t t') :
+    ∃ u, RunsTo p s u := by
+  by_contra hnone
+  -- Never halting means no state the source reaches can be terminal: a
+  -- terminal state at the end of a path is a halting run from the start.
+  have hcan : ∀ j v, runFor p j s = some v → step p v = none → False := by
+    intro j v hv hstop
+    exact hnone ⟨v, runsTo_of_reaches_runsTo p s v v (reaches_of_runFor p j s v hv)
+      (RunsTo.halt v ((step_eq_none_iff p v).mp hstop))⟩
+  -- The invariant: stage `j` is whatever the source reached in `j` steps.
+  refine no_runsTo_of_steps_rel (compile p)
+    (fun j w => ∃ v, runFor p j s = some v ∧ Simulates p R v w) t ⟨s, rfl, hsim⟩
+    (fun j w hw => ?_) t' hrun
+  rcases hw with ⟨v, hv, hsimv⟩
+  -- The source can step, or it would have halted.
+  cases hstep : step p v with
+  | none => exact (hcan j v hv hstep).elim
+  | some v' =>
+      rcases step_simulates p R hm v v' w hsimv hstep with ⟨c, w', hc, hrunFor, hsim'⟩
+      refine ⟨c, w', hc, hrunFor, v', ?_, hsim'⟩
+      rw [show j + 1 = j + 1 from rfl, runFor_add p j 1 s v hv]
+      simp only [runFor, hstep]
+
+/-- The two-counter machine a source machine and its input become: the
+    packed file in counter zero, the scratch empty, at the first block. -/
+def packedInit (m : Nat) : State :=
+  { pc := 0, regs := fun i => if i = 0 then 2 ^ m else 0 }
+
+/-- The initial states correspond. `layout` at zero is zero, and a file
+    holding one number in register zero packs to a power of two. -/
+theorem simulates_init (p : Program) (R m : Nat) (hR : 0 < R) :
+    Simulates p R { pc := 0, regs := fun i => if i = 0 then m else 0 } (packedInit m) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · simp only [packedInit, layout, List.take_zero, List.map_nil, List.sum_nil]
+  · simp only [packedInit, if_pos trivial]
+    exact (packRange_init m R hR).symm
+  · simp only [packedInit, if_neg (by omega : ¬ (1 : Nat) = 0)]
+  · intro q hq
+    simp only [packedInit, if_neg (by omega : ¬ q = 0)]
+
+/-- The halting equivalence: a register machine halts on an input exactly
+    when its two-counter compilation halts on the packed one.
+
+    The packed input is `2 ^ m` — a concrete function of the input, which is
+    what a reduction built on this has to be able to name. -/
+theorem compile_halts_iff (p : Program) (R : Nat) (hm : MentionsBelow p R) (hR : 0 < R)
+    (m : Nat) :
+    (∃ t, RunsTo (compile p) (packedInit m) t) ↔
+      (∃ u, RunsTo p { pc := 0, regs := fun i => if i = 0 then m else 0 } u) := by
+  constructor
+  · rintro ⟨t, ht⟩
+    exact runsTo_of_runsTo_compile p R hm _ _ (simulates_init p R m hR) t ht
+  · rintro ⟨u, hu⟩
+    rcases runsTo_compile_of_runsTo p R hm _ u hu _ (simulates_init p R m hR) with
+      ⟨t, ht, _⟩
+    exact ⟨t, ht⟩
 
 end Register
 

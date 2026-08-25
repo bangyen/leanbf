@@ -34,9 +34,16 @@ induction, not only for the `left` and `right` cases.
 it are load-bearing. The scratch region is an interval disjoint from the
 named registers, so disjointness side conditions are arithmetic rather than
 set reasoning. And the frame clause, saying registers outside the region and
-other than the output are unchanged, is what makes `computes_seq` provable at
+other than the output are unchanged, is what makes sequencing provable at
 all: without it nothing says the second fragment's scratch is still zero when
 the first one finishes.
+
+`computes_seq` chains two fragments through a midpoint register drawn from
+the shared scratch region. That placement makes its hypotheses satisfiable
+only when the first function vanishes, since the postcondition asks the
+midpoint to hold an output and to be zero at once, so real composition goes
+through `computes_seq_clear` in `Theory.Universal.Builder` instead. It is
+kept here as the statement that isolates why the region has to be split.
 
 ## Main definitions
 
@@ -47,7 +54,7 @@ the first one finishes.
 
 * `dom_iff_exists_evaln`: A code halts exactly when some step bound suffices.
 * `clear_reaches`: The clear loop empties a register.
-* `computes_seq`: Fragments compose, giving the `comp` case.
+* `computes_seq`: Chaining through a midpoint inside the scratch region.
 -/
 
 namespace LeanBF

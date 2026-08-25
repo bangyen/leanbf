@@ -55,6 +55,7 @@ weaken that lemma, the table absorbs the difference in one slot each.
 * `jzdecBlock_dvd`: A register that was non-zero is decremented.
 * `embeddedAt_jzdecArm`: A restore arm sits where the layout says.
 * `jzdecBlock_ndvd`: A register that was zero is handed back untouched.
+* `jzdecBlock_mentions`: The block names only the two counters.
 -/
 
 namespace LeanBF
@@ -388,6 +389,37 @@ theorem jzdecBlock_ndvd (prog : Program) (p base ifZero ifNonZero : Nat) (hp : 0
       · simp only [restored, hs2def, dividedAt, if_neg hq0, if_neg hq1]
   rw [← hfinal]
   exact runFor_pos_of_step prog s s₁ _ hstep (reaches_trans hreach harm)
+
+/-- The conditional block names only the two counters: its head is the entry
+    no-op, the divide chain, the jump table and the drain, all of which name
+    counter zero or one, and its arms do by `paddedArm_mentions`. -/
+theorem jzdecBlock_mentions (p base ifZero ifNonZero : Nat) :
+    ∀ i ∈ jzdecBlock p base ifZero ifNonZero, instrMentionsBelow 2 i := by
+  intro i hi
+  rcases List.mem_append.mp hi with h | h
+  · -- The head.
+    rw [jzdecHead] at h
+    rcases List.mem_cons.mp h with rfl | h'
+    · simp only [instrMentionsBelow]; omega
+    · rcases List.mem_append.mp h' with h'' | h''
+      · rcases List.mem_map.mp h'' with ⟨j, _, hj⟩
+        rw [← hj]
+        simp only [instrMentionsBelow]; omega
+      · rcases List.mem_cons.mp h'' with rfl | h'''
+        · simp only [instrMentionsBelow]; omega
+        · rcases List.mem_append.mp h''' with h4 | h4
+          · rcases List.mem_map.mp h4 with ⟨j, _, hj⟩
+            rw [← hj]
+            simp only [instrMentionsBelow]; omega
+          · rcases List.mem_cons.mp h4 with rfl | h5
+            · simp only [instrMentionsBelow]; omega
+            · rcases List.mem_cons.mp h5 with rfl | h6
+              · simp only [instrMentionsBelow]; omega
+              · exact absurd h6 List.not_mem_nil
+  · -- The arms.
+    rw [jzdecArms] at h
+    rcases List.mem_flatMap.mp h with ⟨k, _, hk⟩
+    exact paddedArm_mentions p (k + 1) _ ifZero i hk
 
 end Register
 

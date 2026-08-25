@@ -53,4 +53,27 @@ example : padicValNat 2 144 = 4 := by
       padicValNat.eq_zero_of_not_dvd (by norm_num)]
   rw [h, padicValNat_mul_self 2 72 (by norm_num), h72]
 
+/-- Registers are independent: incrementing one leaves the others alone.
+    Here `72 = 2^3 * 3^2` becomes `144 = 2^4 * 3^2`. -/
+example : padicValNat 3 144 = padicValNat 3 72 := by
+  have h : (144 : Nat) = 2 * 72 := by norm_num
+  rw [h]
+  exact unpack_mul_other 2 3 72 (by norm_num) (by norm_num)
+
+/-- The same holds for a decrement: `72` becomes `36 = 2^2 * 3^2`. -/
+example : padicValNat 3 36 = padicValNat 3 72 := by
+  have h : (36 : Nat) = 72 / 2 := by norm_num
+  rw [h]
+  exact unpack_div_other 2 3 72 (by norm_num) (by norm_num) (by norm_num)
+
+/-- A packed file never reaches zero, which the exponent lemmas require. -/
+example (v : Nat) (hv : 0 < v) : 0 < 2 * v :=
+  pack_mul_pos 2 v hv
+
+example (v : Nat) (hv : 0 < v) (hd : 2 ∣ v) : 0 < v / 2 :=
+  pack_div_pos 2 v hv hd
+
+/-- The decoding reads a register out of the packed value. -/
+example : unpack (fun r => if r = 0 then 2 else 3) 72 0 = padicValNat 2 72 := rfl
+
 end LeanBF.Tests

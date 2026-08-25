@@ -49,6 +49,7 @@ fragment puts it back.
 * `precBodyPre_effect`: The body's prelude assembles the step's argument.
 * `precBodyPost_effect`: The body's postlude counts up and returns.
 * `precBody_effect`: One iteration advances the recursion by one step.
+* `precLoop_effect`: The loop runs the recursion to its base case.
 -/
 
 namespace LeanBF
@@ -404,6 +405,62 @@ theorem precBody_effect (p : Program) (lo hd hi gl : Nat) (g : Nat → Nat)
   · intro q hq
     rw [hF3 q (by omega) (by omega), hF2 q (by omega) (by omega),
       hF1 q (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)]
+
+/-- The loop: run the body once per unit of the counter, carrying the
+    recursion's accumulator. The invariant is indexed by the iterations
+    remaining, so the counter register holds how many have already run, which
+    is exactly the recursion's index. -/
+theorem precLoop_effect (p : Program) (lo hd hi gl postAddr : Nat) (g : Nat → Nat)
+    (b : Nat) (hhi : lo + 22 ≤ hi)
+    (hhead : p[hd]? = some (Instruction.jzdec (lo + 5) postAddr (hd + 1)))
+    (hembPre : EmbeddedAt p (hd + 1) (precBodyPre lo (hd + 1)))
+    (hg : Computes p (hd + 105) (hd + 105 + gl) (lo + 4) (lo + 1) (lo + 6) hi g)
+    (hembPost : EmbeddedAt p (hd + 105 + gl) (precBodyPost lo (hd + 105 + gl) hd)) :
+    ∀ (n0 : Nat) (s : State), s.pc = hd → s.regs (lo + 5) = n0 →
+      s.regs (lo + 2) = 0 → s.regs (lo + 1) = b →
+      s.regs (lo + 3) = 0 → s.regs (lo + 4) = 0 →
+      (∀ r, lo + 6 ≤ r → r < hi → s.regs r = 0) →
+      ∃ s', Reaches p s s' ∧ s'.pc = postAddr ∧ s'.regs (lo + 5) = 0 ∧
+        s'.regs lo = s.regs lo ∧ s'.regs (lo + 2) = n0 ∧
+        s'.regs (lo + 1) = Nat.rec b (fun y ih => g (Nat.pair (s.regs lo)
+          (Nat.pair y ih))) n0 ∧
+        s'.regs (lo + 3) = 0 ∧ s'.regs (lo + 4) = 0 ∧
+        (∀ r, lo + 6 ≤ r → r < hi → s'.regs r = 0) ∧
+        ∀ q, q < lo ∨ hi ≤ q → s'.regs q = s.regs q := by
+  intro n0 s hpc hcnt hy0 hacc h30 h40 hz
+  rcases iterate_inv p (lo + 5) hd postAddr
+    (fun m f => m ≤ n0 ∧ f lo = s.regs lo ∧ f (lo + 2) = n0 - m ∧
+      f (lo + 1) = Nat.rec b (fun y ih => g (Nat.pair (s.regs lo) (Nat.pair y ih))) (n0 - m) ∧
+      f (lo + 3) = 0 ∧ f (lo + 4) = 0 ∧ (∀ r, lo + 6 ≤ r → r < hi → f r = 0) ∧
+      ∀ q, q < lo ∨ hi ≤ q → f q = s.regs q)
+    (fun m f f' hff hI => ⟨hI.1, by rw [← hff lo (by omega)]; exact hI.2.1,
+      by rw [← hff (lo + 2) (by omega)]; exact hI.2.2.1,
+      by rw [← hff (lo + 1) (by omega)]; exact hI.2.2.2.1,
+      by rw [← hff (lo + 3) (by omega)]; exact hI.2.2.2.2.1,
+      by rw [← hff (lo + 4) (by omega)]; exact hI.2.2.2.2.2.1,
+      fun r hr1 hr2 => by rw [← hff r (by omega)]; exact hI.2.2.2.2.2.2.1 r hr1 hr2,
+      fun q hq => by rw [← hff q (by omega)]; exact hI.2.2.2.2.2.2.2 q hq⟩)
+    hhead
+    (fun m s1 hpc1 hc1 hI1 => by
+      rcases precBody_effect p lo hd hi gl g hhi hembPre hg hembPost s1 hpc1
+        hI1.2.2.2.2.1 hI1.2.2.2.2.2.1 hI1.2.2.2.2.2.2.1 with
+        ⟨s2, hr2, hpc2, hZ2, hY2, hA2, hU2, hT2, hB2, hF2⟩
+      -- The counter advanced by one, so the recursion advanced by one step.
+      have hstep : n0 - m = (n0 - (m + 1)) + 1 := by
+        have := hI1.1
+        omega
+      refine ⟨s2, hr2, hpc2, by rw [hF2 (lo + 5) (by omega)]; exact hc1,
+        by omega, by rw [hZ2]; exact hI1.2.1, ?_, ?_, hU2, hT2, hB2,
+        fun q hq => by rw [hF2 q (by omega)]; exact hI1.2.2.2.2.2.2.2 q hq⟩
+      · rw [hY2, hI1.2.2.1, hstep]
+      · rw [hA2, hI1.2.1, hI1.2.2.1, hI1.2.2.2.1, hstep])
+    n0 s hpc hcnt
+    ⟨le_refl _, rfl, by rw [hy0, Nat.sub_self], by rw [hacc, Nat.sub_self]; rfl,
+      h30, h40, hz, fun q _ => rfl⟩ with
+    ⟨s', hr', hpc', hc', hI'⟩
+  exact ⟨s', hr', hpc', hc', hI'.2.1, by rw [hI'.2.2.1, Nat.sub_zero],
+    by rw [hI'.2.2.2.1, Nat.sub_zero], hI'.2.2.2.2.1, hI'.2.2.2.2.2.1,
+    hI'.2.2.2.2.2.2.1, hI'.2.2.2.2.2.2.2⟩
 
 end Register
 

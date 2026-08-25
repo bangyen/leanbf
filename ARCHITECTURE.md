@@ -2,7 +2,15 @@
 
 This document provides a technical overview of the `LeanBF` project's design
 patterns and core abstractions. It is intended for developers who wish to
-contribute to the formal verification of Brainfuck's Turing completeness.
+contribute to the formal verification of Brainfuck's Turing completeness and
+of the undecidability of its halting problem.
+
+The two results are the two halves of the same simulation. Completeness
+compiles a two-counter machine into Brainfuck; undecidability builds a
+two-counter machine whose halting is as hard as the halting problem, and
+compiles that. The first half is `Core.Compiler` with `Theory.Simulate` and
+`Theory.Completeness`; the second is everything under `Theory.Universal` and
+`Theory.Packing`, closed by `Theory.Undecidable`.
 
 ## Core Abstractions
 
@@ -248,6 +256,143 @@ project convention that `Core` files contain only definitions.
   `dispatchMs`-phrased post-condition of `runsTo_compileProgram` to
   `ms_final` via `terminal_of_RunsTo`.
 
+## The Undecidability Layer
+
+The completeness half compiles a Minsky machine *into* Brainfuck. This half
+runs the reduction the other way: it builds a machine whose halting is as
+hard as the halting problem, so that Brainfuck's halting inherits that
+hardness. It is the larger half, because a two-counter machine is a
+deliberately impoverished target and every arithmetic fragment had to be
+built from `inc`, `jzdec` and `halt`. Mathlib has no counter-machine model,
+so none of it could be adapted.
+
+The chain runs `Nat.Partrec.Code` → register machine → two counters → Minsky
+→ Brainfuck, each link proved in both directions.
+
+### Register machines and their traces
+
+- `Core/Register.lean`: a counter machine with arbitrarily many registers,
+  generalizing `Core.Minsky`, whose two counters are fixed in the state
+  structure. Registers are a total function `Nat → Nat` rather than a tuple,
+  so a program can name any register without carrying a bound. This is the
+  middle layer: recursive functions are naturally simulated by a machine with
+  as many registers as the construction needs, and only afterwards are those
+  packed into two.
+- `Theory/Trace.lean`: reachability counted by steps. `Reaches` and `RunsTo`
+  are `Prop`-valued, so a derivation carries no number and nothing can be
+  proved by induction on one; `runFor` supplies it. The module's three
+  divergence lemmas say a machine never halts, each the convenient form for a
+  different caller: `no_runsTo_of_steps_rel` names its stages by a relation
+  (a simulation cannot name them by a function of the step number — how far
+  the simulating machine travels per source step depends on the source
+  instruction), `no_runsTo_of_steps` by a function, and
+  `no_runsTo_of_diverges` by a function whose consecutive stages visibly
+  differ. Each is proved from the one above it.
+- `Theory/Embed.lean`: `EmbeddedAt`, saying a program contains a fragment at
+  an address without constraining the rest of it, so one program can host
+  many fragments side by side. `flatMap_getElem_prefix` indexes a
+  concatenation by piece and offset, which the compiler needs because its
+  blocks differ in size; `flatMap_getElem_uniform` is the special case for
+  equal-sized pieces, which the padded restore arms use to get closed-form
+  addresses.
+
+### Arithmetic fragments
+
+- `Theory/Transfer.lean`: the loops everything else is built from. `drain`
+  empties one register into another, `kdrain` transfers `k` units at a time
+  (multiplying by `k`), and `div` consumes groups of `k` and branches on the
+  remainder by exit address. `copyBack` is the non-destructive copy, which
+  needs one scratch register to pour back from.
+- `Theory/Arith.lean`: the fragments built on those loops — variable
+  multiplication (`mulVar_effect`), truncated subtraction, a comparison that
+  answers by which address it exits at, integer square root by bounded
+  search, and `Nat.pair`/`Nat.unpair`. The pairing fragment is fifty-one
+  slots and leaves both operands as it found them, which is what lets the
+  same input be read twice.
+
+### The universal register machine
+
+- `Theory/Universal/Convention.lean`: `Computes`, the calling convention the
+  fragments share — a scratch region `[lo, hi)` disjoint from the named
+  registers, so disjointness side conditions are arithmetic rather than set
+  reasoning, and a frame clause without which sequencing is not provable.
+  `dom_iff_exists_evaln` reduces halting to a search over a decidable
+  predicate, which is what lets a total machine express a function that need
+  not terminate.
+- `Theory/Universal/Builder.lean`: `Builds`, a relocatable builder. Two
+  `RegComputable` witnesses cannot be combined — each binds its own program,
+  and the jump targets inside are absolute — so the induction is over
+  builders, and concatenating two is list append with the second handed
+  `base + first.length`.
+- `Theory/Universal/Primrec.lean`: the induction `Nat.Primrec f →
+  RegComputable f`, discharging all seven constructors. `prec` is the only
+  case whose sub-builder runs more than once; the step function's fragment is
+  placed once inside the loop body and applied afresh on each pass.
+- `Theory/Universal/Search.lean`: `evalnPacked`, the step-bounded evaluator
+  on one packed argument. `primrec_evaln` says the interpreter is primitive
+  recursive in all three of its arguments, the code number included, which is
+  what keeps the seven cases from having to be redone over
+  `Nat.Partrec.Code`. The `Option` result is encoded as `Encodable.encode`
+  already encodes it, which makes the search's test free: `jzdec` jumps when
+  a register is zero and decrements otherwise, so the instruction that
+  detects success is also the one that decodes it.
+- `Theory/Universal/Machine.lean`: `universal_machine`, one program whose
+  halting from `loopState (Nat.pair c n) 0` is equivalent to code `c` halting
+  on `n`. Because every fragment restores what it borrows, the state at the
+  top of the next iteration is literally `loopState` with the bound raised,
+  which is what keeps both directions short.
+
+### Packing down to two counters
+
+- `Theory/Packed.lean`: the first sketch of the two-counter story —
+  multiplication and exact division of a packed value, each using one scratch
+  register and leaving it at zero. It is superseded by
+  `Theory/Packing/Blocks.lean`, which does the same work in the form the
+  compiler needs (relocatable, with an entry no-op and a positive step
+  count); nothing outside its own tests depends on it, and it is kept as the
+  statement of where the construction started.
+- `Theory/Godel.lean`: a register file as a single number, register `r`
+  holding `padicValNat (p r) n` for distinct primes `p`. Incrementing
+  multiplies by `p r`, decrementing divides, and testing for zero asks
+  whether `p r` divides — the three facts the machine layer realizes as
+  loops.
+- `Theory/Packing/Support.lean`: `packRange`, the packed value over a bounded
+  range, with `MentionsBelow` and `SupportedBelow` supplying the finite
+  support the encoding needs — a program names finitely many registers, so
+  above some bound nothing can be written. `packRange_init` says a file
+  holding one number in register zero packs to `2 ^ m`, which is what makes
+  the eventual reduction map concrete.
+- `Theory/Packing/Blocks.lean` and `Divide.lean`: what one instruction
+  becomes. An increment is a scaled transfer; a conditional is a single
+  divide, which answers the zero test and performs the decrement at once. The
+  divide is destructive, so each non-zero remainder gets a restore arm that
+  multiplies the quotient back and adds that remainder as literal units.
+  Every block opens with a no-op testing the empty scratch counter, which
+  makes its run provably non-empty even when the block exits to its own base
+  — as it does whenever a source instruction jumps to itself.
+- `Theory/Packing/Compile.lean`: `layout`, the address table. Defining it by
+  `List.take` is what makes an out-of-range jump behave: taking more than a
+  list holds gives the whole list, so a target past the end of the source
+  maps to the end of the compiled program, out of bounds there too.
+- `Theory/Packing/Simulate.lean`: `compile_halts_iff`. The Gödel translation
+  happens in `step_simulates` and nowhere else — a register is zero exactly
+  when its prime fails to divide the packed value, so the two branches of the
+  conditional block are the two branches of the instruction.
+- `Theory/Packing/Minsky.lean`: the last step down, and the shortest. A
+  program naming only registers zero and one is already a Minsky machine
+  written differently, so the two step relations are the same relation on
+  different state types and one step matches one step.
+
+### The capstone
+
+- `Theory/Undecidable.lean`: `universal_brainfuck`, one fixed Brainfuck
+  program that halts on the tape encoding `2 ^ Nat.pair c n` exactly when
+  code `c` halts on input `n`, and `brainfuck_halting_undecidable`, which
+  draws the conclusion: no computable predicate decides whether that program
+  halts on a given input. The program does not depend on the code or the
+  input, and the starting tape is a computable function of both, so a decider
+  would contradict `ComputablePred.halting_problem`.
+
 ## Example Programs
 
 `LeanBF/Examples` holds example programs. `HelloWorld` is the classic
@@ -277,16 +422,22 @@ way, with `quadruple_executes` giving the exact interpreter run (`c2 = 8`).
 `Tripler` (`c2 := 3 * c2`, 14 steps) is the odd-multiplier companion, since
 both of `Quadruple`'s phases double. `Addition` (`c2 := c1 + c2`, 5 steps) is
 the one example whose result depends on both counters rather than on a
-constant fixed in the program. That is the boundary: a general
-`c2 := c1 * c2` needs the counter, the multiplicand, and the accumulator live
-at once, which two registers cannot hold without a Gödel encoding.
+constant fixed in the program. That was the boundary of what the examples
+could reach: a general `c2 := c1 * c2` needs the counter, the multiplicand,
+and the accumulator live at once, which two registers cannot hold directly.
+The undecidability layer crosses it — `Theory.Arith.Multiply` multiplies two
+registers of a machine that has enough of them, and `Theory.Packing` packs
+any such machine back down to two — but the examples themselves stop here,
+being about the compiler rather than about that construction.
 
 ## Project Structure
 
 - `LeanBF/Core`: Definitions (Instruction, State, Semantics, Minsky,
-  Compiler, Parser).
-- `LeanBF/Theory`: Theorems (tape algebra, semantics, determinism, loop
-  machinery, invariance, the dispatch simulation, and completeness).
+  Register, Compiler, Parser).
+- `LeanBF/Theory`: Theorems. The completeness half — tape algebra, semantics,
+  determinism, loop machinery, invariance, the dispatch simulation — and the
+  undecidability half, in `Trace`, `Embed`, `Transfer`, `Arith`, `Godel`,
+  `Universal`, `Packing` and `Undecidable`.
 - `LeanBF/Examples`: Example programs.
 - `Tests`: Executable `example` statements that re-assert the definitions.
 - `scripts`: Repository guard checks (naming, imports, copyright, formatting).

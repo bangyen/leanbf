@@ -51,10 +51,10 @@ example (p : Register.Program) (r base exit : Nat)
 
 /-- The induction target is well formed: a computable function is one some
     fragment computes. -/
-example (p : Register.Program) (base exit inR outR lo hi : Nat) (f : Nat → Nat)
-    (hio : inR ≠ outR) (hi : inR < lo ∨ hi ≤ inR) (ho : outR < lo ∨ hi ≤ outR)
-    (hc : Register.Computes p base exit inR outR lo hi f) :
+example (p : Register.Program) (base exit inR outR lo hiR : Nat) (f : Nat → Nat)
+    (hio : inR ≠ outR) (hin : inR < lo ∨ hiR ≤ inR) (hout : outR < lo ∨ hiR ≤ outR)
+    (hc : Register.Computes p base exit inR outR lo hiR f) :
     Register.RegComputable f :=
-  ⟨p, base, exit, inR, outR, lo, hi, hio, hi, ho, hc⟩
+  ⟨p, base, exit, inR, outR, lo, hiR, hio, hin, hout, hc⟩
 
 end LeanBF.Tests

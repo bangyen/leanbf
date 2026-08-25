@@ -39,6 +39,7 @@ instead of the least.
 
 ## Theorems
 
+* `mentionsBelow_of_mem`: The naming condition, stated over membership.
 * `step_supportedBelow`: Stepping preserves bounded support.
 * `reaches_supportedBelow`: Reachability preserves bounded support.
 * `packRange_pos`: A packed register file is positive.
@@ -61,6 +62,13 @@ def instrMentionsBelow (R : Nat) : Instruction → Prop
 /-- Every instruction of the program names only registers below the bound. -/
 def MentionsBelow (p : Program) (R : Nat) : Prop :=
   ∀ i (h : i < p.length), instrMentionsBelow R p[i]
+
+/-- The same condition stated over membership rather than indices. Programs
+    assembled by appending and flattening are easier to talk about this way,
+    every such combinator having a membership lemma. -/
+theorem mentionsBelow_of_mem (p : Program) (R : Nat)
+    (h : ∀ i ∈ p, instrMentionsBelow R i) : MentionsBelow p R :=
+  fun i hi => h p[i] (List.getElem_mem hi)
 
 /-- The registers at or above the bound are all zero. -/
 def SupportedBelow (s : State) (R : Nat) : Prop :=

@@ -39,6 +39,7 @@ counter. Nothing has to special-case it.
 * `embeddedAt_compile`: Each block sits where the table says.
 * `compile_length`: The compiled program's length is the table's end.
 * `layout_of_length_le`: Past the end, the table stops moving.
+* `compile_mentions`: The compiled program names only the two counters.
 -/
 
 namespace LeanBF
@@ -158,6 +159,23 @@ theorem layout_of_length_le (p : Program) (i : Nat) (hi : p.length ≤ i) :
     layout p i = layout p p.length := by
   simp only [layout]
   rw [List.take_of_length_le hi, List.take_of_length_le (le_refl _)]
+
+/-- The compiled program names only the two counters. Every block does, and
+    the program is nothing but blocks — which is what makes it a two-counter
+    machine rather than merely a register machine that happens to use few. -/
+theorem compile_mentions (p : Program) : MentionsBelow (compile p) 2 := by
+  refine mentionsBelow_of_mem _ _ (fun i hi => ?_)
+  rw [compile] at hi
+  rcases List.mem_flatMap.mp hi with ⟨k, _, hk⟩
+  -- Each block is one of the three shapes.
+  rw [compileInstr] at hk
+  split at hk
+  · exact absurd hk List.not_mem_nil
+  · exact incBlock_mentions _ _ _ i hk
+  · exact jzdecBlock_mentions _ _ _ _ i hk
+  · rcases List.mem_cons.mp hk with rfl | h
+    · simp only [instrMentionsBelow]
+    · exact absurd h List.not_mem_nil
 
 end Register
 

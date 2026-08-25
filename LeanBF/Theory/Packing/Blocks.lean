@@ -59,6 +59,9 @@ a `jzdec` block's length grows with the register's prime.
 * `restoreArm_get_units`: The arm's literal remainder units.
 * `restoreArm_units_reaches`: Walking the arm's literal units.
 * `restoreArm_reaches`: The arm rebuilds the value the divide destroyed.
+* `incBlock_mentions`: The increment block names only the two counters.
+* `restoreArm_mentions`: The restore arm names only the two counters.
+* `paddedArm_mentions`: A padded arm names only the two counters.
 -/
 
 namespace LeanBF
@@ -359,6 +362,55 @@ theorem restoreArm_reaches (prog : Program) (p r base exit : Nat) (hp : 0 < p) (
       simp only [hs1def, scaled, if_neg hq0]
   rw [← heq]
   exact reaches_trans hkd hu
+
+/-- The increment block names only the two counters. Every slot is either
+    the entry no-op, a chain increment, or one of the drain's two, and each
+    names counter zero or one. -/
+theorem incBlock_mentions (p base exit : Nat) :
+    ∀ i ∈ incBlock p base exit, instrMentionsBelow 2 i := by
+  intro i hi
+  rw [incBlock] at hi
+  rcases List.mem_append.mp hi with h | h
+  · rcases List.mem_append.mp h with h' | h'
+    · rcases List.mem_cons.mp h' with rfl | h''
+      · simp only [instrMentionsBelow]; omega
+      · rcases List.mem_cons.mp h'' with rfl | h'''
+        · simp only [instrMentionsBelow]; omega
+        · exact absurd h''' List.not_mem_nil
+    · rcases List.mem_map.mp h' with ⟨j, _, hj⟩
+      rw [← hj]
+      simp only [instrMentionsBelow]; omega
+  · rcases List.mem_cons.mp h with rfl | h'
+    · simp only [instrMentionsBelow]; omega
+    · rcases List.mem_cons.mp h' with rfl | h''
+      · simp only [instrMentionsBelow]; omega
+      · exact absurd h'' List.not_mem_nil
+
+/-- The restore arm names only the two counters. -/
+theorem restoreArm_mentions (p r base exit : Nat) :
+    ∀ i ∈ restoreArm p r base exit, instrMentionsBelow 2 i := by
+  intro i hi
+  rw [restoreArm] at hi
+  rcases List.mem_append.mp hi with h | h
+  · rcases List.mem_append.mp h with h' | h'
+    · rcases List.mem_cons.mp h' with rfl | h''
+      · simp only [instrMentionsBelow]; omega
+      · exact absurd h'' List.not_mem_nil
+    · rcases List.mem_map.mp h' with ⟨j, _, hj⟩
+      rw [← hj]
+      simp only [instrMentionsBelow]; omega
+  · rcases List.mem_map.mp h with ⟨j, _, hj⟩
+    rw [← hj]
+    simp only [instrMentionsBelow]; omega
+
+/-- A padded arm names only the two counters, its padding being halts. -/
+theorem paddedArm_mentions (p r base exit : Nat) :
+    ∀ i ∈ paddedArm p r base exit, instrMentionsBelow 2 i := by
+  intro i hi
+  rcases List.mem_append.mp hi with h | h
+  · exact restoreArm_mentions p r base exit i h
+  · rw [List.eq_of_mem_replicate h]
+    simp only [instrMentionsBelow]
 
 end Register
 

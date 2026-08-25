@@ -3,6 +3,7 @@ Copyright (c) 2026 Bangyen Pham. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
+import LeanBF.Theory.BodyLoop
 import LeanBF.Theory.Determinism
 import LeanBF.Theory.Simulation
 
@@ -22,9 +23,11 @@ cancel, and so does `+ -`.
 
 Equivalence is a congruence for `++` in each argument, proven from
 `runsTo_append_factor`: every run of `A ++ C` factors through a state at
-which `A` has halted. Congruence under `loop` is not addressed here; a loop
-body runs an unbounded number of times, so it needs an induction this slice
-does not set up.
+which `A` has halted. It is also a congruence for `loop`
+(`progEquiv_loop`), by strong induction on the length of the halting run —
+each iteration costs at least the loop-entry step, so the measure strictly
+decreases. Together these let a rewrite be applied at any depth of
+nesting.
 
 ## Main definitions
 
@@ -47,6 +50,9 @@ does not set up.
 * `progEquiv_incVal_decVal`: `+ -` is a no-op.
 * `decVal_incVal_ne_id`: `- +` is *not* a no-op, because cell values are
   natural numbers and decrement truncates at zero.
+* `runsTo_of_runsExactly`: An exact run witnesses a `RunsTo` chain.
+* `runsTo_loop_of_progEquiv`: One direction of `progEquiv_loop`.
+* `progEquiv_loop`: Equivalent loop bodies give equivalent loops.
 -/
 
 namespace LeanBF
@@ -223,5 +229,80 @@ theorem decVal_incVal_ne_id : ¬ (∀ s : State, s.decVal.incVal = s) := by
   have hc := congrArg (fun st => st.tape 0) (h State.mkEmpty)
   simp only [State.decVal, State.incVal, State.modifyCell, State.mkEmpty, if_pos] at hc
   omega
+
+/-- A run that halts after exactly `n` steps witnesses a `RunsTo` chain. This
+    is the converse of `run_of_RunsTo`. -/
+theorem runsTo_of_runsExactly : ∀ (n : Nat) (prog : Program) (s t : State),
+    RunsExactly n prog s t → RunsTo (prog, s) t := by
+  intro n
+  induction n with
+  | zero =>
+      intro prog s t h
+      have hts : t = s := by
+        have hrun := h.1
+        simp only [run] at hrun
+        exact (Option.some_inj.mp hrun).symm
+      have hnil : prog = [] := (stepsToHalt_one_eq_zero prog s).mp h.2
+      rw [hts, hnil]
+      exact RunsTo.halt s
+  | succ k ih =>
+      intro prog s t h
+      rcases hstep : step prog s with _ | ⟨p', s'⟩
+      · exfalso
+        have hsteps := h.2
+        simp only [stepsToHalt, hstep] at hsteps
+        omega
+      · have hrest : RunsExactly k p' s' t := by
+          constructor
+          · have hrun := h.1
+            simpa only [run, hstep] using hrun
+          · have hsteps := h.2
+            simp only [stepsToHalt, hstep, Nat.add_right_cancel_iff] at hsteps
+            exact hsteps
+        exact RunsTo.step prog s s' p' t hstep (ih p' s' t hrest)
+
+/-- One direction of `progEquiv_loop`, by strong induction on the exact length
+    of the halting run. Each iteration costs at least the loop-entry step, so
+    the measure strictly decreases. -/
+theorem runsTo_loop_of_progEquiv (A B : Program) (h : ProgEquiv A B) :
+    ∀ (n : Nat) (s t : State), RunsExactly n [Instruction.loop A] s t →
+      RunsTo ([Instruction.loop B], s) t := by
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    intro s t hex
+    by_cases hz : State.currentVal s = 0
+    · have hstepA : step [Instruction.loop A] s = some ([], s) := step_loop_zero s A hz
+      have hstepB : step [Instruction.loop B] s = some ([], s) := step_loop_zero s B hz
+      rcases runsExactly_step n _ s t hex ([] : Program) s hstepA with ⟨m, hm, _⟩
+      have hts : t = s := runsTo_nil_eq (runsTo_of_runsExactly m [] s t hm)
+      rw [hts]
+      exact RunsTo.step _ s s _ s hstepB (RunsTo.halt s)
+    · have hstepA : step [Instruction.loop A] s = some (A ++ [Instruction.loop A], s) :=
+        step_loop_nonzero s A hz
+      have hstepB : step [Instruction.loop B] s = some (B ++ [Instruction.loop B], s) :=
+        step_loop_nonzero s B hz
+      rcases runsExactly_step n _ s t hex _ s hstepA with ⟨m, hm, hmn⟩
+      have hrun : RunsTo (A ++ [Instruction.loop A], s) t :=
+        runsTo_of_runsExactly m _ s t hm
+      rcases runsTo_append_factor _ t hrun A [Instruction.loop A] s rfl with ⟨s', hA, _⟩
+      rcases runsExactly_append_suffix (A, s) s' hA [Instruction.loop A] m t hm with
+        ⟨j, hj, hjm⟩
+      have hjn : j < n := by omega
+      exact RunsTo.step _ s s _ t hstepB
+        (RunsTo_append [Instruction.loop B] s' t ((h s s').mp hA) (ih j hjn s' t hj))
+
+/-- Equivalent loop bodies give equivalent loops, so a rewrite is valid inside
+    a loop and therefore at any depth of nesting. -/
+theorem progEquiv_loop {A B : Program} (h : ProgEquiv A B) :
+    ProgEquiv [Instruction.loop A] [Instruction.loop B] := by
+  intro s t
+  constructor
+  · intro hr
+    rcases run_of_RunsTo ([Instruction.loop A], s) t hr with ⟨n, hn⟩
+    exact runsTo_loop_of_progEquiv A B h n s t hn
+  · intro hr
+    rcases run_of_RunsTo ([Instruction.loop B], s) t hr with ⟨n, hn⟩
+    exact runsTo_loop_of_progEquiv B A (progEquiv_symm h) n s t hn
 
 end LeanBF

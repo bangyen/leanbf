@@ -26,6 +26,9 @@ zero tested cell skips the body, a non-zero one runs it exactly once, in
 ## Theorems
 
 * `run_of_RunsTo`: A `RunsTo` chain witnesses an exact run.
+* `runsExactly_step`: Peeling one step off an exact run shortens it by one.
+* `runsExactly_append_suffix`: The suffix phase of an append run is no
+  longer than the whole.
 * `runsTo_of_loopFree`: A loop-free program runs to `runSeq` completion.
 * `runsTo_clearHere`: The clear loop `[-]` clears the current cell.
 * `runsTo_bodyLoop_zero`: A zero tested cell skips the body loop.
@@ -286,5 +289,40 @@ theorem run_bodyLoop_succ (w : Nat) (test s : Int) (body : Program) (s0 s1 : Sta
   exact run_of_RunsTo (bodyLoop test s body, s0)
     { s1 with ptr := test, tape := fun i => if i = s then 0 else s1.tape i }
     (runsTo_bodyLoop_succ w test s body s0 s1 hptr hv hbody h1ptr)
+
+/-- Peeling one step off an exact run shortens it by exactly one. -/
+theorem runsExactly_step (n : Nat) (prog : Program) (s t : State)
+    (h : RunsExactly n prog s t) (prog' : Program) (s' : State)
+    (hstep : step prog s = some (prog', s')) :
+    ∃ m, RunsExactly m prog' s' t ∧ m + 1 = n := by
+  cases n with
+  | zero =>
+      exfalso
+      have := h.2
+      simp only [stepsToHalt, hstep] at this
+      exact Nat.succ_ne_zero 0 this
+  | succ k =>
+      refine ⟨k, ⟨?_, ?_⟩, rfl⟩
+      · have := h.1
+        simpa only [run, hstep] using this
+      · have := h.2
+        simp only [stepsToHalt, hstep, Nat.add_right_cancel_iff] at this
+        exact this
+
+/-- If the prefix `B` runs to `s1` and the whole run of `B ++ C` is exact of
+    length `n`, then the `C` phase is exact of some length at most `n`. -/
+theorem runsExactly_append_suffix (cfg : Program × State) (s1 : State)
+    (hB : RunsTo cfg s1) : ∀ (C : Program) (n : Nat) (t : State),
+    RunsExactly n (cfg.1 ++ C) cfg.2 t → ∃ m, RunsExactly m C s1 t ∧ m ≤ n := by
+  induction hB with
+  | halt s0 => intro C n t h; exact ⟨n, by simpa only [List.nil_append] using h, Nat.le_refl n⟩
+  | step p s0 s2 p' s_fin hstep hrest ih =>
+      intro C n t h
+      have happ : step (p ++ C) s0 = some (p' ++ C, s2) := step_append p C s0 s2 p' hstep
+      rcases runsExactly_step n (p ++ C) s0 t h (p' ++ C) s2 happ with ⟨k, hk, hkn⟩
+      rcases ih C k t hk with ⟨m, hm, hmk⟩
+      exact ⟨m, hm, by omega⟩
+
+-- Strict version: a first step costs one, so the suffix is strictly shorter.
 
 end LeanBF

@@ -43,7 +43,7 @@ example : ∃ s', Reaches cmpProg (cmpStart 2 5) s' ∧ s'.pc = 14 := by
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide)
     rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
-    (cmpStart 2 5) rfl rfl rfl rfl with ⟨s', hr, _, _, _, _, _, hpc⟩
+    (cmpStart 2 5) rfl rfl rfl rfl with ⟨s', hr, _, _, _, _, _, _, hpc⟩
   exact ⟨s', hr, by rw [hpc]; decide⟩
 
 /-- It exits at `15` when the first operand is strictly greater. -/
@@ -52,7 +52,7 @@ example : ∃ s', Reaches cmpProg (cmpStart 5 2) s' ∧ s'.pc = 15 := by
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide)
     rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
-    (cmpStart 5 2) rfl rfl rfl rfl with ⟨s', hr, _, _, _, _, _, hpc⟩
+    (cmpStart 5 2) rfl rfl rfl rfl with ⟨s', hr, _, _, _, _, _, _, hpc⟩
   exact ⟨s', hr, by rw [hpc]; decide⟩
 
 /-- Equal operands take the `15` arm, since the comparison is strict. This
@@ -62,7 +62,7 @@ example : ∃ s', Reaches cmpProg (cmpStart 3 3) s' ∧ s'.pc = 15 := by
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide)
     rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
-    (cmpStart 3 3) rfl rfl rfl rfl with ⟨s', hr, _, _, _, _, _, hpc⟩
+    (cmpStart 3 3) rfl rfl rfl rfl with ⟨s', hr, _, _, _, _, _, _, hpc⟩
   exact ⟨s', hr, by rw [hpc]; decide⟩
 
 /-- Both operands survive the comparison, and every working register is
@@ -73,7 +73,7 @@ example : ∃ s', Reaches cmpProg (cmpStart 2 5) s' ∧ s'.regs 0 = 2 ∧
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide)
     rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl
-    (cmpStart 2 5) rfl rfl rfl rfl with ⟨s', hr, ha, hb, hsc, hc, ht, _⟩
+    (cmpStart 2 5) rfl rfl rfl rfl with ⟨s', hr, ha, hb, hsc, hc, ht, _, _⟩
   exact ⟨s', hr, by rw [ha]; rfl, by rw [hb]; rfl, ht, hc, hsc⟩
 
 /-- The subtraction loop saturates rather than underflowing. -/

@@ -49,4 +49,12 @@ example (p : Register.Program) (r base exit : Nat)
     Register.Reaches p s { pc := exit, regs := fun i => if i = r then 0 else s.regs i } :=
   Register.clear_reaches p r base exit h0 n s hpc ha
 
+/-- The induction target is well formed: a computable function is one some
+    fragment computes. -/
+example (p : Register.Program) (base exit inR outR lo hi : Nat) (f : Nat → Nat)
+    (hio : inR ≠ outR) (hi : inR < lo ∨ hi ≤ inR) (ho : outR < lo ∨ hi ≤ outR)
+    (hc : Register.Computes p base exit inR outR lo hi f) :
+    Register.RegComputable f :=
+  ⟨p, base, exit, inR, outR, lo, hi, hio, hi, ho, hc⟩
+
 end LeanBF.Tests

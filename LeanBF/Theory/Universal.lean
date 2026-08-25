@@ -23,6 +23,13 @@ halting to a search over it. Non-termination then lives in exactly one place,
 the outer search over the step bound, rather than threaded through every
 case.
 
+The target is `Nat.Primrec f → RegComputable f`, an induction over the seven
+constructors of `Nat.Primrec`. That inductive is the bare one on `ℕ → ℕ`, so
+the motive stays unary and pairing is handled by machine fragments at each
+node rather than by the statement. Note that `prec`'s goal mentions both
+`Nat.unpaired` and `Nat.pair`, so the pairing fragments are needed inside the
+induction, not only for the `left` and `right` cases.
+
 `Computes` fixes the calling convention the seven cases share. Two parts of
 it are load-bearing. The scratch region is an interval disjoint from the
 named registers, so disjointness side conditions are arithmetic rather than
@@ -34,6 +41,7 @@ the first one finishes.
 ## Main definitions
 
 * `Computes`: A fragment computes a function, with a calling convention.
+* `RegComputable`: A function is computed by some fragment.
 
 ## Theorems
 
@@ -135,6 +143,13 @@ theorem computes_seq (p : Program) (base mid exit inR midR outR lo hi : Nat)
       rintro rfl
       omega
     rw [hfr2 r hro hlohi, hfr1 r hrm hlohi]
+
+/-- A function is register computable when some fragment computes it under
+    the calling convention, for some choice of registers and scratch region. -/
+def RegComputable (f : Nat → Nat) : Prop :=
+  ∃ (p : Program) (base exit inR outR lo hi : Nat),
+    inR ≠ outR ∧ (inR < lo ∨ hi ≤ inR) ∧ (outR < lo ∨ hi ≤ outR) ∧
+    Computes p base exit inR outR lo hi f
 
 end Register
 

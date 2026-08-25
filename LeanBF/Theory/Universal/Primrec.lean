@@ -50,6 +50,8 @@ fragment puts it back.
 * `precBodyPost_effect`: The body's postlude counts up and returns.
 * `precBody_effect`: One iteration advances the recursion by one step.
 * `precLoop_effect`: The loop runs the recursion to its base case.
+* `precPost_effect`: The cleanup after the loop.
+* `builds_prec`: Primitive recursion preserves computability.
 -/
 
 namespace LeanBF
@@ -461,6 +463,177 @@ theorem precLoop_effect (p : Program) (lo hd hi gl postAddr : Nat) (g : Nat → 
   exact ⟨s', hr', hpc', hc', hI'.2.1, by rw [hI'.2.2.1, Nat.sub_zero],
     by rw [hI'.2.2.2.1, Nat.sub_zero], hI'.2.2.2.2.1, hI'.2.2.2.2.2.1,
     hI'.2.2.2.2.2.2.1, hI'.2.2.2.2.2.2.2⟩
+
+/-- The cleanup: move the accumulator to the output, then empty the two
+    registers still holding values. The iteration counter finishes at the
+    number of iterations rather than at zero, so it needs clearing too. -/
+theorem precPost_effect (p : Program) (outR lo base exit : Nat) (hout : outR < lo)
+    (hemb : EmbeddedAt p base (precPost outR lo base exit)) :
+    ∀ (s : State), s.pc = base → s.regs outR = 0 →
+      ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs outR = s.regs (lo + 1) ∧
+        s'.regs lo = 0 ∧ s'.regs (lo + 1) = 0 ∧ s'.regs (lo + 2) = 0 ∧
+        ∀ q, q ≠ outR → q ≠ lo → q ≠ lo + 1 → q ≠ lo + 2 → s'.regs q = s.regs q := by
+  intro s hpc hout0
+  have hg := embeddedAt_get p base _ hemb
+  -- The accumulator becomes the output.
+  have hdrain := drain_reaches p (lo + 1) outR base (base + 2) (by omega)
+    (by simpa only [Nat.add_zero] using hg 0 _ rfl) (hg 1 _ rfl) (s.regs (lo + 1)) s hpc rfl
+  set s1 : State := drained (lo + 1) outR (base + 2) (s.regs (lo + 1)) s with hs1
+  have hclr1 := clear_reaches p lo (base + 2) (base + 3) (hg 2 _ rfl) (s1.regs lo) s1
+    (by simp only [hs1, drained]) rfl
+  set s2 : State := { pc := base + 3, regs := fun i => if i = lo then 0 else s1.regs i } with hs2
+  have hclr2 := clear_reaches p (lo + 2) (base + 3) exit (hg 3 _ rfl) (s2.regs (lo + 2)) s2
+    rfl rfl
+  refine ⟨_, reaches_trans hdrain (reaches_trans hclr1 hclr2), rfl, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [if_neg (by omega : outR ≠ lo + 2), hs2, if_neg (by omega : outR ≠ lo), hs1,
+      drained, if_neg (by omega : outR ≠ lo + 1), if_true, hout0, Nat.zero_add]
+  · simp only [if_neg (by omega : lo ≠ lo + 2), hs2, if_true]
+  · simp only [if_neg (by omega : lo + 1 ≠ lo + 2), hs2, if_neg (by omega : lo + 1 ≠ lo),
+      hs1, drained, if_true]
+  · simp only [if_true]
+  · intro q hqo hql hql1 hql2
+    simp only [if_neg hql2, hs2, if_neg hql, hs1, drained, if_neg hql1, if_neg hqo]
+
+/-- Primitive recursion preserves computability. The input is unpaired into
+    the recursion's parameter and its depth, the base case runs once, and the
+    loop applies the step function that many times. -/
+theorem builds_prec (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) :
+    Builds (Nat.unpaired fun z n => n.rec (f z) fun y IH => g (Nat.pair z (Nat.pair y IH))) := by
+  intro inR outR lo hio hin hout base
+  rcases hf lo (lo + 1) (lo + 6) (by omega) (by omega) (by omega) (base + 93) with
+    ⟨hiF, fragF, hloF, hF⟩
+  set hd : Nat := base + 93 + fragF.length with hhd
+  rcases hg (lo + 4) (lo + 1) (lo + 6) (by omega) (by omega) (by omega) (hd + 105) with
+    ⟨hiG, fragG, hloG, hG⟩
+  set postAddr : Nat := hd + 108 + fragG.length with hpost
+  refine ⟨max (max hiF hiG) (lo + 22),
+    unpairFrag inR lo (lo + 5) (lo + 6) base (base + 93) ++ fragF ++
+      [Instruction.jzdec (lo + 5) postAddr (hd + 1)] ++ precBodyPre lo (hd + 1) ++ fragG ++
+      precBodyPost lo (hd + 105 + fragG.length) hd ++
+      precPost outR lo postAddr (postAddr + 4),
+    by omega, fun p hemb s hpc hout0 hzero => ?_⟩
+  -- Peel the six pieces off the concatenation, innermost first.
+  have e5 := embeddedAt_append_left p base _ _ hemb
+  have e4 := embeddedAt_append_left p base _ _ e5
+  have e3 := embeddedAt_append_left p base _ _ e4
+  have e2 := embeddedAt_append_left p base _ _ e3
+  have e1 := embeddedAt_append_left p base _ _ e2
+  have hembU := embeddedAt_append_left p base _ _ e1
+  have hembFraw := embeddedAt_append_right p base _ _ e1
+  have hembF : EmbeddedAt p (base + 93) fragF := by rwa [unpairFrag_length] at hembFraw
+  have hlen1 : (unpairFrag inR lo (lo + 5) (lo + 6) base (base + 93) ++ fragF).length
+      = 93 + fragF.length := by rw [List.length_append, unpairFrag_length]
+  have hheadraw := embeddedAt_append_right p base _ _ e2
+  have hhead : p[hd]? = some (Instruction.jzdec (lo + 5) postAddr (hd + 1)) := by
+    have h := embeddedAt_get p _ _ hheadraw 0 _ rfl
+    rwa [hlen1, Nat.add_zero, ← Nat.add_assoc] at h
+  have hlen2 : (unpairFrag inR lo (lo + 5) (lo + 6) base (base + 93) ++ fragF ++
+      [Instruction.jzdec (lo + 5) postAddr (hd + 1)]).length = 93 + fragF.length + 1 := by
+    rw [List.length_append, hlen1, List.length_cons, List.length_nil]
+  have hembPreraw := embeddedAt_append_right p base _ _ e3
+  have hembPre : EmbeddedAt p (hd + 1) (precBodyPre lo (hd + 1)) := by
+    rwa [hlen2, ← Nat.add_assoc, ← Nat.add_assoc] at hembPreraw
+  have hlen3 : (unpairFrag inR lo (lo + 5) (lo + 6) base (base + 93) ++ fragF ++
+      [Instruction.jzdec (lo + 5) postAddr (hd + 1)] ++ precBodyPre lo (hd + 1)).length
+      = 93 + fragF.length + 1 + 104 := by
+    rw [List.length_append, hlen2, precBodyPre, List.length_append, List.length_append,
+      pairFrag_length, pairFrag_length, List.length_cons, List.length_cons, List.length_nil]
+  have hembGraw := embeddedAt_append_right p base _ _ e4
+  have hembG : EmbeddedAt p (hd + 105) fragG := by
+    have heq : base + (93 + fragF.length + 1 + 104) = hd + 105 := by omega
+    rwa [hlen3, heq] at hembGraw
+  have hlen4 : (unpairFrag inR lo (lo + 5) (lo + 6) base (base + 93) ++ fragF ++
+      [Instruction.jzdec (lo + 5) postAddr (hd + 1)] ++ precBodyPre lo (hd + 1) ++
+      fragG).length = 93 + fragF.length + 1 + 104 + fragG.length := by
+    rw [List.length_append, hlen3]
+  have hembPostraw := embeddedAt_append_right p base _ _ e5
+  have hembPost : EmbeddedAt p (hd + 105 + fragG.length)
+      (precBodyPost lo (hd + 105 + fragG.length) hd) := by
+    have heq : base + (93 + fragF.length + 1 + 104 + fragG.length)
+        = hd + 105 + fragG.length := by omega
+    rwa [hlen4, heq] at hembPostraw
+  have hlen5 : (unpairFrag inR lo (lo + 5) (lo + 6) base (base + 93) ++ fragF ++
+      [Instruction.jzdec (lo + 5) postAddr (hd + 1)] ++ precBodyPre lo (hd + 1) ++
+      fragG ++ precBodyPost lo (hd + 105 + fragG.length) hd).length
+      = 93 + fragF.length + 1 + 104 + fragG.length + 3 := by
+    rw [List.length_append, hlen4, precBodyPost, List.length_cons, List.length_cons,
+      List.length_cons, List.length_nil]
+  have hembCleanraw := embeddedAt_append_right p base _ _ hemb
+  have hembClean : EmbeddedAt p postAddr (precPost outR lo postAddr (postAddr + 4)) := by
+    have heq : base + (93 + fragF.length + 1 + 104 + fragG.length + 3) = postAddr := by omega
+    rwa [hlen5, heq] at hembCleanraw
+  -- Unpair the input into the recursion's parameter and its depth.
+  rcases unpairVar_effect p inR lo (lo + 5) (lo + 6) base (base + 93)
+    (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) hembU
+    s hpc (hzero lo (by omega) (by omega)) (hzero (lo + 5) (by omega) (by omega))
+    (fun j hj => hzero (lo + 6 + j) (by omega) (by omega)) with
+    ⟨s1, hr1, hpc1, hN1, hZ1, hC1, hB1, hFr1⟩
+  -- The base case.
+  have hFw := computes_mono_hi p (base + 93) _ lo (lo + 1) (lo + 6) hiF
+    (max (max hiF hiG) (lo + 22)) f (by omega) (by omega) (hF p hembF)
+  rcases hFw s1 hpc1
+    (by rw [hFr1 (lo + 1) (by omega) (by omega) (by omega) (by omega)]
+        exact hzero (lo + 1) (by omega) (by omega))
+    (fun r hr1' hr2' => by
+      by_cases hlow : r < lo + 22
+      · have := hB1 (r - (lo + 6)) (by omega)
+        rwa [show lo + 6 + (r - (lo + 6)) = r by omega] at this
+      · rw [hFr1 r (by omega) (by omega) (by omega) (by omega)]
+        exact hzero r (by omega) hr2') with
+    ⟨s2, hr2, hpc2, hV2, hI2, hB2, hFr2⟩
+  -- The loop.
+  have hGw := computes_mono_hi p (hd + 105) _ (lo + 4) (lo + 1) (lo + 6) hiG
+    (max (max hiF hiG) (lo + 22)) g (by omega) (by omega) (hG p hembG)
+  rcases precLoop_effect p lo hd (max (max hiF hiG) (lo + 22)) fragG.length postAddr g
+    (f (s1.regs lo)) (by omega) hhead hembPre hGw hembPost
+    (s1.regs (lo + 5)) s2 (by omega)
+    (by rw [hFr2 (lo + 5) (by omega) (by omega)])
+    (by rw [hFr2 (lo + 2) (by omega) (by omega),
+          hFr1 (lo + 2) (by omega) (by omega) (by omega) (by omega)]
+        exact hzero (lo + 2) (by omega) (by omega))
+    (by rw [hV2])
+    (by rw [hFr2 (lo + 3) (by omega) (by omega),
+          hFr1 (lo + 3) (by omega) (by omega) (by omega) (by omega)]
+        exact hzero (lo + 3) (by omega) (by omega))
+    (by rw [hFr2 (lo + 4) (by omega) (by omega),
+          hFr1 (lo + 4) (by omega) (by omega) (by omega) (by omega)]
+        exact hzero (lo + 4) (by omega) (by omega))
+    hB2 with ⟨s3, hr3, hpc3, hC3, hZ3, hY3, hA3, hU3, hT3, hB3, hFr3⟩
+  -- The cleanup.
+  rcases precPost_effect p outR lo postAddr (postAddr + 4) (by omega) hembClean s3 hpc3
+    (by rw [hFr3 outR (by omega), hFr2 outR (by omega) (by omega),
+          hFr1 outR (by omega) (by omega) (by omega) (by omega)]
+        exact hout0) with ⟨s4, hr4, hpc4, hO4, hZ4, hA4, hY4, hFr4⟩
+  refine ⟨s4, reaches_trans hr1 (reaches_trans hr2 (reaches_trans hr3 hr4)), ?_, ?_, ?_, ?_, ?_⟩
+  · -- The exit is just past the whole fragment.
+    simp only [List.length_append, hlen5, precPost, List.length_cons, List.length_nil]
+    omega
+  · -- The recursion's answer, on the two halves of the unpaired input.
+    rw [hO4, hA3, hFr2 lo (by omega) (by omega), hZ1, hC1]
+  · rw [hFr4 inR (by omega) (by omega) (by omega) (by omega), hFr3 inR (by omega),
+      hFr2 inR (by omega) (by omega), hN1]
+  · intro r hlor hrhi
+    by_cases hr0 : r = lo
+    · rw [hr0, hZ4]
+    · by_cases hr1' : r = lo + 1
+      · rw [hr1', hA4]
+      · by_cases hr2' : r = lo + 2
+        · rw [hr2', hY4]
+        · rw [hFr4 r (by omega) hr0 hr1' hr2']
+          by_cases hr5 : r = lo + 5
+          · rw [hr5]
+            exact hC3
+          · by_cases hr34 : r = lo + 3 ∨ r = lo + 4
+            · rcases hr34 with h | h
+              · rw [h]; exact hU3
+              · rw [h]; exact hT3
+            · exact hB3 r (by omega) hrhi
+  · intro q hqo hqlohi
+    rw [hFr4 q hqo (by omega) (by omega) (by omega), hFr3 q (by omega),
+      hFr2 q (by omega) (by omega)]
+    by_cases hqi : q = inR
+    · rw [hqi, hN1]
+    · exact hFr1 q hqi (by omega) (by omega) (by omega)
 
 end Register
 

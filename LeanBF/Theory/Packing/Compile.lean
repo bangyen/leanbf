@@ -31,9 +31,7 @@ counter. Nothing has to special-case it.
 
 ## Theorems
 
-* `blockLen_pos`: Every block occupies at least one slot.
 * `layout_succ`: The next block starts a block later.
-* `layout_mono`: Later blocks start no earlier.
 * `compileInstr_length`: A block's length is what the table says.
 * `layout_eq_piecesBefore`: The table agrees with the concatenation's offsets.
 * `embeddedAt_compile`: Each block sits where the table says.
@@ -53,12 +51,6 @@ noncomputable def blockLen : Instruction → Nat
   | .jzdec r _ _ => 2 + 2 * regPrime r + 2 + (regPrime r - 1) * (2 * regPrime r)
   | .halt => 1
 
-theorem blockLen_pos (i : Instruction) : 0 < blockLen i := by
-  cases i with
-  | inc r _ => simp only [blockLen]; omega
-  | jzdec r _ _ => simp only [blockLen]; omega
-  | halt => simp only [blockLen]; omega
-
 /-- Where block `i` starts: the total size of the blocks before it. Taking
     more than the program holds gives the whole program, so a counter past
     the end maps to the end of the compiled program. -/
@@ -71,27 +63,6 @@ theorem layout_succ (p : Program) (i : Nat) (hi : i < p.length) :
   simp only [List.map_append, List.sum_append_nat, Option.toList_some,
     List.map_cons, List.map_nil, List.sum_cons, List.sum_nil]
   omega
-
-theorem layout_mono (p : Program) (a b : Nat) (hab : a ≤ b) : layout p a ≤ layout p b := by
-  induction b with
-  | zero =>
-      have : a = 0 := by omega
-      rw [this]
-  | succ m ih =>
-      rcases Nat.lt_or_ge a (m + 1) with hlt | hge
-      · rcases Nat.lt_or_ge m p.length with hm | hm
-        · rw [layout_succ p m hm]
-          have := ih (by omega)
-          omega
-        · -- Past the end the table stops growing.
-          have heq : layout p (m + 1) = layout p m := by
-            simp only [layout]
-            rw [List.take_of_length_le (by omega : p.length ≤ m + 1),
-              List.take_of_length_le (by omega : p.length ≤ m)]
-          rw [heq]
-          exact ih (by omega)
-      · have : a = m + 1 := by omega
-        rw [this]
 
 /-- The block one instruction compiles to, placed at its own address. -/
 noncomputable def compileInstr (p : Program) (i : Nat) : Program :=

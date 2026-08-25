@@ -357,11 +357,14 @@ The chain runs `Nat.Partrec.Code` → register machine → two counters → Mins
   whether `p r` divides — the three facts the machine layer realizes as
   loops.
 - `Theory/Packing/Support.lean`: `packRange`, the packed value over a bounded
-  range, with `MentionsBelow` and `SupportedBelow` supplying the finite
-  support the encoding needs — a program names finitely many registers, so
-  above some bound nothing can be written. `packRange_init` says a file
-  holding one number in register zero packs to `2 ^ m`, which is what makes
-  the eventual reduction map concrete.
+  range, with `MentionsBelow` supplying the bound — a program names finitely
+  many registers, and `exists_mentionsBelow` produces one, which is what lets
+  a machine that only exists inside an existential be packed at all. Updating
+  one register multiplies or divides the packed value by that register's
+  prime (`packRange_setReg_succ` and its twin), which is a fact about the
+  product rather than about a valuation. `packRange_init` says a file holding
+  one number in register zero packs to `2 ^ m`, which is what makes the
+  reduction map concrete.
 - `Theory/Packing/Blocks.lean` and `Divide.lean`: what one instruction
   becomes. An increment is a scaled transfer; a conditional is a single
   divide, which answers the zero test and performs the decrement at once. The

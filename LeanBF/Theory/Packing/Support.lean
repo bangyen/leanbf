@@ -15,15 +15,20 @@ a single number.
 `State`'s registers are a total function `Nat → Nat`, and there is no
 finite product over all of them. The encoding therefore has to be taken over
 a bounded range, and the registers above that range have to be known to be
-zero — otherwise the packed value forgets them and the simulation is not
-faithful.
+zero.
 
-`MentionsBelow` is the syntactic condition that makes this hold for free. A
-program only ever names finitely many registers, so for any program there is
-a bound below which all of them sit; above it, no instruction can write, and
-a register that starts at zero stays there. `step_supportedBelow` is that
-argument, and it is the only thing standing between a program and a packed
-representation of its state.
+`MentionsBelow` is the syntactic condition that supplies the bound: a program
+only ever names finitely many registers, so for any program there is one
+below which all of them sit, and `exists_mentionsBelow` produces it — which
+is what lets a machine that only exists inside an existential be packed at
+all.
+
+Nothing has to be carried about the registers above the bound. An earlier
+version tracked that they stay zero, on the theory that the simulation would
+otherwise forget them; it does not, because `packRange` only ever reads below
+the bound and the simulation relation is stated in terms of `packRange`. The
+registers above it are not preserved by the packing — they are simply outside
+what it claims.
 
 The bound is a parameter rather than computed from the program. Both are
 possible, but the packing layer is stated for every valid bound, so a caller
@@ -34,15 +39,12 @@ instead of the least.
 
 * `instrMentionsBelow`: One instruction names only registers below a bound.
 * `MentionsBelow`: A program names only registers below a bound.
-* `SupportedBelow`: A state's registers vanish above a bound.
 * `packRange`: The packed value of a register file's bounded range.
 
 ## Theorems
 
 * `mentionsBelow_of_mem`: The naming condition, stated over membership.
 * `exists_mentionsBelow`: Every program has such a bound.
-* `step_supportedBelow`: Stepping preserves bounded support.
-* `reaches_supportedBelow`: Reachability preserves bounded support.
 * `packRange_pos`: A packed register file is positive.
 * `unpack_packRange`: Reading a register back out of the packed value.
 * `packRange_setReg_succ`: Incrementing a register multiplies by its prime.
@@ -70,65 +72,6 @@ def MentionsBelow (p : Program) (R : Nat) : Prop :=
 theorem mentionsBelow_of_mem (p : Program) (R : Nat)
     (h : ∀ i ∈ p, instrMentionsBelow R i) : MentionsBelow p R :=
   fun i hi => h p[i] (List.getElem_mem hi)
-
-/-- The registers at or above the bound are all zero. -/
-def SupportedBelow (s : State) (R : Nat) : Prop :=
-  ∀ r, R ≤ r → s.regs r = 0
-
-/-- Stepping preserves bounded support. A program that never names a high
-    register cannot write to one, so the zeros above the bound stay put. -/
-theorem step_supportedBelow (p : Program) (R : Nat) (hm : MentionsBelow p R)
-    (s s' : State) (hstep : step p s = some s') (hs : SupportedBelow s R) :
-    SupportedBelow s' R := by
-  intro r hr
-  -- The instruction at the counter is one the program mentions.
-  rcases hget : p[s.pc]? with _ | instr
-  · rw [step, hget] at hstep
-    exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
-  have hlt : s.pc < p.length := by
-    by_contra hc
-    rw [List.getElem?_eq_none_iff.mpr (Nat.le_of_not_lt hc)] at hget
-    exact absurd hget (by simp only [reduceCtorEq, not_false_eq_true])
-  have hmi : instrMentionsBelow R instr := by
-    have heq : p[s.pc] = instr := by
-      rw [List.getElem?_eq_getElem hlt, Option.some.injEq] at hget
-      exact hget
-    rw [← heq]
-    exact hm s.pc hlt
-  -- No instruction writes above the bound, so the zero there survives.
-  cases instr with
-  | inc q next =>
-      rw [step, hget] at hstep
-      simp only [Option.some.injEq] at hstep
-      rw [← hstep]
-      simp only [setReg]
-      rw [if_neg (by simp only [instrMentionsBelow] at hmi; omega)]
-      exact hs r hr
-  | jzdec q ifZero ifNonZero =>
-      by_cases hq : s.regs q = 0
-      · have h : step p s = some { s with pc := ifZero } := by
-          simp only [step, hget, hq, if_pos]
-        rw [h, Option.some.injEq] at hstep
-        rw [← hstep]
-        exact hs r hr
-      · have h : step p s = some { setReg s q (s.regs q - 1) with pc := ifNonZero } := by
-          simp only [step, hget, hq, if_false]
-        rw [h, Option.some.injEq] at hstep
-        rw [← hstep]
-        simp only [setReg]
-        rw [if_neg (by simp only [instrMentionsBelow] at hmi; omega)]
-        exact hs r hr
-  | halt =>
-      rw [step, hget] at hstep
-      exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
-
-/-- Reachability preserves bounded support, by induction along the path. -/
-theorem reaches_supportedBelow (p : Program) (R : Nat) (hm : MentionsBelow p R)
-    (s s' : State) (hr : Reaches p s s') (hs : SupportedBelow s R) :
-    SupportedBelow s' R := by
-  induction hr with
-  | refl _ => exact hs
-  | step a b _ hstep _ ih => exact ih (step_supportedBelow p R hm a b hstep hs)
 
 /-- The packed value of a register file's bounded range: a product of prime
     powers, one factor per register. -/

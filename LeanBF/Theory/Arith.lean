@@ -8,6 +8,7 @@ import LeanBF.Theory.Arith.Multiply
 import LeanBF.Theory.Arith.Pair
 import LeanBF.Theory.Arith.Sqrt
 import LeanBF.Theory.Arith.Subtract
+import LeanBF.Theory.Arith.Unpair
 
 /-!
 # Arithmetic Fragment Aggregator

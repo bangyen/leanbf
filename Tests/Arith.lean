@@ -8,6 +8,7 @@ import Tests.Arith.Multiply
 import Tests.Arith.Pair
 import Tests.Arith.Sqrt
 import Tests.Arith.Subtract
+import Tests.Arith.Unpair
 
 /-!
 # Arithmetic Test Aggregator

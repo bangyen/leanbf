@@ -46,6 +46,7 @@ disjointness becomes arithmetic.
 
 * `sqrtStep`: One upward-search step lands on the next `min` of the search.
 * `squareVar_effect`: A register's square is added to another.
+* `sqrtBody_effect`: One search iteration tests the next candidate.
 -/
 
 namespace LeanBF
@@ -140,6 +141,190 @@ def sqrtBodyFrag (nR r lo base exit : Nat) : Program :=
    .inc r (base + 33),
    .jzdec lo (base + 34) (base + 33),
    .jzdec (lo + 1) base (base + 34)]
+
+/-- One iteration of the search. The candidate is copied, raised, and
+    squared; the square is compared against the input; and the candidate
+    advances only on the arm where the square still fits. Both arms rejoin at
+    the shared clear.
+
+    Everything here is register bookkeeping — the only arithmetic fact used
+    is `sqrtStep`, applied once at the branch. -/
+theorem sqrtBody_effect (p : Program) (nR r lo base exit : Nat)
+    (hnr : nR ≠ r) (hn : nR < lo) (hr : r < lo)
+    (hemb : EmbeddedAt p base (sqrtBodyFrag nR r lo base exit))
+    (n0 : Nat) :
+    ∀ (m : Nat) (s : State), s.pc = base + 1 → s.regs (lo + 7) = m →
+      s.regs nR = n0 → s.regs r = min (Nat.sqrt n0) (n0 - (m + 1)) →
+      (∀ j, j < 7 → s.regs (lo + j) = 0) → m + 1 ≤ n0 →
+      ∃ s', Reaches p s s' ∧ s'.pc = base ∧ s'.regs (lo + 7) = m ∧
+        s'.regs nR = n0 ∧ s'.regs r = min (Nat.sqrt n0) (n0 - m) ∧
+        (∀ j, j < 7 → s'.regs (lo + j) = 0) ∧
+        ∀ q, q ≠ nR → q ≠ r → (q < lo ∨ lo + 8 ≤ q) → s'.regs q = s.regs q := by
+  intro m s hpc hcnt hnv hrv hz hmn
+  have hg := embeddedAt_get p base _ hemb
+  -- Stage one: copy the candidate, then raise the copy.
+  rcases copyBack_effect p r lo (lo + 5) (base + 1) (base + 4) (base + 6)
+    (by omega) (by omega) (by omega)
+    (hg 1 _ rfl) (hg 2 _ rfl) (hg 3 _ rfl) (hg 4 _ rfl) (hg 5 _ rfl)
+    s hpc (hz 5 (by omega)) with ⟨s1, hr1, hpc1, hR1, hU1, hS1, hF1⟩
+  -- Raise the copy to the next candidate.
+  have hstepInc : step p s1
+      = some { setReg s1 lo (s1.regs lo + 1) with pc := base + 7 } := by
+    simp only [step, hpc1, hg 6 _ rfl, setReg]
+  set s2 : State := { setReg s1 lo (s1.regs lo + 1) with pc := base + 7 } with hs2
+  -- Stage two: square the candidate into `lo + 1`.
+  rcases squareVar_effect p lo (lo + 1) (lo + 2) (lo + 5) (base + 7) (base + 10)
+    (base + 12) (base + 18) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
+    (hg 7 _ rfl) (hg 8 _ rfl) (hg 9 _ rfl) (hg 10 _ rfl) (hg 11 _ rfl)
+    (hg 12 _ rfl) (hg 13 _ rfl) (hg 14 _ rfl) (hg 15 _ rfl) (hg 16 _ rfl) (hg 17 _ rfl)
+    s2 rfl (by
+      simp only [hs2, setReg, if_neg (by omega : lo + 5 ≠ lo)]
+      exact hS1)
+    (by
+      simp only [hs2, setReg, if_neg (by omega : lo + 2 ≠ lo)]
+      rw [hF1 (lo + 2) (by omega) (by omega) (by omega)]
+      exact hz 2 (by omega)) with ⟨s3, hr3, hpc3, hU3, hV3, hS3, hT3, hF3⟩
+  -- The candidate's square, which is what the comparison tests.
+  have hcand : s3.regs (lo + 1) = (min (Nat.sqrt n0) (n0 - (m + 1)) + 1) *
+      (min (Nat.sqrt n0) (n0 - (m + 1)) + 1) := by
+    have hU2 : s2.regs lo = min (Nat.sqrt n0) (n0 - (m + 1)) + 1 := by
+      have hz0 : s.regs lo = 0 := by
+        have := hz 0 (by omega)
+        rwa [Nat.add_zero] at this
+      simp only [hs2, setReg, hU1, hrv, hz0, Nat.zero_add, if_true]
+    have hT2 : s2.regs (lo + 1) = 0 := by
+      simp only [hs2, setReg, if_neg (by omega : lo + 1 ≠ lo)]
+      rw [hF1 (lo + 1) (by omega) (by omega) (by omega)]
+      exact hz 1 (by omega)
+    rw [hT3, hU2, hT2, Nat.zero_add]
+  -- Stage three: compare the input against the square.
+  rcases cmpBranch_effect p nR (lo + 1) (lo + 3) (lo + 4) (lo + 6)
+    (base + 18) (base + 21) (base + 23) (base + 26) (base + 28) (base + 30) (base + 31)
+    (base + 33) (base + 32)
+    (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)
+    (by omega) (by omega) (by omega) (by omega)
+    (hg 18 _ rfl) (hg 19 _ rfl) (hg 20 _ rfl) (hg 21 _ rfl) (hg 22 _ rfl)
+    (hg 23 _ rfl) (hg 24 _ rfl) (hg 25 _ rfl) (hg 26 _ rfl) (hg 27 _ rfl)
+    (hg 28 _ rfl) (hg 29 _ rfl) (hg 30 _ rfl) (hg 31 _ rfl)
+    s3 hpc3
+    (by
+      rw [hF3 (lo + 6) (by omega) (by omega) (by omega) (by omega), hs2]
+      simp only [setReg, if_neg (by omega : lo + 6 ≠ lo)]
+      rw [hF1 (lo + 6) (by omega) (by omega) (by omega)]
+      exact hz 6 (by omega))
+    (by
+      rw [hF3 (lo + 3) (by omega) (by omega) (by omega) (by omega), hs2]
+      simp only [setReg, if_neg (by omega : lo + 3 ≠ lo)]
+      rw [hF1 (lo + 3) (by omega) (by omega) (by omega)]
+      exact hz 3 (by omega))
+    (by
+      rw [hF3 (lo + 4) (by omega) (by omega) (by omega) (by omega), hs2]
+      simp only [setReg, if_neg (by omega : lo + 4 ≠ lo)]
+      rw [hF1 (lo + 4) (by omega) (by omega) (by omega)]
+      exact hz 4 (by omega)) with
+    ⟨s4, hr4, hN4, hT4, hSc4, hC4, hW4, hFcmp, hpc4⟩
+  -- The input as the comparison saw it.
+  have hN3 : s3.regs nR = n0 := by
+    rw [hF3 nR (by omega) (by omega) (by omega) (by omega), hs2]
+    simp only [setReg, if_neg (by omega : nR ≠ lo)]
+    rw [hF1 nR (by omega) (by omega) (by omega)]
+    exact hnv
+  -- The two arms differ only in whether the candidate advances. Both land on
+  -- the shared clear, so state where that clear starts and what `r` holds.
+  have harm : ∃ s5, Reaches p s4 s5 ∧ s5.pc = base + 33 ∧
+      s5.regs r = min (Nat.sqrt n0) (n0 - m) ∧
+      ∀ q, q ≠ r → s5.regs q = s4.regs q := by
+    by_cases hlt : n0 < (min (Nat.sqrt n0) (n0 - (m + 1)) + 1) *
+        (min (Nat.sqrt n0) (n0 - (m + 1)) + 1)
+    · -- Overshoot: the candidate stays where it is.
+      refine ⟨s4, Reaches.refl _, ?_, ?_, fun q _ => rfl⟩
+      · rw [hpc4, hN3, hcand, if_pos hlt]
+      · rw [hFcmp r (by omega) (by omega) (by omega) (by omega) (by omega),
+          hF3 r (by omega) (by omega) (by omega) (by omega), hs2]
+        simp only [setReg, if_neg (by omega : r ≠ lo)]
+        rw [hR1, hrv]
+        have hstep := sqrtStep n0 m (min (Nat.sqrt n0) (n0 - (m + 1))) hmn rfl
+        rw [if_neg (by omega : ¬ (min (Nat.sqrt n0) (n0 - (m + 1)) + 1) *
+          (min (Nat.sqrt n0) (n0 - (m + 1)) + 1) ≤ n0)] at hstep
+        exact hstep
+    · -- It fits: the candidate advances by one.
+      have hpcGE : s4.pc = base + 32 := by rw [hpc4, hN3, hcand, if_neg hlt]
+      have hstep : step p s4 = some { setReg s4 r (s4.regs r + 1) with pc := base + 33 } := by
+        simp only [step, hpcGE, hg 32 _ rfl, setReg]
+      refine ⟨_, Reaches.step _ _ _ hstep (Reaches.refl _), rfl, ?_, ?_⟩
+      · change (if r = r then s4.regs r + 1 else s4.regs r) = min (Nat.sqrt n0) (n0 - m)
+        rw [if_pos rfl, hFcmp r (by omega) (by omega) (by omega) (by omega) (by omega),
+          hF3 r (by omega) (by omega) (by omega) (by omega), hs2]
+        simp only [setReg, if_neg (by omega : r ≠ lo)]
+        rw [hR1, hrv]
+        have hstep := sqrtStep n0 m (min (Nat.sqrt n0) (n0 - (m + 1))) hmn rfl
+        rw [if_pos (by omega : (min (Nat.sqrt n0) (n0 - (m + 1)) + 1) *
+          (min (Nat.sqrt n0) (n0 - (m + 1)) + 1) ≤ n0)] at hstep
+        exact hstep
+      · intro q hqr
+        change (if q = r then s4.regs r + 1 else s4.regs q) = s4.regs q
+        rw [if_neg hqr]
+  rcases harm with ⟨s5, hr5, hpc5, hR5, hF5⟩
+  -- The shared clears: the candidate copy, then its square.
+  have hclr1 := clear_reaches p lo (base + 33) (base + 34) (hg 33 _ rfl) (s5.regs lo) s5 hpc5 rfl
+  set s6 : State := { pc := base + 34, regs := fun i => if i = lo then 0 else s5.regs i } with hs6
+  have hclr2 := clear_reaches p (lo + 1) (base + 34) base (hg 34 _ rfl)
+    (s6.regs (lo + 1)) s6 rfl rfl
+  refine ⟨_, reaches_trans hr1 (Reaches.step _ _ _ hstepInc (reaches_trans hr3
+    (reaches_trans hr4 (reaches_trans hr5 (reaches_trans hclr1 hclr2))))), rfl,
+    ?_, ?_, ?_, ?_, ?_⟩
+  · -- The counter is untouched by everything the body does.
+    change (if lo + 7 = lo + 1 then 0 else s6.regs (lo + 7)) = m
+    rw [if_neg (by omega)]
+    simp only [hs6, if_neg (by omega : lo + 7 ≠ lo)]
+    rw [hF5 (lo + 7) (by omega),
+      hFcmp (lo + 7) (by omega) (by omega) (by omega) (by omega) (by omega),
+      hF3 (lo + 7) (by omega) (by omega) (by omega) (by omega), hs2]
+    simp only [setReg, if_neg (by omega : lo + 7 ≠ lo)]
+    rw [hF1 (lo + 7) (by omega) (by omega) (by omega)]
+    exact hcnt
+  · -- The comparison restores the input it read.
+    change (if nR = lo + 1 then 0 else s6.regs nR) = n0
+    rw [if_neg (by omega)]
+    simp only [hs6, if_neg (by omega : nR ≠ lo)]
+    rw [hF5 nR (by omega), hN4, hN3]
+  · -- The candidate, advanced or not by the arm that ran.
+    change (if r = lo + 1 then 0 else s6.regs r) = min (Nat.sqrt n0) (n0 - m)
+    rw [if_neg (by omega)]
+    simp only [hs6, if_neg (by omega : r ≠ lo)]
+    exact hR5
+  · -- Every working register is clear again: the comparison cleaned its own,
+    -- and the two clears empty the candidate copy and its square.
+    intro j hj
+    change (if lo + j = lo + 1 then 0 else s6.regs (lo + j)) = 0
+    by_cases hj1 : j = 1
+    · rw [hj1, if_pos rfl]
+    · rw [if_neg (by omega)]
+      simp only [hs6]
+      by_cases hj0 : j = 0
+      · rw [hj0, Nat.add_zero, if_pos rfl]
+      · rw [if_neg (by omega)]
+        rw [hF5 (lo + j) (by omega)]
+        -- The comparison left its three working registers clear.
+        match j, hj, hj0, hj1 with
+        | 2, _, _, _ =>
+            rw [hFcmp (lo + 2) (by omega) (by omega) (by omega) (by omega) (by omega)]
+            exact hV3
+        | 3, _, _, _ => exact hW4
+        | 4, _, _, _ => exact hC4
+        | 5, _, _, _ =>
+            rw [hFcmp (lo + 5) (by omega) (by omega) (by omega) (by omega) (by omega)]
+            exact hS3
+        | 6, _, _, _ => exact hSc4
+  · -- Nothing outside the named registers and the working block moves.
+    intro q hqn hqr hqout
+    change (if q = lo + 1 then 0 else s6.regs q) = s.regs q
+    rw [if_neg (by omega)]
+    simp only [hs6, if_neg (by omega : q ≠ lo)]
+    rw [hF5 q hqr, hFcmp q hqn (by omega) (by omega) (by omega) (by omega),
+      hF3 q (by omega) (by omega) (by omega) (by omega), hs2]
+    simp only [setReg, if_neg (by omega : q ≠ lo)]
+    rw [hF1 q hqr (by omega) (by omega)]
 
 end Register
 

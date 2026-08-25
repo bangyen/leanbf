@@ -84,6 +84,7 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
 * `iterate_reaches`: A counted loop runs a body once per unit of a counter.
 * `copyBack_reaches`: A register is copied without being destroyed.
 * `copyBack_effect`: The copy stated by its effect on each register.
+* `addVar_effect`: Two registers are added into a third, both preserved.
 -/
 
 namespace LeanBF
@@ -648,6 +649,34 @@ theorem copyBack_effect (p : Program) (a t sc base mid exit : Nat)
   · simp only [drained, if_true]
   · intro r hra hrt hrsc
     simp only [drained, copied, if_neg hra, if_neg hrt, if_neg hrsc]
+
+/-- Adding two registers into a third: copy each in turn, preserving both. -/
+theorem addVar_effect (p : Program) (a b t sc base m1 m2 m3 exit : Nat)
+    (hab : a ≠ b) (hat : a ≠ t) (hasc : a ≠ sc)
+    (hbt : b ≠ t) (hbsc : b ≠ sc) (htsc : t ≠ sc)
+    (ha0 : p[base]? = some (Instruction.jzdec a m1 (base + 1)))
+    (ha1 : p[base + 1]? = some (Instruction.inc t (base + 2)))
+    (ha2 : p[base + 2]? = some (Instruction.inc sc base))
+    (hr0 : p[m1]? = some (Instruction.jzdec sc m2 (m1 + 1)))
+    (hr1 : p[m1 + 1]? = some (Instruction.inc a m1))
+    (hb0 : p[m2]? = some (Instruction.jzdec b m3 (m2 + 1)))
+    (hb1 : p[m2 + 1]? = some (Instruction.inc t (m2 + 2)))
+    (hb2 : p[m2 + 2]? = some (Instruction.inc sc m2))
+    (hs0 : p[m3]? = some (Instruction.jzdec sc exit (m3 + 1)))
+    (hs1 : p[m3 + 1]? = some (Instruction.inc b m3)) :
+    ∀ (s : State), s.pc = base → s.regs sc = 0 →
+      ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs a = s.regs a ∧
+        s'.regs b = s.regs b ∧ s'.regs t = s.regs t + s.regs a + s.regs b ∧
+        s'.regs sc = 0 := by
+  intro s hpc hsc
+  rcases copyBack_effect p a t sc base m1 m2 hat hasc htsc ha0 ha1 ha2 hr0 hr1 s hpc hsc with
+    ⟨s1, hr1', hpc1, hA1, hT1, hS1, hF1⟩
+  rcases copyBack_effect p b t sc m2 m3 exit hbt hbsc htsc hb0 hb1 hb2 hs0 hs1 s1 hpc1 hS1 with
+    ⟨s2, hr2', hpc2, hB2, hT2, hS2, hF2⟩
+  refine ⟨s2, reaches_trans hr1' hr2', hpc2, ?_, ?_, ?_, hS2⟩
+  · rw [hF2 a hab hat hasc, hA1]
+  · rw [hB2, hF1 b hab.symm hbt hbsc]
+  · rw [hT2, hT1, hF1 b hab.symm hbt hbsc]
 
 end Register
 

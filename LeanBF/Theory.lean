@@ -22,6 +22,7 @@ import LeanBF.Theory.Simulation
 import LeanBF.Theory.State
 import LeanBF.Theory.Trace
 import LeanBF.Theory.Transfer
+import LeanBF.Theory.Undecidable
 import LeanBF.Theory.Universal
 
 /-!

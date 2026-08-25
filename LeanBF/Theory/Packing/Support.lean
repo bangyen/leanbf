@@ -40,6 +40,7 @@ instead of the least.
 ## Theorems
 
 * `mentionsBelow_of_mem`: The naming condition, stated over membership.
+* `exists_mentionsBelow`: Every program has such a bound.
 * `step_supportedBelow`: Stepping preserves bounded support.
 * `reaches_supportedBelow`: Reachability preserves bounded support.
 * `packRange_pos`: A packed register file is positive.
@@ -222,6 +223,44 @@ theorem packRange_init (m R : Nat) (hR : 0 < R) :
     refine Finset.prod_eq_one (fun q hq => ?_)
     rw [if_neg (Finset.mem_erase.mp hq).1, pow_zero]
   rw [hrest, Nat.one_mul]
+
+/-- Every program names only finitely many registers, so some bound holds.
+    The universal machine is produced by an existential, so its bound cannot
+    be written down in advance and has to be extracted from the program
+    itself. -/
+theorem exists_mentionsBelow (p : Program) : ∃ R, MentionsBelow p R := by
+  induction p with
+  | nil => exact ⟨0, fun i hi => absurd hi (by simp only [List.length_nil,
+      Nat.not_lt_zero, not_false_eq_true])⟩
+  | cons a t ih =>
+      rcases ih with ⟨R, hR⟩
+      -- A bound past both the head's register and the tail's.
+      refine ⟨max R (match a with
+        | .inc r _ => r + 1
+        | .jzdec r _ _ => r + 1
+        | .halt => 0), fun i hi => ?_⟩
+      rcases i with _ | j
+      · -- The head.
+        cases a with
+        | inc r next => simp only [List.getElem_cons_zero, instrMentionsBelow]; omega
+        | jzdec r z nz => simp only [List.getElem_cons_zero, instrMentionsBelow]; omega
+        | halt => simp only [List.getElem_cons_zero, instrMentionsBelow]
+      · -- The tail, whose bound only grew.
+        have hj : j < t.length := by
+          simp only [List.length_cons] at hi
+          omega
+        have := hR j hj
+        simp only [List.getElem_cons_succ]
+        cases hc : t[j] with
+        | inc r next =>
+            rw [hc] at this
+            simp only [instrMentionsBelow] at this ⊢
+            omega
+        | jzdec r z nz =>
+            rw [hc] at this
+            simp only [instrMentionsBelow] at this ⊢
+            omega
+        | halt => simp only [instrMentionsBelow]
 
 end Register
 

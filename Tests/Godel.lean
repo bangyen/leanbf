@@ -76,4 +76,32 @@ example (v : Nat) (hv : 0 < v) (hd : 2 ∣ v) : 0 < v / 2 :=
 /-- The decoding reads a register out of the packed value. -/
 example : unpack (fun r => if r = 0 then 2 else 3) 72 0 = padicValNat 2 72 := rfl
 
+/-- The canonical assignment starts at the first two primes. -/
+example : regPrime 0 = 2 := Nat.nth_prime_zero_eq_two
+
+example : regPrime 1 = 3 := Nat.nth_prime_one_eq_three
+
+/-- The assignment satisfies the hypotheses the operation lemmas need, so
+    those statements are not vacuous. -/
+example (r : Nat) : (regPrime r).Prime := regPrime_prime r
+
+example (m n : Nat) (h : regPrime m = regPrime n) : m = n := regPrime_inj m n h
+
+/-- Multiplying by a register's prime increments it and leaves the rest. -/
+example (pr : Nat → Nat) (r v : Nat) (hv : 0 < v)
+    (hp : ∀ n, (pr n).Prime) (hi : ∀ m n, pr m = pr n → m = n) (r' : Nat) :
+    unpack pr (pr r * v) r' = (if r' = r then unpack pr v r' + 1 else unpack pr v r') :=
+  unpack_mul_inc pr r v hv hp hi r'
+
+/-- Dividing decrements it, given that the register is non-zero. -/
+example (pr : Nat → Nat) (r v : Nat) (hv : 0 < v)
+    (hp : ∀ n, (pr n).Prime) (hi : ∀ m n, pr m = pr n → m = n) (hd : pr r ∣ v) (r' : Nat) :
+    unpack pr (v / pr r) r' = (if r' = r then unpack pr v r' - 1 else unpack pr v r') :=
+  unpack_div_dec pr r v hv hp hi hd r'
+
+/-- The machine's divisibility test is the register's zero test. -/
+example (pr : Nat → Nat) (r v : Nat) (hv : 0 < v) (hp : ∀ n, (pr n).Prime) :
+    unpack pr v r = 0 ↔ ¬ (pr r ∣ v) :=
+  unpack_eq_zero_iff pr r v hv hp
+
 end LeanBF.Tests

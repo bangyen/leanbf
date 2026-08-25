@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bangyen Pham
 -/
 import LeanBF.Core.Register
+import Mathlib.Data.Nat.PrimeFin
 import Mathlib.NumberTheory.Padics.PadicVal.Basic
+import Mathlib.NumberTheory.PrimeCounting
 
 /-!
 # Gödel Encoding of Registers
@@ -31,6 +33,7 @@ layer.
 ## Main definitions
 
 * `unpack`: A register's value, read out of a packed natural number.
+* `regPrime`: The canonical assignment of primes to registers.
 
 ## Theorems
 
@@ -44,6 +47,12 @@ layer.
   incremented.
 * `pack_div_pos`: A packed value stays positive when a register is
   decremented.
+* `regPrime_prime`: Every register's prime is prime.
+* `regPrime_inj`: Distinct registers get distinct primes.
+* `unpack_mul_inc`: Multiplying by a register's prime increments it.
+* `unpack_div_dec`: Dividing by a register's prime decrements it.
+* `unpack_eq_zero_iff`: A register is zero exactly when its prime does not
+  divide the packed value.
 -/
 
 namespace LeanBF
@@ -112,5 +121,57 @@ theorem pack_mul_pos (p v : Nat) [hp : Fact p.Prime] (hv : 0 < v) : 0 < p * v :=
 theorem pack_div_pos (p v : Nat) [hp : Fact p.Prime] (hv : 0 < v) (hd : p ∣ v) :
     0 < v / p :=
   Nat.div_pos (Nat.le_of_dvd hv hd) hp.out.pos
+
+/-- The canonical assignment of primes to registers: register `r` uses the
+    `r`-th prime. Noncomputable because `Nat.nth` is, which costs nothing
+    here — the encoding is a specification, not something the machine runs. -/
+noncomputable def regPrime (r : Nat) : Nat := Nat.nth Nat.Prime r
+
+/-- Every register's prime is prime. -/
+theorem regPrime_prime (r : Nat) : (regPrime r).Prime := Nat.prime_nth_prime r
+
+/-- Distinct registers get distinct primes. -/
+theorem regPrime_inj (m n : Nat) (h : regPrime m = regPrime n) : m = n :=
+  Nat.nth_injective Nat.infinite_setOf_prime h
+
+/-- Multiplying the packed value by `pr r` increments register `r` of the
+    decoded file and leaves every other register alone. -/
+theorem unpack_mul_inc (pr : Nat → Nat) (r : Nat) (v : Nat) (hv : 0 < v)
+    (hprime : ∀ n, (pr n).Prime) (hinj : ∀ m n, pr m = pr n → m = n) :
+    ∀ r', unpack pr (pr r * v) r' = (if r' = r then unpack pr v r' + 1 else unpack pr v r') := by
+  intro r'
+  haveI : Fact (pr r).Prime := ⟨hprime r⟩
+  haveI : Fact (pr r').Prime := ⟨hprime r'⟩
+  by_cases h : r' = r
+  · subst h
+    rw [if_pos rfl]
+    exact padicValNat_mul_self (pr r') v (by omega)
+  · rw [if_neg h]
+    exact unpack_mul_other (pr r) (pr r') v (fun hc => h (hinj r' r hc.symm)) (by omega)
+
+/-- Dividing the packed value by `pr r` decrements register `r` and leaves
+    every other register alone. The divisibility hypothesis is exactly the
+    statement that register `r` is non-zero. -/
+theorem unpack_div_dec (pr : Nat → Nat) (r : Nat) (v : Nat) (hv : 0 < v)
+    (hprime : ∀ n, (pr n).Prime) (hinj : ∀ m n, pr m = pr n → m = n)
+    (hdvd : pr r ∣ v) :
+    ∀ r', unpack pr (v / pr r) r' = (if r' = r then unpack pr v r' - 1 else unpack pr v r') := by
+  intro r'
+  haveI : Fact (pr r).Prime := ⟨hprime r⟩
+  haveI : Fact (pr r').Prime := ⟨hprime r'⟩
+  by_cases h : r' = r
+  · subst h
+    rw [if_pos rfl]
+    exact padicValNat_div_self (pr r') v (by omega) hdvd
+  · rw [if_neg h]
+    exact unpack_div_other (pr r) (pr r') v (fun hc => h (hinj r' r hc.symm)) (by omega) hdvd
+
+/-- Register `r` is zero exactly when its prime does not divide the packed
+    value, so the divisibility test the division loop performs is the
+    machine's zero test on the decoded register. -/
+theorem unpack_eq_zero_iff (pr : Nat → Nat) (r v : Nat) (hv : 0 < v)
+    (hprime : ∀ n, (pr n).Prime) : unpack pr v r = 0 ↔ ¬ (pr r ∣ v) := by
+  haveI : Fact (pr r).Prime := ⟨hprime r⟩
+  exact padicValNat_eq_zero_iff_not_dvd (pr r) v (by omega)
 
 end LeanBF

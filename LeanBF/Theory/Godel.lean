@@ -25,10 +25,11 @@ register operations become arithmetic on the packed value:
   non-zero is exactly the statement that `p r` divides the packed value;
 * testing whether it is zero asks whether `p r` divides the packed value.
 
-The theorems below are those three facts. What they do not yet do is drive a
-machine: a register machine cannot multiply or divide directly, so each of
-these has to be realized as a loop over a second counter, which is the next
-layer.
+The theorems below are those three facts. On their own they do not drive a
+machine: a register machine cannot multiply or divide directly, so each has
+to be realized as a loop over a second counter. `Theory.Packing` does that,
+and `Theory.Packing.Simulate` is where these three become the three cases of
+one instruction step.
 
 ## Main definitions
 

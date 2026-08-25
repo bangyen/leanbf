@@ -40,6 +40,7 @@ a `jzdec` block's length grows with the register's prime.
 * `incBlock`: The block that increments a packed register.
 * `restoreArm`: The arm that rebuilds a packed value the divide destroyed.
 * `restored`: The state a restore arm leaves.
+* `paddedArm`: A restore arm padded to a uniform length.
 
 ## Theorems
 
@@ -51,6 +52,8 @@ a `jzdec` block's length grows with the register's prime.
 * `incBlockLen`: The increment block's length.
 * `incBlock_reaches`: The increment block multiplies by the register's prime.
 * `restoreArm_length`: A restore arm's length.
+* `paddedArm_length`: A padded arm's uniform length.
+* `embeddedAt_paddedArm`: A padded arm embeds the arm inside it.
 * `restoreArm_get_head`: The arm's opening test.
 * `restoreArm_get_chain`: The arm's multiply-back chain.
 * `restoreArm_get_units`: The arm's literal remainder units.
@@ -206,6 +209,26 @@ theorem restoreArm_length (p r base exit : Nat) :
   simp only [restoreArm, List.length_append, List.length_cons, List.length_map,
     List.length_range, List.length_nil]
   omega
+
+/-- A restore arm padded to a uniform length. The arms differ in size — arm
+    `r` carries `r` literal units — which would make each one's address a
+    running total over all the earlier ones. Padding them all to `2 * p` makes
+    arm `r` start at a closed-form offset instead, and the padding is
+    unreachable, `EmbeddedAt` constraining only the slots that are used. -/
+def paddedArm (p r base exit : Nat) : Program :=
+  restoreArm p r base exit ++ List.replicate (2 * p - (p + 1 + r)) Instruction.halt
+
+theorem paddedArm_length (p r base exit : Nat) (hrp : r < p) :
+    (paddedArm p r base exit).length = 2 * p := by
+  simp only [paddedArm, List.length_append, restoreArm_length, List.length_replicate]
+  omega
+
+/-- The padding sits past the arm, so an embedded padded arm embeds the arm
+    itself — which is what the effect lemma asks for. -/
+theorem embeddedAt_paddedArm (prog : Program) (p r base exit : Nat)
+    (h : EmbeddedAt prog base (paddedArm p r base exit)) :
+    EmbeddedAt prog base (restoreArm p r base exit) :=
+  embeddedAt_append_left prog base _ _ h
 
 /-- Reading the restore arm's slots: the opening test, the multiply-back
     chain, and the literal units that add the remainder. -/

@@ -6,6 +6,7 @@ Authors: Bangyen Pham
 import LeanBF.Theory.BodyLoop
 import LeanBF.Theory.Completeness
 import LeanBF.Theory.Determinism
+import LeanBF.Theory.Displacement
 import LeanBF.Theory.Equivalence
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Invariance

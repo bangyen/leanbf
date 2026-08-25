@@ -16,7 +16,7 @@ Each combinator is framed at the cell it enters and leaves on, and the frames
 chain with `fapp`. The loop bodies inside `ifZeroElse` enter at four different
 scratch cells, so each is framed separately before `frame_loop` lifts it.
 
-Where `Examples.CountDown` proves the window bound for one program by
+Where `Examples.Minsky.CountDown` proves the window bound for one program by
 executing its 4245 steps, this proves it for all programs at once from the
 compiler's structure, so it costs nothing per example and does not grow with
 the run length.

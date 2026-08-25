@@ -18,6 +18,7 @@ import Tests.Invariance
 import Tests.Loop
 import Tests.Minsky
 import Tests.Packed
+import Tests.Packing
 import Tests.Parser
 import Tests.Register
 import Tests.Semantics
@@ -25,6 +26,7 @@ import Tests.Simulate
 import Tests.State
 import Tests.Trace
 import Tests.Transfer
+import Tests.Undecidable
 import Tests.Universal
 
 /-!

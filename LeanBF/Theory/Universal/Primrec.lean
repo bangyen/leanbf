@@ -46,6 +46,7 @@ fragment puts it back.
 * `builds_left`: The first half of the unpairing is computable.
 * `builds_right`: The second half of the unpairing is computable.
 * `builds_pair`: The pairing of two computable functions is computable.
+* `precBodyPre_effect`: The body's prelude assembles the step's argument.
 -/
 
 namespace LeanBF
@@ -250,6 +251,71 @@ def precPost (outR lo base exit : Nat) : Program :=
    Instruction.inc outR base,
    Instruction.jzdec lo (base + 3) (base + 2),
    Instruction.jzdec (lo + 2) exit (base + 3)]
+
+/-- The prelude assembles `pair z (pair y acc)` into `lo + 4` and leaves the
+    accumulator and the inner pair empty, which is what the step function's
+    fragment needs to run. -/
+theorem precBodyPre_effect (p : Program) (lo base : Nat)
+    (hemb : EmbeddedAt p base (precBodyPre lo base)) :
+    ∀ (s : State), s.pc = base → s.regs (lo + 3) = 0 → s.regs (lo + 4) = 0 →
+      (∀ j, j < 8 → s.regs (lo + 6 + j) = 0) →
+      ∃ s', Reaches p s s' ∧ s'.pc = base + 104 ∧
+        s'.regs lo = s.regs lo ∧ s'.regs (lo + 2) = s.regs (lo + 2) ∧
+        s'.regs (lo + 1) = 0 ∧ s'.regs (lo + 3) = 0 ∧
+        s'.regs (lo + 4) = Nat.pair (s.regs lo) (Nat.pair (s.regs (lo + 2)) (s.regs (lo + 1))) ∧
+        (∀ j, j < 8 → s'.regs (lo + 6 + j) = 0) ∧
+        ∀ q, q ≠ lo → q ≠ lo + 1 → q ≠ lo + 2 → q ≠ lo + 3 → q ≠ lo + 4 →
+          (q < lo + 6 ∨ lo + 6 + 8 ≤ q) → s'.regs q = s.regs q := by
+  intro s hpc h30 h40 hz
+  have hemb1 := embeddedAt_append_left p base _ _ (embeddedAt_append_left p base _ _ hemb)
+  have hemb2raw := embeddedAt_append_right p base _ _ (embeddedAt_append_left p base _ _ hemb)
+  have hemb2 : EmbeddedAt p (base + 51)
+      (pairFrag lo (lo + 3) (lo + 4) (lo + 6) (base + 51) (base + 102)) := by
+    rwa [pairFrag_length] at hemb2raw
+  have hgc := embeddedAt_get p _ _ (embeddedAt_append_right p base _ _ hemb)
+  have hlen2 : (pairFrag (lo + 2) (lo + 1) (lo + 3) (lo + 6) base (base + 51) ++
+      pairFrag lo (lo + 3) (lo + 4) (lo + 6) (base + 51) (base + 102)).length = 102 := by
+    rw [List.length_append, pairFrag_length, pairFrag_length]
+  have hc1 : p[base + 102]? = some (Instruction.jzdec (lo + 1) (base + 103) (base + 102)) := by
+    have h := hgc 0 _ rfl
+    rwa [hlen2, Nat.add_zero] at h
+  have hc2 : p[base + 103]? = some (Instruction.jzdec (lo + 3) (base + 104) (base + 103)) := by
+    have h := hgc 1 _ rfl
+    rwa [hlen2] at h
+  -- The inner pairing of the counter with the accumulator.
+  rcases pairVar_effect p (lo + 2) (lo + 1) (lo + 3) (lo + 6) base (base + 51)
+    (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) hemb1
+    s hpc h30 hz with ⟨s1, hr1, hpc1, hY1, hA1, hU1, hZ1, hF1⟩
+  -- Then the outer pairing with the first component.
+  rcases pairVar_effect p lo (lo + 3) (lo + 4) (lo + 6) (base + 51) (base + 102)
+    (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) hemb2
+    s1 hpc1 (by rw [hF1 (lo + 4) (by omega) (by omega) (by omega) (by omega)]; exact h40)
+    hZ1 with ⟨s2, hr2, hpc2, hZ2', hU2, hT2, hZ2, hF2⟩
+  -- Clear the accumulator, then the inner pair.
+  have hclr1 := clear_reaches p (lo + 1) (base + 102) (base + 103) hc1 (s2.regs (lo + 1)) s2
+    hpc2 rfl
+  set s3 : State :=
+    { pc := base + 103, regs := fun i => if i = lo + 1 then 0 else s2.regs i } with hs3
+  have hclr2 := clear_reaches p (lo + 3) (base + 103) (base + 104) hc2 (s3.regs (lo + 3)) s3
+    rfl rfl
+  refine ⟨_, reaches_trans hr1 (reaches_trans hr2 (reaches_trans hclr1 hclr2)),
+    rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [if_neg (by omega : lo ≠ lo + 3), hs3, if_neg (by omega : lo ≠ lo + 1)]
+    rw [hZ2', hF1 lo (by omega) (by omega) (by omega) (by omega)]
+  · simp only [if_neg (by omega : lo + 2 ≠ lo + 3), hs3, if_neg (by omega : lo + 2 ≠ lo + 1)]
+    rw [hF2 (lo + 2) (by omega) (by omega) (by omega) (by omega), hY1]
+  · simp only [if_neg (by omega : lo + 1 ≠ lo + 3), hs3, if_true]
+  · simp only [if_true]
+  · -- The assembled argument.
+    simp only [if_neg (by omega : lo + 4 ≠ lo + 3), hs3, if_neg (by omega : lo + 4 ≠ lo + 1)]
+    rw [hT2, hU1, hF1 lo (by omega) (by omega) (by omega) (by omega)]
+  · intro j hj
+    simp only [if_neg (by omega : lo + 6 + j ≠ lo + 3), hs3,
+      if_neg (by omega : lo + 6 + j ≠ lo + 1)]
+    exact hZ2 j hj
+  · intro q hq0 hq1 hq2 hq3 hq4 hqr
+    simp only [if_neg hq3, hs3, if_neg hq1]
+    rw [hF2 q hq0 hq3 hq4 (by omega), hF1 q hq2 hq1 hq3 (by omega)]
 
 end Register
 

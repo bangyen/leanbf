@@ -200,6 +200,12 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   when `test` is `0` and `elseBody` exactly once otherwise, preserving `test`
   and restoring the scratch cells to `0` (`runsTo_ifZeroElse_zero`/
   `runsTo_ifZeroElse_succ`, plus `run` and `runToCompletion` forms).
+- **Brainfuck idioms** (`Theory.Idioms`): the loops a programmer writes,
+  stated on the literal instruction lists. `runsTo_moveLoop` proves `[->+<]`
+  drains a cell into its right neighbour (`0` and `b + a`, pointer unmoved),
+  and `parse_moveLoop` ties the program to its source text. `[-]` is covered
+  by `runsTo_clearHere`, which the compiler layer already needed, with
+  `parse_clearHere` tying it to source the same way.
 - **Kernel re-assertions** (`Tests`): the state, semantics, Minsky model, and
   compiler definitions are re-asserted on concrete inputs with `rfl` and
   `decide` — including running compiled Minsky programs (`inc1`, `inc2`,
@@ -209,7 +215,7 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Verified Brainfuck idioms** | Medium | Nothing here yet. The formalization proves deep things about *compiled* programs, but almost nothing about Brainfuck someone would write: of the five example modules, four are Minsky machines that exercise the compiler, and only `HelloWorld` is a Brainfuck program. Brainfuck is built from recognizable idioms — `[-]` clears a cell, `[->+<]` moves one, `[->+>+<<]` duplicates, `[>]` scans to the next zero — and none of them has a theorem. The machinery to state them exists (`Theory.Loop`, `Theory.BodyLoop`, and `Theory.Displacement`'s pointer bounds), so the question is whether one such proof comes out clean; that is worth establishing on `[-]` before assuming the rest follow. |
+| **Verified Brainfuck idioms** | In progress | `Theory.Idioms` states the idioms on the literal instruction lists a programmer writes, rather than on compiler output. Two are covered. `[-]` needed no new work: `runsTo_clearHere` already proves it, since the compiler emits the same three characters as `Compiler.clearHere` for its scratch cells, and `parse_clearHere` ties that to the source text. `[->+<]` is the first idiom with no compiled counterpart — `runsTo_moveLoop` drains a cell into its right neighbour, leaving `0` and `b + a` with the pointer back where it started, and `parse_moveLoop` ties it to the source text. The proof came out clean, at the size of `runsTo_clearHere`: induction on the source cell, with the loop-free body as one `runSeq` step. Unbounded `Nat` cells mean no overflow side conditions. Still open: `[->+>+<<]` duplicates, and `[>]` scans to the next zero — the scan needs a hypothesis that some zero exists to the right, so it is a different proof shape and may not follow as easily.
 | **More programs verified end to end** | Low | `HelloWorld` is checked by `decide` over a thousand steps, which already required raising `maxRecDepth`. Whether that approach reaches other small classics — cat, echo, a two-cell adder — is unknown, and finding out on one program is the way to learn it. A negative result would be worth recording too. |
 | **`Examples` is misnamed** | Low | Four of its five modules are Minsky machines rather than Brainfuck programs. Splitting the directory would stop it misrepresenting itself. |
 | **Multiplication needs a Gödel encoding** | Done | Resolved by the universality work. The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly; a general `c2 := c1 × c2` needs three quantities live at once, so it needs an encoding. Both halves now exist: `mulVar_effect` (`Theory.Arith.Multiply`) multiplies two registers, and `Theory.Godel` packs a whole register file into one counter as a product of prime powers, which `Theory.Packing` uses to compile any register machine down to two. |

@@ -68,6 +68,12 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   via `runsTo_compileProgram` to halt with the final counter values on the
   tape — and, via `run_of_RunsTo`, confirmed to complete under the
   interpreter's executable `run` in exactly `n` steps.
+- **Program-level I/O** (`Theory.Semantics`): a whole run consumes a prefix
+  of its input (`runsTo_input_suffix`) and only extends its output
+  (`runsTo_output_extends`) — nothing already written is removed or altered.
+  Both lift from single-step versions by induction on the run. The output
+  stream is stored most recent first, so "extends" is a prepend:
+  `t.output = w ++ s.output`.
 - **Loop-free termination** (`Theory.Loop.RunSeq`): a program with no `[`
   halts in exactly as many steps as it has instructions
   (`stepsToHalt_loop_free`), and therefore always halts
@@ -132,7 +138,6 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | :--- | :--- | :--- |
 | **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
 | **Compiled-run cell preservation** | Low | Push the pointer-position invariant through all reachable fragments of a compiled Minsky body, so the whole compiled `countDown`/`quadruple` run provably never touches tape cells above 16 (beyond the current window-sweep demonstration in `Theory.Invariance`). |
-| **Program-level I/O functionality** | Low | Generalize the existing `read_write_echo`/`runSeq_read_input` single-instruction I/O facts to whole programs: a run's reads consume a prefix of the input and its writes append to the output. |
 | **2CM universality bridge** | High | Compile mathlib's `Nat.Partrec.Code` (or `Turing.TM`) into a two-counter Minsky program, the missing input to the undecidability capstone. This is the classical Minsky construction — Gödel-encoding the tape into counter exponents — and is realistically larger than everything currently in the repo. |
 | **Halting problem undecidability** | High | The capstone: Brainfuck halting is undecidable. Both simulation directions are in place, so a Brainfuck decider would yield a 2CM decider; what is missing is the classical fact that *2CM* halting is undecidable. Mathlib has the halting problem for partial recursive codes (`ComputablePred.halting_problem`) but no counter-machine model, so that theorem cannot be applied directly — the gap is a universality bridge compiling `Partrec` codes (or mathlib's Turing machines) down to two counters. |
 

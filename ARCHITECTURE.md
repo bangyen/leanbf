@@ -115,7 +115,11 @@ project convention that `Core` files contain only definitions.
   loop (non-zero). It also covers run-level I/O (`read_write_echo`,
   `runSeq_read_input` — reads consume the input prefix) and divergence
   (`loop_incVal_never_halts` — a non-zero cell makes `[+ ]` run forever).
-  The empty program has no step and halts.
+  The empty program has no step and halts. The single-instruction I/O facts
+  are also lifted to whole runs: `runsTo_input_suffix` says a run's reads
+  consume a prefix of the input, and `runsTo_output_extends` says a run only
+  extends the output. Because the output stream is stored most recent first,
+  that extension is a prepend (`t.output = w ++ s.output`).
 - `Theory/Determinism.lean`: determinism. Because `step` is a total
   function, a configuration has at most one successor
   (`step_deterministic`), the state after `n` steps is unique

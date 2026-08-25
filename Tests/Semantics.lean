@@ -75,4 +75,27 @@ example (s : State) (k : Nat) (hk : k ≤ s.input.length) :
     (runSeq (List.replicate k .read) s).input = s.input.drop k :=
   runSeq_read_input s k hk
 
+/-- A run only extends the output; the output is stored most recent first, so
+    the extension is a prepend. -/
+example (cfg : Program × State) (t : State) (h : RunsTo cfg t) :
+    ∃ w, t.output = w ++ cfg.2.output :=
+  runsTo_output_extends cfg t h
+
+/-- A run's reads consume a prefix of the input. -/
+example (cfg : Program × State) (t : State) (h : RunsTo cfg t) :
+    ∃ v, cfg.2.input = v ++ t.input :=
+  runsTo_input_suffix cfg t h
+
+/-- On a concrete echo program `, . , .` the input is consumed and the two
+    reads are echoed to the output. -/
+example : (run 10 [.read, .write, .read, .write]
+    { State.mkEmpty with input := [3, 7] }).map (fun s => (s.input, s.output))
+    = some ([], [7, 3]) := by
+  decide
+
+/-- Reading past end-of-input pushes `0` and leaves the input empty. -/
+example : (run 10 [.read, .write] State.mkEmpty).map (fun s => (s.input, s.output))
+    = some ([], [0]) := by
+  decide
+
 end LeanBF.Tests

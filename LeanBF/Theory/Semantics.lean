@@ -41,6 +41,10 @@ basic `run`/`halts` facts.
 * `runSeq_write_write_output`: Writing twice appends two copies of the
   current value.
 * `runSeq_read_input`: Reading `k` times consumes the first `k` inputs.
+* `step_output_extends`: A single step only extends the output.
+* `runsTo_output_extends`: A whole run only extends the output.
+* `step_input_suffix`: A single step consumes a prefix of the input.
+* `runsTo_input_suffix`: A whole run consumes a prefix of the input.
 -/
 
 namespace LeanBF
@@ -232,5 +236,98 @@ theorem runSeq_read_input (s : State) (k : Nat) (hk : k ≤ s.input.length) :
             omega)
           rw [ih']
           rfl
+
+/-- A single step extends the output by at most the value it writes. The
+    output stream is stored most recent first, so extending it is a prepend:
+    `s'.output = w ++ s.output`. -/
+theorem step_output_extends (p : Program) (s : State) (p' : Program) (s' : State)
+    (h : step p s = some (p', s')) : ∃ w, s'.output = w ++ s.output := by
+  cases p with
+  | nil =>
+      rw [step_empty] at h
+      exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | cons i rest =>
+      cases i with
+      | inc_ptr | dec_ptr | inc_val | dec_val =>
+          simp only [step, Option.some_inj, Prod.mk.injEq] at h
+          rcases h with ⟨_, hs'⟩
+          subst hs'
+          exact ⟨[], rfl⟩
+      | write =>
+          simp only [step, Option.some_inj, Prod.mk.injEq] at h
+          rcases h with ⟨_, hs'⟩
+          subst hs'
+          exact ⟨[s.currentVal], rfl⟩
+      | read =>
+          rcases hin : s.input with _ | ⟨x, xs⟩ <;>
+            simp only [step, hin, Option.some_inj, Prod.mk.injEq] at h <;>
+            (rcases h with ⟨_, hs'⟩; subst hs'; exact ⟨[], rfl⟩)
+      | loop body =>
+          by_cases hz : s.currentVal = 0
+          · simp only [step, if_pos hz, Option.some_inj, Prod.mk.injEq] at h
+            rcases h with ⟨_, hs'⟩
+            subst hs'
+            exact ⟨[], rfl⟩
+          · simp only [step, if_neg hz, Option.some_inj, Prod.mk.injEq] at h
+            rcases h with ⟨_, hs'⟩
+            subst hs'
+            exact ⟨[], rfl⟩
+
+/-- A whole run only extends the output: writes accumulate and nothing already
+    written is removed or altered. -/
+theorem runsTo_output_extends (cfg : Program × State) (t : State) (h : RunsTo cfg t) :
+    ∃ w, t.output = w ++ cfg.2.output := by
+  induction h with
+  | halt s => exact ⟨[], rfl⟩
+  | step p s s' p' sf hstep hrest ih =>
+      rcases ih with ⟨w, hw⟩
+      rcases step_output_extends p s p' s' hstep with ⟨v, hv⟩
+      exact ⟨w ++ v, by rw [hw, hv, List.append_assoc]⟩
+
+/-- A single step consumes a prefix of the input. -/
+theorem step_input_suffix (p : Program) (s : State) (p' : Program) (s' : State)
+    (h : step p s = some (p', s')) : ∃ v, s.input = v ++ s'.input := by
+  cases p with
+  | nil =>
+      rw [step_empty] at h
+      exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | cons i rest =>
+      cases i with
+      | inc_ptr | dec_ptr | inc_val | dec_val | write =>
+          simp only [step, Option.some_inj, Prod.mk.injEq] at h
+          rcases h with ⟨_, hs'⟩
+          subst hs'
+          exact ⟨[], rfl⟩
+      | read =>
+          rcases hin : s.input with _ | ⟨x, xs⟩
+          · simp only [step, hin, Option.some_inj, Prod.mk.injEq] at h
+            rcases h with ⟨_, hs'⟩
+            subst hs'
+            exact ⟨[], rfl⟩
+          · simp only [step, hin, Option.some_inj, Prod.mk.injEq] at h
+            rcases h with ⟨_, hs'⟩
+            subst hs'
+            exact ⟨[x], rfl⟩
+      | loop body =>
+          by_cases hz : s.currentVal = 0
+          · simp only [step, if_pos hz, Option.some_inj, Prod.mk.injEq] at h
+            rcases h with ⟨_, hs'⟩
+            subst hs'
+            exact ⟨[], rfl⟩
+          · simp only [step, if_neg hz, Option.some_inj, Prod.mk.injEq] at h
+            rcases h with ⟨_, hs'⟩
+            subst hs'
+            exact ⟨[], rfl⟩
+
+/-- A whole run's reads consume a prefix of the input: whatever is left is a
+    suffix of what the run started with. -/
+theorem runsTo_input_suffix (cfg : Program × State) (t : State) (h : RunsTo cfg t) :
+    ∃ v, cfg.2.input = v ++ t.input := by
+  induction h with
+  | halt s => exact ⟨[], rfl⟩
+  | step p s s' p' sf hstep hrest ih =>
+      rcases ih with ⟨v, hv⟩
+      rcases step_input_suffix p s p' s' hstep with ⟨u, hu⟩
+      exact ⟨u ++ v, by rw [hu, hv, List.append_assoc]⟩
 
 end LeanBF

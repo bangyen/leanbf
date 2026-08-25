@@ -67,7 +67,10 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   (`countDown`, `quadruple`) whose compiled Brainfuck programs are verified
   via `runsTo_compileProgram` to halt with the final counter values on the
   tape — and, via `run_of_RunsTo`, confirmed to complete under the
-  interpreter's executable `run` in exactly `n` steps.
+  interpreter's executable `run` in exactly `n` steps. `tripler` adds an odd
+  multiplier (`c2 := 3 * c2`, where `quadruple`'s two phases both double),
+  and `addMachine` computes `c2 := c1 + c2` — a result depending on both
+  counters rather than on a constant built into the program.
 - **Program-level I/O** (`Theory.Semantics`): a whole run consumes a prefix
   of its input (`runsTo_input_suffix`) and only extends its output
   (`runsTo_output_extends`) — nothing already written is removed or altered.
@@ -144,7 +147,7 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **More verified examples** | Medium | More Minsky machines (e.g. a multiplication machine `c2 := c1 × c2`) could run through `runsTo_compileProgram` like `countDown` and `quadruple`. |
+| **Multiplication needs a Gödel encoding** | Low | The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly. A general `c2 := c1 × c2` needs three quantities live at once — counter, multiplicand, accumulator — so it requires encoding two values in one register (`c1 = 2^a · 3^b`). That is the same construction the 2CM universality bridge needs, and is not a small example task. |
 | **Cell preservation for `quadruple`** | Low | `countDown`'s compiled run is proven to stay inside the window (`countDown_preserves_above_window`, via `run_preserves_tape_above_of_ptrBounded`). The same statement for `quadruple` is compute-bound rather than open: its run is 35451 steps against `countDown`'s 4245, and kernel `decide` exceeds the heartbeat limit. It needs either a cheaper decision procedure or `native_decide`, which would add the `ofReduceBool` axiom to a development that is otherwise `propext`-clean. |
 | **General window invariant** | Medium | Prove that *every* compiled Minsky program keeps the pointer inside the window, rather than checking it per example. This needs a per-position invariant threaded through the compiled body — `runsTo_compileBody` constrains only the endpoint states, not the intermediate ones — so it means re-instrumenting the `Theory.Simulate` stack with a pointer-bound side condition. |
 | **2CM universality bridge** | High | Compile mathlib's `Nat.Partrec.Code` (or `Turing.TM`) into a two-counter Minsky program, the missing input to the undecidability capstone. This is the classical Minsky construction — Gödel-encoding the tape into counter exponents — and is realistically larger than everything currently in the repo. |

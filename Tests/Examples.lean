@@ -65,4 +65,24 @@ example : ∃ s', run 4300 (Compiler.compileProgram Examples.countDown)
       ∀ i : Int, 17 ≤ i → s'.tape i = (simState Examples.countDownStart).tape i :=
   Examples.countDown_preserves_above_window
 
+/-- The addition machine transfers `c1` into `c2`. -/
+example : Minsky.RunsTo Examples.addMachine Examples.addStart Examples.addFinal :=
+  Examples.add_runs
+
+/-- Its compiled form halts with `c2 = 5` on the tape. -/
+example : ∃ s', RunsTo (Compiler.compileProgram Examples.addMachine,
+    simState Examples.addStart) s' ∧ s'.tape 3 = 5 := by
+  rcases Examples.add_compiled with ⟨s', hrun, hpost⟩
+  exact ⟨s', hrun, hpost.2.2.2.2⟩
+
+/-- The tripler machine computes `c2 := 3 * c2`. -/
+example : Minsky.RunsTo Examples.tripler Examples.triplerStart Examples.triplerFinal :=
+  Examples.tripler_runs
+
+/-- Its compiled form halts with `c2 = 6` on the tape. -/
+example : ∃ s', RunsTo (Compiler.compileProgram Examples.tripler,
+    simState Examples.triplerStart) s' ∧ s'.tape 3 = 6 := by
+  rcases Examples.tripler_compiled with ⟨s', hrun, hpost⟩
+  exact ⟨s', hrun, hpost.2.2.2.2⟩
+
 end LeanBF.Tests

@@ -36,7 +36,7 @@ example : ∃ s', Reaches mulVarProg
   rcases mulVar_effect mulVarProg 0 1 2 3 0 6 (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) rfl rfl rfl rfl rfl rfl
     { pc := 0, regs := fun i => if i = 0 then 3 else if i = 1 then 4 else 0 } rfl rfl with
-    ⟨s', hr, hpc, hb, ha, hsc, ht⟩
+    ⟨s', hr, hpc, hb, ha, hsc, ht, _⟩
   refine ⟨s', hr, hpc, hb, ?_, hsc, ?_⟩
   · rw [ha]
     rfl

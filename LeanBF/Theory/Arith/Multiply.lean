@@ -68,12 +68,13 @@ theorem mul_body_effect (p : Program) (a t sc c base : Nat)
     ∀ (m : Nat) (s : State), s.pc = base + 1 → s.regs c = m →
       MulInv a t sc a0 t0 b0 (m + 1) s.regs →
       ∃ s', Reaches p s s' ∧ s'.pc = base ∧ s'.regs c = m ∧
-        MulInv a t sc a0 t0 b0 m s'.regs := by
+        MulInv a t sc a0 t0 b0 m s'.regs ∧
+        ∀ r, r ≠ a → r ≠ t → r ≠ sc → s'.regs r = s.regs r := by
   intro m s hpc hc hI
   have hmb : m + 1 ≤ b0 := hI.1
   rcases copyBack_effect p a t sc (base + 1) (base + 4) base hat hasc htsc
     h0 hi1 hi2 hd0 hd1 s hpc hI.2.2.1 with ⟨s', hr, hpc', hA, hT, hS, hF⟩
-  refine ⟨s', hr, hpc', ?_, by omega, hA.trans hI.2.1, hS, ?_⟩
+  refine ⟨s', hr, hpc', ?_, ⟨by omega, hA.trans hI.2.1, hS, ?_⟩, hF⟩
   · rw [hF c (fun hcc => hac hcc.symm) (fun hcc => htc hcc.symm) (fun hcc => hscc hcc.symm), hc]
   · -- One more copy of `a` has landed, so the remaining count drops by one.
     -- The counter never exceeds its starting value, so the subtraction is exact.
@@ -96,20 +97,31 @@ theorem mulVar_effect (p : Program) (a b t sc base exit : Nat)
     ∀ (s : State), s.pc = base → s.regs sc = 0 →
       ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs b = 0 ∧
         s'.regs a = s.regs a ∧ s'.regs sc = 0 ∧
-        s'.regs t = s.regs t + s.regs a * s.regs b := by
+        s'.regs t = s.regs t + s.regs a * s.regs b ∧
+        ∀ r, r ≠ a → r ≠ t → r ≠ sc → r ≠ b → s'.regs r = s.regs r := by
   intro s hpc hsc
-  rcases iterate_inv p b base exit (MulInv a t sc (s.regs a) (s.regs t) (s.regs b))
-    (mulInv_congr a t sc (s.regs a) (s.regs t) (s.regs b) b
-      (fun hc => hab hc) (fun hc => hbt hc.symm) (fun hc => hbsc hc.symm))
+  -- The frame rides along with the invariant, since `iterate_inv` threads
+  -- only the invariant between iterations.
+  rcases iterate_inv p b base exit
+    (fun m f => MulInv a t sc (s.regs a) (s.regs t) (s.regs b) m f ∧
+      ∀ r, r ≠ a → r ≠ t → r ≠ sc → r ≠ b → f r = s.regs r)
+    (fun m f g hfg hI => ⟨mulInv_congr a t sc (s.regs a) (s.regs t) (s.regs b) b
+      (fun hc => hab hc) (fun hc => hbt hc.symm) (fun hc => hbsc hc.symm) m f g hfg hI.1,
+      fun r hra hrt hrsc hrb => by rw [← hfg r hrb]; exact hI.2 r hra hrt hrsc hrb⟩)
     hloop
-    (fun m s1 hpc1 hc1 hI1 => mul_body_effect p a t sc b base hat hasc htsc
-      (fun hc => hab hc) (fun hc => hbt hc.symm) (fun hc => hbsc hc.symm)
-      (s.regs a) (s.regs t) (s.regs b) h0 hi1 hi2 hd0 hd1 m s1 hpc1 hc1 hI1)
+    (fun m s1 hpc1 hc1 hI1 => by
+      rcases mul_body_effect p a t sc b base hat hasc htsc
+        (fun hc => hab hc) (fun hc => hbt hc.symm) (fun hc => hbsc hc.symm)
+        (s.regs a) (s.regs t) (s.regs b) h0 hi1 hi2 hd0 hd1 m s1 hpc1 hc1 hI1.1 with
+        ⟨s2, hr2, hpc2, hc2, hI2, hfr2⟩
+      exact ⟨s2, hr2, hpc2, hc2, hI2, fun r hra hrt hrsc hrb => by
+        rw [hfr2 r hra hrt hrsc]; exact hI1.2 r hra hrt hrsc hrb⟩)
     (s.regs b) s hpc rfl
-    ⟨le_refl _, rfl, hsc, by rw [Nat.sub_self, Nat.mul_zero, Nat.add_zero]⟩ with
+    ⟨⟨le_refl _, rfl, hsc, by rw [Nat.sub_self, Nat.mul_zero, Nat.add_zero]⟩,
+      fun r _ _ _ _ => rfl⟩ with
     ⟨s', hr, hpc', hb', hI'⟩
-  refine ⟨s', hr, hpc', hb', hI'.2.1, hI'.2.2.1, ?_⟩
-  rw [hI'.2.2.2, Nat.sub_zero]
+  refine ⟨s', hr, hpc', hb', hI'.1.2.1, hI'.1.2.2.1, ?_, hI'.2⟩
+  rw [hI'.1.2.2.2, Nat.sub_zero]
 
 end Register
 

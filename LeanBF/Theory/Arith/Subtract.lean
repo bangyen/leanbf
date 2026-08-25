@@ -144,7 +144,8 @@ theorem subVar_effect (p : Program) (a b t c sc base m1 m2 m3 loop exit : Nat)
     ∀ (s : State), s.pc = base → s.regs sc = 0 → s.regs t = 0 → s.regs c = 0 →
       ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs a = s.regs a ∧
         s'.regs b = s.regs b ∧ s'.regs sc = 0 ∧ s'.regs c = 0 ∧
-        s'.regs t = s.regs a - s.regs b := by
+        s'.regs t = s.regs a - s.regs b ∧
+        ∀ r, r ≠ a → r ≠ b → r ≠ t → r ≠ c → r ≠ sc → s'.regs r = s.regs r := by
   intro s hpc hsc ht0 hc0
   -- Copy the minuend into the target.
   rcases copyBack_effect p a t sc base m1 m2 hat hasc htsc ha0 ha1 ha2 hr0 hr1 s hpc hsc with
@@ -162,7 +163,9 @@ theorem subVar_effect (p : Program) (a b t c sc base m1 m2 m3 loop exit : Nat)
   have hB3 : s3.regs b = s.regs b := by
     rw [hF3 b (fun hc => hbt hc) (fun hc => hbc hc), hB2]
     exact hF1 b (fun hc => hab hc.symm) (fun hc => hbt hc) (fun hc => hbsc hc)
-  refine ⟨s3, reaches_trans hr1' (reaches_trans hr2' hr3'), hpc3, hA3, hB3, ?_, hC3, ?_⟩
+  refine ⟨s3, reaches_trans hr1' (reaches_trans hr2' hr3'), hpc3, hA3, hB3, ?_, hC3, ?_,
+    fun r hra hrb hrt hrc hrsc => by
+      rw [hF3 r hrt hrc, hF2 r hrb hrc hrsc, hF1 r hra hrt hrsc]⟩
   · rw [hF3 sc (fun hc => htsc hc.symm) (fun hc => hcsc hc.symm)]
     exact hS2
   · -- The target held a copy of the minuend; the counter held one of the
@@ -200,13 +203,14 @@ theorem cmpBranch_effect (p : Program) (a b t c sc base m1 m2 m3 loop test clr :
     ∀ (s : State), s.pc = base → s.regs sc = 0 → s.regs t = 0 → s.regs c = 0 →
       ∃ s', Reaches p s s' ∧ s'.regs a = s.regs a ∧ s'.regs b = s.regs b ∧
         s'.regs sc = 0 ∧ s'.regs c = 0 ∧ s'.regs t = 0 ∧
+        (∀ r, r ≠ a → r ≠ b → r ≠ t → r ≠ c → r ≠ sc → s'.regs r = s.regs r) ∧
         s'.pc = if s.regs a < s.regs b then exitLT else exitGE := by
   intro s hpc hsc ht0 hc0
   -- The target holds `b - a`, which vanishes exactly when `b ≤ a`.
   rcases subVar_effect p b a t c sc base m1 m2 m3 loop test
     (fun hc => hbt hc) hbsc htsc hac hasc hcsc (fun hc => hab hc.symm) hbc
     (fun hc => hat hc) htc ha0 ha1 ha2 hr0 hr1 hb0 hb1 hb2 hs0 hs1 hloop hbody
-    s hpc hsc ht0 hc0 with ⟨s1, hr1', hpc1, hB1, hA1, hS1, hC1, hT1⟩
+    s hpc hsc ht0 hc0 with ⟨s1, hr1', hpc1, hB1, hA1, hS1, hC1, hT1, hFsub⟩
   by_cases hlt : s.regs a < s.regs b
   · -- Strictly less: the test decrements, then the clear empties the rest.
     have hne : s1.regs t ≠ 0 := by rw [hT1]; omega
@@ -215,7 +219,7 @@ theorem cmpBranch_effect (p : Program) (a b t c sc base m1 m2 m3 loop test clr :
     refine ⟨{ pc := exitLT, regs := fun i => if i = t then 0
         else (setReg s1 t (s1.regs t - 1)).regs i },
       reaches_trans hr1' (Reaches.step _ _ _ hstep
-        (clear_reaches p t clr exitLT hclr _ _ rfl rfl)), ?_, ?_, ?_, ?_, ?_, ?_⟩
+        (clear_reaches p t clr exitLT hclr _ _ rfl rfl)), ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · change (if a = t then 0 else (setReg s1 t (s1.regs t - 1)).regs a) = s.regs a
       rw [if_neg hat]
       change (if a = t then s1.regs t - 1 else s1.regs a) = s.regs a
@@ -233,13 +237,21 @@ theorem cmpBranch_effect (p : Program) (a b t c sc base m1 m2 m3 loop test clr :
       change (if c = t then s1.regs t - 1 else s1.regs c) = 0
       rw [if_neg (fun hc => htc hc.symm), hC1]
     · simp only [if_true]
+    · intro r hra hrb hrt hrc hrsc
+      change (if r = t then 0 else (setReg s1 t (s1.regs t - 1)).regs r) = s.regs r
+      rw [if_neg hrt]
+      change (if r = t then s1.regs t - 1 else s1.regs r) = s.regs r
+      rw [if_neg hrt]
+      exact hFsub r hrb hra hrt hrc hrsc
     · simp only [if_pos hlt]
   · -- Not less: the target is already empty and the test jumps straight out.
     have hz : s1.regs t = 0 := by rw [hT1]; omega
     have hstep : step p s1 = some { s1 with pc := exitGE } := by
       simp only [step, hpc1, htest, hz, if_pos]
     exact ⟨{ s1 with pc := exitGE }, reaches_trans hr1' (Reaches.step _ _ _ hstep
-      (Reaches.refl _)), hA1, hB1, hS1, hC1, hz, by simp only [if_neg hlt]⟩
+      (Reaches.refl _)), hA1, hB1, hS1, hC1, hz,
+      fun r hra hrb hrt hrc hrsc => hFsub r hrb hra hrt hrc hrsc,
+      by simp only [if_neg hlt]⟩
 
 end Register
 

@@ -41,6 +41,7 @@ have been.
 * `reaches_iff_runFor`: Reachability is iteration for some count.
 * `runsTo_of_reaches`: A halting run passes through everything reachable on
   the way.
+* `runsTo_of_reaches_halt`: Reaching a terminal state is a halting run.
 -/
 
 namespace LeanBF
@@ -126,6 +127,15 @@ theorem runsTo_of_reaches (p : Program) (s s' t : State)
           have hbb : b = b' := by
             injection hstep'
           exact ih (by rwa [← hbb] at hrest)
+
+/-- Reaching a terminal state is a halting run. This is how a fragment's
+    forward path becomes a `RunsTo` once it lands on a `halt`. -/
+theorem runsTo_of_reaches_halt (p : Program) (s t : State) (hr : Reaches p s t)
+    (hterm : (p : List Instruction)[t.pc]? = some Instruction.halt ∨
+      (p : List Instruction)[t.pc]? = none) : RunsTo p s t := by
+  induction hr with
+  | refl u => exact RunsTo.halt u hterm
+  | step a b c hstep _ ih => exact RunsTo.step a b c hstep (ih hterm)
 
 end Register
 

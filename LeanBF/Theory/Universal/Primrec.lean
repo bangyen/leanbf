@@ -8,10 +8,13 @@ import LeanBF.Theory.Arith
 /-!
 # Discharging the Primitive Recursive Cases
 
-The builders for the constructors of `Nat.Primrec` that need the arithmetic
-fragments. `zero`, `succ` and `comp` are already in `Theory.Universal.Builder`,
-which the fragments themselves import; these are the ones that go the other
-way, so they live above both.
+The induction that closes the reduction: every primitive recursive function
+is computed by a register machine.
+
+Four of the seven constructors need the arithmetic fragments and are
+discharged here. The other three — `zero`, `succ` and `comp` — are in
+`Theory.Universal.Builder`, which the fragments themselves import, so they
+could not have waited for this module.
 
 `builds_pair` runs both sub-builders on the same input, which is what the
 calling convention's promise to preserve the input register buys: the second
@@ -52,6 +55,9 @@ fragment puts it back.
 * `precLoop_effect`: The loop runs the recursion to its base case.
 * `precPost_effect`: The cleanup after the loop.
 * `builds_prec`: Primitive recursion preserves computability.
+* `primrec_builds`: Every primitive recursive function has a builder.
+* `primrec_regComputable`: Every primitive recursive function is computed by
+  a register machine.
 -/
 
 namespace LeanBF
@@ -634,6 +640,27 @@ theorem builds_prec (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) :
     by_cases hqi : q = inR
     · rw [hqi, hN1]
     · exact hFr1 q hqi (by omega) (by omega) (by omega)
+
+/-- Every primitive recursive function has a builder. The induction is over
+    the seven constructors, each of which is now a lemma. -/
+theorem primrec_builds {f : Nat → Nat} (hf : Nat.Primrec f) : Builds f := by
+  induction hf with
+  | zero => exact builds_zero
+  | succ => exact builds_succ
+  | left => exact builds_left
+  | right => exact builds_right
+  | pair _ _ ihf ihg => exact builds_pair _ _ ihf ihg
+  | comp _ _ ihf ihg => exact builds_comp _ _ ihf ihg
+  | prec _ _ ihf ihg => exact builds_prec _ _ ihf ihg
+
+/-- Every primitive recursive function is computed by a register machine.
+    The builder is asked for a fragment at address zero, and that fragment is
+    then taken as the whole program, which embeds in itself. -/
+theorem primrec_regComputable {f : Nat → Nat} (hf : Nat.Primrec f) : RegComputable f := by
+  rcases primrec_builds hf 0 1 2 (by omega) (by omega) (by omega) 0 with ⟨hi, frag, hlo, hc⟩
+  refine ⟨frag, 0, frag.length, 0, 1, 2, hi, by omega, by omega, by omega, ?_⟩
+  have hself : EmbeddedAt frag 0 frag := fun j _ => by rw [Nat.zero_add]
+  simpa only [Nat.zero_add] using hc frag hself
 
 end Register
 

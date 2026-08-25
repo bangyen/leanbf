@@ -57,6 +57,27 @@ example : precPost 1 2 300 9000 = [Instruction.jzdec 3 302 301,
     Instruction.inc 1 300, Instruction.jzdec 2 303 302,
     Instruction.jzdec 4 9000 303] := rfl
 
+/-- The `prec` constructor's function is built, in the shape the inductive
+    states it. -/
+example (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) :
+    Builds (Nat.unpaired fun z n => n.rec (f z) fun y IH => g (Nat.pair z (Nat.pair y IH))) :=
+  builds_prec f g hf hg
+
+/-- Every primitive recursive function has a builder. -/
+example {f : Nat → Nat} (hf : Nat.Primrec f) : Builds f := primrec_builds hf
+
+/-- And so is computed by a register machine. -/
+example {f : Nat → Nat} (hf : Nat.Primrec f) : RegComputable f := primrec_regComputable hf
+
+/-- Concretely: addition of a constant is primitive recursive, so a register
+    machine computes it. -/
+example : RegComputable (fun n => n + 1) :=
+  primrec_regComputable (Nat.Primrec.succ)
+
+/-- And so is any constant function. -/
+example (k : Nat) : RegComputable (fun _ => k) :=
+  primrec_regComputable (Nat.Primrec.const k)
+
 /-- The cases already discharged in `Theory.Universal.Builder`. -/
 example : Builds (fun _ => 0) := builds_zero
 

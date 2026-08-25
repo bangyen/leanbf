@@ -17,8 +17,6 @@ measure strictly decreases and the induction is well-founded.
 
 ## Theorems
 
-* `runsExactly_append_suffix_lt`: Peeling a first step makes the suffix
-  strictly shorter.
 * `minsky_step_isSome`: A non-terminal program counter steps.
 * `minsky_halts_of_compiled_halts_aux`: The induction on the run length.
 * `minsky_halts_of_compiled_halts`: A halting compiled run implies the Minsky
@@ -28,15 +26,6 @@ measure strictly decreases and the induction is well-founded.
 -/
 
 namespace LeanBF
-
-theorem runsExactly_append_suffix_lt (p : Program) (s0 s2 s1 : State) (p' : Program)
-    (hstep : step p s0 = some (p', s2)) (hB : RunsTo (p', s2) s1)
-    (C : Program) (n : Nat) (t : State)
-    (h : RunsExactly n (p ++ C) s0 t) : ∃ m, RunsExactly m C s1 t ∧ m < n := by
-  have happ : step (p ++ C) s0 = some (p' ++ C, s2) := step_append p C s0 s2 p' hstep
-  rcases runsExactly_step n (p ++ C) s0 t h (p' ++ C) s2 happ with ⟨k, hk, hkn⟩
-  rcases runsExactly_append_suffix (p', s2) s1 hB C k t hk with ⟨m, hm, hmk⟩
-  exact ⟨m, hm, by omega⟩
 
 -- A non-terminal pc means Minsky.step succeeds.
 theorem minsky_step_isSome (m : Minsky.Program) (ms : Minsky.State)

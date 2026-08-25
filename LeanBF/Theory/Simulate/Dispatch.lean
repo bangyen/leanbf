@@ -23,7 +23,6 @@ lemmas, and the dispatch loop running exactly the matching window.
 ## Theorems
 
 * `runsTo_window_done'`: A window whose done flag is set runs nothing.
-* `runsTo_window_done`: The window form with the done flag set.
 * `runsTo_windows_done`: The flattened dispatch over all windows.
 * `stepInstr_jzdec1_pc`: The jzdec1 pc update.
 * `stepInstr_jzdec1_c1`: The jzdec1 c1 update.

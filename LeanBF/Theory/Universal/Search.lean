@@ -133,7 +133,7 @@ def searchTail (out k arg res blk head base : Nat) : Program :=
 /-- A bound that failed: clear the argument, fall through the test, raise
     the bound, and return to the head. -/
 theorem searchTail_retry (p : Program) (out k arg res blk head base : Nat)
-    (hka : k ≠ arg) (hkb : k ≠ blk) (harb : arg ≠ blk) (hrb : res ≠ blk) (hra : res ≠ arg)
+    (hka : k ≠ arg) (hkb : k ≠ blk) (harb : arg ≠ blk) (hra : res ≠ arg)
     (hemb : EmbeddedAt p base (searchTail out k arg res blk head base)) :
     ∀ (s : State), s.pc = base → s.regs res = 0 → s.regs blk = 0 →
       ∃ s', Reaches p s s' ∧ s'.pc = head ∧ s'.regs arg = 0 ∧

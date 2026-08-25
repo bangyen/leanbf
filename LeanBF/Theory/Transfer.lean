@@ -31,7 +31,13 @@ both questions the Gödel decrement needs — the quotient, and whether the
 prime divided the packed value at all.
 
 `kdrain_reaches` scales the drain: each unit drained adds `k` to the target,
-so that fragment multiplies by a constant. That is what the Gödel encoding needs,
+so that fragment multiplies by a constant.
+
+`copy_reaches` sends each drained unit to two targets at once. Draining is
+destructive, so this is how a register is read without being lost: copy it
+into a spare and a scratch, then drain the scratch back. It is the primitive
+the pairing arithmetic is built from, since Cantor pairing needs its
+arguments more than once. That is what the Gödel encoding needs,
 since incrementing a packed register means multiplying the packed value by a
 prime. Its proof splits in two, an outer induction draining the source and an
 inner one (`inc_chain`) walking the chain of increments that runs per unit.
@@ -47,6 +53,10 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
 * `consumed`: A mid-chain state of the division loop.
 * `bumpedAt`: A register raised by one, at a given pointer.
 * `divided`: The state after the division loop has run to completion.
+* `copied`: The state after the copy loop has run to completion.
+* `copyDec`: The copy loop's state after its `jzdec` step.
+* `copyMid`: The copy loop's state after its first increment.
+* `copyLoop`: The copy loop's state back at the loop head.
 
 ## Theorems
 
@@ -62,6 +72,7 @@ inner one (`inc_chain`) walking the chain of increments that runs per unit.
 * `chain_full`: The source survives a whole group.
 * `div_reaches`: The division loop divides by `k`, branching on the
   remainder.
+* `copy_reaches`: The copy loop duplicates a register into two others.
 -/
 
 namespace LeanBF
@@ -449,6 +460,99 @@ theorem div_reaches (p : Program) (a t base exitBase k : Nat) (hne : a ≠ t)
                 consumed_regs_other a base k (s.regs a - k) i s hia]
       rw [← hfin]
       exact reaches_trans hfull (Reaches.step _ _ _ hstepInc hrec)
+
+/-- The state after copying `n` units from `a` into both `t1` and `t2`. -/
+def copied (a t1 t2 exit n : Nat) (s : State) : State :=
+  { pc := exit,
+    regs := fun i => if i = a then 0 else if i = t1 then s.regs t1 + n
+      else if i = t2 then s.regs t2 + n else s.regs i }
+
+/-- After the first increment of one iteration. -/
+def copyMid (a t1 base n : Nat) (s : State) : State :=
+  { pc := base + 2, regs := fun i => if i = t1 then s.regs t1 + 1
+      else if i = a then n else s.regs i }
+
+/-- After both increments of one iteration, back at the loop head. -/
+def copyLoop (a t1 t2 base n : Nat) (s : State) : State :=
+  { pc := base, regs := fun i => if i = t2 then s.regs t2 + 1
+      else if i = t1 then s.regs t1 + 1 else if i = a then n else s.regs i }
+
+/-- After the jzdec of one iteration. -/
+def copyDec (a base n : Nat) (s : State) : State :=
+  { pc := base + 1, regs := fun i => if i = a then n else s.regs i }
+
+/-- The copy loop duplicates the source into two targets, emptying it. -/
+theorem copy_reaches (p : Program) (a t1 t2 base exit : Nat)
+    (h1 : a ≠ t1) (h2 : a ≠ t2) (h12 : t1 ≠ t2)
+    (h0 : p[base]? = some (Instruction.jzdec a exit (base + 1)))
+    (hi1 : p[base + 1]? = some (Instruction.inc t1 (base + 2)))
+    (hi2 : p[base + 2]? = some (Instruction.inc t2 base)) :
+    ∀ (n : Nat) (s : State), s.pc = base → s.regs a = n →
+      Reaches p s (copied a t1 t2 exit n s) := by
+  have h1' : t1 ≠ a := fun hc => h1 hc.symm
+  have h2' : t2 ≠ a := fun hc => h2 hc.symm
+  have h12' : t2 ≠ t1 := fun hc => h12 hc.symm
+  intro n
+  induction n with
+  | zero =>
+      intro s hpc ha
+      have hstep : step p s = some { s with pc := exit } := by
+        simp only [step, hpc, h0, ha, if_pos]
+      have hst : ({ pc := exit, regs := s.regs } : State) = copied a t1 t2 exit 0 s := by
+        unfold copied
+        ext i
+        · simp only
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, hia, ha]
+          · rw [if_neg hia]
+            by_cases hit1 : i = t1
+            · rw [if_pos hit1, hit1, Nat.add_zero]
+            · rw [if_neg hit1]
+              by_cases hit2 : i = t2
+              · rw [if_pos hit2, hit2, Nat.add_zero]
+              · rw [if_neg hit2]
+      rw [← hst]
+      exact Reaches.step s _ _ hstep (Reaches.refl _)
+  | succ m ih =>
+      intro s hpc ha
+      have hs1 : step p s = some (copyDec a base m s) := by
+        unfold copyDec
+        simp only [step, hpc, h0, ha, setReg]
+        rw [if_neg (by omega)]
+        congr 1
+      have hs2 : step p (copyDec a base m s) = some (copyMid a t1 base m s) := by
+        unfold copyDec copyMid
+        simp only [step, hi1, setReg, if_neg h1']
+      have hs3 : step p (copyMid a t1 base m s) = some (copyLoop a t1 t2 base m s) := by
+        unfold copyMid copyLoop
+        simp only [step, hi2, setReg, if_neg h12', if_neg h2']
+      have hpcL : (copyLoop a t1 t2 base m s).pc = base := by simp only [copyLoop]
+      have hregL : (copyLoop a t1 t2 base m s).regs a = m := by
+        simp only [copyLoop, if_neg h2, if_neg h1, if_true]
+      have hrec := ih (copyLoop a t1 t2 base m s) hpcL hregL
+      have hfin : copied a t1 t2 exit m (copyLoop a t1 t2 base m s)
+          = copied a t1 t2 exit (m + 1) s := by
+        unfold copied copyLoop
+        ext i
+        · simp only
+        · simp only []
+          by_cases hia : i = a
+          · rw [if_pos hia, if_pos hia]
+          · rw [if_neg hia, if_neg hia]
+            by_cases hit1 : i = t1
+            · subst hit1
+              simp only [if_neg h12, if_neg hia, if_true]
+              omega
+            · rw [if_neg hit1, if_neg hit1]
+              by_cases hit2 : i = t2
+              · subst hit2
+                simp only [if_neg hia, if_true, if_neg hit1]
+                omega
+              · rw [if_neg hit2, if_neg hit2]
+                simp only [if_neg hit2, if_neg hit1, if_neg hia]
+      rw [← hfin]
+      exact Reaches.step s _ _ hs1 (Reaches.step _ _ _ hs2 (Reaches.step _ _ _ hs3 hrec))
 
 end Register
 

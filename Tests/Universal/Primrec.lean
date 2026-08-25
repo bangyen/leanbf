@@ -1,0 +1,39 @@
+/-
+Copyright (c) 2026 Bangyen Pham. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bangyen Pham
+-/
+import LeanBF.Theory.Universal.Primrec
+
+/-!
+# Primitive Recursive Case Tests
+
+Kernel re-assertions of the case discharges, stated in the exact forms the
+constructors of `Nat.Primrec` demand.
+-/
+
+namespace LeanBF.Tests
+
+open LeanBF.Register
+
+/-- The `left` constructor's function is built. -/
+example : Builds (fun n => n.unpair.1) := builds_left
+
+/-- And the `right` constructor's. -/
+example : Builds (fun n => n.unpair.2) := builds_right
+
+/-- These are the shapes the inductive actually uses, so the discharges apply
+    without massaging the statement. -/
+example : Nat.Primrec (fun n => n.unpair.1) := Nat.Primrec.left
+
+example : Nat.Primrec (fun n => n.unpair.2) := Nat.Primrec.right
+
+/-- The cases already discharged in `Theory.Universal.Builder`. -/
+example : Builds (fun _ => 0) := builds_zero
+
+example : Builds Nat.succ := builds_succ
+
+example (f g : Nat → Nat) (hf : Builds f) (hg : Builds g) : Builds (fun n => f (g n)) :=
+  builds_comp f g hf hg
+
+end LeanBF.Tests

@@ -256,6 +256,13 @@ exercises every instruction (`inc1`, `inc2`, `jzdec1`, `jzdec2`, `halt`).
 `quadruple_compiled`/`quadruple_halts` verify the compiled program the same
 way, with `quadruple_executes` giving the exact interpreter run (`c2 = 8`).
 
+`Tripler` (`c2 := 3 * c2`, 14 steps) is the odd-multiplier companion, since
+both of `Quadruple`'s phases double. `Addition` (`c2 := c1 + c2`, 5 steps) is
+the one example whose result depends on both counters rather than on a
+constant fixed in the program. That is the boundary: a general
+`c2 := c1 * c2` needs the counter, the multiplicand, and the accumulator live
+at once, which two registers cannot hold without a Gödel encoding.
+
 ## Project Structure
 
 - `LeanBF/Core`: Definitions (Instruction, State, Semantics, Minsky,

@@ -32,9 +32,21 @@ example : Primrec fun a : (Nat × Nat.Partrec.Code) × Nat =>
     Nat.Partrec.Code.evaln a.1.1 a.1.2 a.2 :=
   Nat.Partrec.Code.primrec_evaln
 
-/-- The calling convention is satisfiable. -/
-example (p : Register.Program) (base r : Nat) :
-    Register.RegComputes p base base r r (fun _ => False) id :=
-  Register.regComputes_id p base r
+/-- Fragments compose, which is the `comp` case of the induction ahead. -/
+example (p : Register.Program) (base mid exit inR midR outR lo hi : Nat) (f g : Nat → Nat)
+    (hmlo : lo ≤ midR) (hmhi : midR < hi) (hmo : midR ≠ outR) (hmi : midR ≠ inR)
+    (hilo : inR < lo ∨ hi ≤ inR) (holo : outR < lo ∨ hi ≤ outR) (hio : inR ≠ outR)
+    (hg : Register.Computes p base mid inR midR lo hi g)
+    (hf : Register.Computes p mid exit midR outR lo hi f) :
+    Register.Computes p base exit inR outR lo hi (f ∘ g) :=
+  Register.computes_seq p base mid exit inR midR outR lo hi f g
+    hmlo hmhi hmo hmi hilo holo hio hg hf
+
+/-- The clear loop empties a register, which is the cleanup primitive. -/
+example (p : Register.Program) (r base exit : Nat)
+    (h0 : p[base]? = some (Register.Instruction.jzdec r exit base))
+    (n : Nat) (s : Register.State) (hpc : s.pc = base) (ha : s.regs r = n) :
+    Register.Reaches p s { pc := exit, regs := fun i => if i = r then 0 else s.regs i } :=
+  Register.clear_reaches p r base exit h0 n s hpc ha
 
 end LeanBF.Tests

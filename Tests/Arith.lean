@@ -5,6 +5,7 @@ Authors: Bangyen Pham
 -/
 
 import Tests.Arith.Multiply
+import Tests.Arith.Sqrt
 import Tests.Arith.Subtract
 
 /-!

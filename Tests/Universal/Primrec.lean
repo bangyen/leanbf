@@ -38,6 +38,25 @@ example (f g : Nat → Nat) (hf : Nat.Primrec f) (hg : Nat.Primrec g) :
     Nat.Primrec (fun n => Nat.pair (f n) (g n)) :=
   Nat.Primrec.pair hf hg
 
+/-- The primitive recursion body's prelude ends with the two clears that
+    give the step function's fragment the conditions it requires. -/
+example : (precBodyPre 2 0)[102]? = some (Instruction.jzdec 3 103 102) := rfl
+
+example : (precBodyPre 2 0)[103]? = some (Instruction.jzdec 5 104 103) := rfl
+
+example : (precBodyPre 2 0).length = 104 := rfl
+
+/-- Its postlude clears the assembled argument, counts the iteration, and
+    returns to the head by testing a register the invariant keeps empty. -/
+example : precBodyPost 2 200 3 = [Instruction.jzdec 6 201 200,
+    Instruction.inc 4 202, Instruction.jzdec 8 3 3] := rfl
+
+/-- After the loop the counter holds the number of iterations, so the
+    cleanup clears it as well as the argument. -/
+example : precPost 1 2 300 9000 = [Instruction.jzdec 3 302 301,
+    Instruction.inc 1 300, Instruction.jzdec 2 303 302,
+    Instruction.jzdec 4 9000 303] := rfl
+
 /-- The cases already discharged in `Theory.Universal.Builder`. -/
 example : Builds (fun _ => 0) := builds_zero
 

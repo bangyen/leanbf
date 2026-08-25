@@ -21,6 +21,7 @@ import Tests.Register
 import Tests.Semantics
 import Tests.Simulate
 import Tests.State
+import Tests.Transfer
 
 /-!
 # Test Suite Aggregator

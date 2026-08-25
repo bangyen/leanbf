@@ -59,7 +59,9 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   exactly when the recursive code `c` halts on input `n`. Since the program
   is fixed and the starting tape is a computable function of the code and
   input, a decider for Brainfuck halting would decide `Nat.Partrec.Code`
-  halting, which `ComputablePred.halting_problem` forbids. The chain runs
+  halting; `brainfuck_halting_undecidable` draws that conclusion, showing no
+  computable predicate decides whether the program halts on a given input.
+  The chain runs
   `Nat.Partrec.Code` → register machine (`Theory.Universal`) → two counters
   (`Theory.Packing`, via a Gödel encoding of the register file as prime
   exponents) → Minsky → Brainfuck, each link proved in both directions.
@@ -173,7 +175,7 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 
 | Task | Priority | Status |
 | :--- | :--- | :--- |
-| **Multiplication needs a Gödel encoding** | Low | The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly. A general `c2 := c1 × c2` needs three quantities live at once — counter, multiplicand, accumulator — so it requires encoding two values in one register (`c1 = 2^a · 3^b`). That is the same construction the 2CM universality bridge needs, and is not a small example task. |
+| **Multiplication needs a Gödel encoding** | Done | Resolved by the universality work. The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly; a general `c2 := c1 × c2` needs three quantities live at once, so it needs an encoding. Both halves now exist: `mulVar_effect` (`Theory.Arith.Multiply`) multiplies two registers, and `Theory.Godel` packs a whole register file into one counter as a product of prime powers, which `Theory.Packing` uses to compile any register machine down to two. |
 | **2CM universality bridge** | Done | Built on the `counter-machine-bridge` branch. The register-machine transfer loops (`Theory.Transfer`), the arithmetic fragments built on them (`Theory.Arith`), the induction `Nat.Primrec f → RegComputable f` (`Theory.Universal.Primrec`), the universal register machine (`Theory.Universal.Machine`), the pack down to two counters (`Theory.Packing`, the register file encoded as a product of prime powers), and the bridge to `Core.Minsky`. `universal_minsky` is the result: one Minsky program whose halting on `(2 ^ Nat.pair c n, 0)` is equivalent to code `c` halting on input `n`. Mathlib has no counter-machine model, so none of this could be adapted from it. |
 | **Halting problem undecidability** | Done | `universal_brainfuck` (`Theory.Undecidable`): one fixed Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n` exactly when code `c` halts on input `n`. The program does not depend on the code or the input, and the starting tape is a computable function of both, so a decider for Brainfuck halting would decide `Nat.Partrec.Code` halting — which `ComputablePred.halting_problem` forbids. The chain is `Nat.Partrec.Code` → register machine → two counters → Minsky → Brainfuck, each link proved in both directions. |
 
@@ -183,7 +185,9 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 commands, the bracketed loop as a recursive instruction list, and the
 small-step semantics — together with the Minsky machine model, the compiler,
 and the proof that `Compiler.compileProgram` simulates a two-counter Minsky
-machine, so Brainfuck is Turing complete.
+machine, so Brainfuck is Turing complete. It also formalizes the register
+machine and Gödel-encoding layers needed to run the reduction the other way,
+giving the undecidability of Brainfuck halting.
 
 **Design choices.** Brainfuck's informal specification leaves several details
 open; LeanBF makes the following choices, documented in `ARCHITECTURE.md`:

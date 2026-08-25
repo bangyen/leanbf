@@ -55,7 +55,6 @@ have tried to.
 
 * `headFrag_length`: The head occupies fifty-one slots.
 * `headFrag_effect`: The head packs the bound with the run's argument.
-* `universal_length`: The whole program's size.
 * `universal_embeddedAt_tail`: The tail sits past the head and evaluator.
 * `probe_eval`: One pass, up to the tail's test.
 * `probe_retry`: A bound too small returns to the head with it raised.
@@ -108,11 +107,6 @@ theorem headFrag_effect (p : Program) (hemb : EmbeddedAt p 0 headFrag) :
     proof of `evalnPacked_regComputable`, `Builds` being an existential. -/
 def universal (ev : Program) : Program :=
   headFrag ++ ev ++ searchTail 4 1 2 3 5 0 (51 + ev.length)
-
-theorem universal_length (ev : Program) :
-    (universal ev).length = 51 + ev.length + 7 := by
-  simp only [universal, List.length_append, headFrag_length, searchTail,
-    List.length_cons, List.length_nil]
 
 /-- The machine at the top of an iteration: the head's address, the run's
     argument in `m`, the bound in `k`, and everything else clear. -/

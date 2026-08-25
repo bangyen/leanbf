@@ -11,6 +11,7 @@ import LeanBF.Theory.Displacement
 import LeanBF.Theory.Embed
 import LeanBF.Theory.Equivalence
 import LeanBF.Theory.Godel
+import LeanBF.Theory.Idioms
 import LeanBF.Theory.IfZeroElse
 import LeanBF.Theory.Invariance
 import LeanBF.Theory.Loop

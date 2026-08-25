@@ -16,6 +16,7 @@ the transitivity of reachability.
 * `drainProg`: A two-instruction drain loop followed by `halt`.
 * `tripleProg`: A scaled transfer loop moving three units per unit drained.
 * `divProg`: A division loop with three jzdec slots.
+* `iterProg`: A counted loop whose body adds two to a register.
 -/
 
 namespace LeanBF.Tests
@@ -92,5 +93,25 @@ example : (divided 0 1 4 2 0 { pc := 0, regs := fun i => if i = 0 then 6 else 0 
 
 /-- The source is emptied either way. -/
 example : (divided 0 1 4 2 1 { pc := 0, regs := fun i => if i = 0 then 7 else 0 }).regs 0 = 0 := rfl
+
+/-- A counted loop whose body adds two to a register. -/
+def iterProg : Program :=
+  [.jzdec 1 3 1, .inc 0 2, .inc 0 0, .halt]
+
+/-- The loop head tests and decrements the counter. -/
+example : iterProg[0]? = some (Instruction.jzdec 1 3 (0 + 1)) := rfl
+
+/-- The body runs from `base + 1` and returns to `base`. -/
+example : iterProg[2]? = some (Instruction.inc 0 0) := rfl
+
+/-- Iterating any body empties the counter and reaches the exit. -/
+example (p : Program) (c base exit : Nat) (F : State → State)
+    (h0 : p[base]? = some (Instruction.jzdec c exit (base + 1)))
+    (hbody : ∀ (s : State), s.pc = base + 1 → Reaches p s (F s))
+    (hbodyPc : ∀ (s : State), (F s).pc = base)
+    (hbodyC : ∀ (s : State), (F s).regs c = s.regs c)
+    (n : Nat) (s : State) (hpc : s.pc = base) (hc : s.regs c = n) :
+    ∃ s', Reaches p s s' ∧ s'.pc = exit ∧ s'.regs c = 0 :=
+  iterate_reaches p c base exit F h0 hbody hbodyPc hbodyC n s hpc hc
 
 end LeanBF.Tests

@@ -54,6 +54,15 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
   therefore established in both directions, and the two halves package into
   the halting equivalence `compiled_halts_iff`: the compiled program halts
   exactly when the source machine does.
+- **Undecidability** (`Theory.Undecidable`): `universal_brainfuck` — one
+  fixed Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n`
+  exactly when the recursive code `c` halts on input `n`. Since the program
+  is fixed and the starting tape is a computable function of the code and
+  input, a decider for Brainfuck halting would decide `Nat.Partrec.Code`
+  halting, which `ComputablePred.halting_problem` forbids. The chain runs
+  `Nat.Partrec.Code` → register machine (`Theory.Universal`) → two counters
+  (`Theory.Packing`, via a Gödel encoding of the register file as prime
+  exponents) → Minsky → Brainfuck, each link proved in both directions.
 - **Concrete syntax** (`Core.Parser`): a total `parse : String → Program`,
   driven by an explicit fuel argument because a `[` continues on whatever its
   body left behind, which is not a structural subterm. Non-command characters
@@ -165,8 +174,8 @@ the run-level tape lemmas), `Examples` (example programs), and `Tests`
 | Task | Priority | Status |
 | :--- | :--- | :--- |
 | **Multiplication needs a Gödel encoding** | Low | The example machines (`countDown`, `quadruple`, `tripler`, `addMachine`) cover constant multiples and addition, which is the limit of what two counters express directly. A general `c2 := c1 × c2` needs three quantities live at once — counter, multiplicand, accumulator — so it requires encoding two values in one register (`c1 = 2^a · 3^b`). That is the same construction the 2CM universality bridge needs, and is not a small example task. |
-| **2CM universality bridge** | High | The remaining capstone input, being built on the `counter-machine-bridge` branch. Done: the register-machine transfer loops (`Theory.Transfer`), the arithmetic fragments built on them (`Theory.Arith` — variable multiplication, truncated subtraction, comparison answering by exit address, integer square root, `Nat.pair` and `Nat.unpair`), the induction `Nat.Primrec f → RegComputable f` (`Theory.Universal.Primrec`), the universal register machine (`Theory.Universal.Machine` — `universal_machine` proves `(∃ t, RunsTo U (loopState (Nat.pair c n) 0) t) ↔ (Code.eval (ofNat Code c) n).Dom`, the unbounded search over the step bound standing in for `rfind'`), and the pack down to two counters (`Theory.Packing`). `compile_halts_iff` proves a register machine halts exactly when its two-counter compilation does, the register file encoded as a product of prime powers (`Theory.Godel`) and each instruction becoming a block that multiplies or divides by one prime. The packed input is `2 ^ m`, concrete enough for a reduction to name. Still to build: the bridge from two-register `Register` programs to `Core.Minsky`, which is a lockstep bisimulation — the two step relations are structurally identical. Mathlib has no counter-machine model, so none of this can be adapted from it. |
-| **Halting problem undecidability** | High | The capstone: Brainfuck halting is undecidable. Every piece but one is now in place. `compiled_halts_iff` reduces 2CM halting to Brainfuck halting, `universal_machine` reduces `Nat.Partrec.Code` halting to register machine halting, and `compile_halts_iff` reduces register machine halting to two counters. What remains is to join the last two — a lockstep bisimulation between two-register `Register` programs and `Core.Minsky` — and then to contradict `ComputablePred.halting_problem`. |
+| **2CM universality bridge** | Done | Built on the `counter-machine-bridge` branch. The register-machine transfer loops (`Theory.Transfer`), the arithmetic fragments built on them (`Theory.Arith`), the induction `Nat.Primrec f → RegComputable f` (`Theory.Universal.Primrec`), the universal register machine (`Theory.Universal.Machine`), the pack down to two counters (`Theory.Packing`, the register file encoded as a product of prime powers), and the bridge to `Core.Minsky`. `universal_minsky` is the result: one Minsky program whose halting on `(2 ^ Nat.pair c n, 0)` is equivalent to code `c` halting on input `n`. Mathlib has no counter-machine model, so none of this could be adapted from it. |
+| **Halting problem undecidability** | Done | `universal_brainfuck` (`Theory.Undecidable`): one fixed Brainfuck program that halts on the tape encoding `2 ^ Nat.pair c n` exactly when code `c` halts on input `n`. The program does not depend on the code or the input, and the starting tape is a computable function of both, so a decider for Brainfuck halting would decide `Nat.Partrec.Code` halting — which `ComputablePred.halting_problem` forbids. The chain is `Nat.Partrec.Code` → register machine → two counters → Minsky → Brainfuck, each link proved in both directions. |
 
 ## Scope & Limitations
 

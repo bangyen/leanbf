@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - name: Build Lean project
         uses: leanprover/lean-action@v1
@@ -29,5 +31,5 @@ jobs:
 
       - name: Run guard checks
         run: |
-          chmod +x scripts/check_all.sh
+          chmod +x scripts/*.sh
           ./scripts/check_all.sh

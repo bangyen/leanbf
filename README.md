@@ -156,7 +156,7 @@ Make sure you have [elan](https://github.com/leanprover/elan) installed for
 Lean 4 version management.
 
 ```bash
-git clone https://github.com/bangyen/leanbf.git
+git clone --recurse-submodules https://github.com/bangyen/leanbf.git
 cd leanbf
 lake exe cache get  # Downloads the pre-compiled Mathlib libraries
 lake build
@@ -172,10 +172,11 @@ lake lint           # Runs the linter
 
 ## Contributing
 
-This repo uses standard Mathlib naming conventions and the same guard scripts
-as LeanSharp. If you are interested in extending the formalization — for
-example, completing the `jzdec` translation or taking a first step toward the
-completeness proof — feel free to open a pull request.
+This repo uses standard Mathlib naming conventions and the shared guard scripts
+from [lean-guards](https://github.com/bangyen/lean-guards), vendored as a
+submodule at `scripts/`. If you are interested in extending the formalization —
+for example, completing the `jzdec` translation or taking a first step toward
+the completeness proof — feel free to open a pull request.
 
 ## Citation
 

@@ -5,31 +5,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: read 
-  pages: write 
-  id-token: write 
-
 jobs:
   build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          submodules: true
-
-      - name: Build Lean project
-        uses: leanprover/lean-action@v1
-
-      - name: Enforce warning-free Lean build
-        run: lake --wfail build
-
-      - name: Run the linter
-        run: lake lint
-
-      - name: Run guard checks
-        run: |
-          chmod +x scripts/*.sh
-          ./scripts/check_all.sh
+    uses: bangyen/lean-guards/.github/workflows/lean-ci.yml@v1
